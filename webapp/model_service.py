@@ -66,12 +66,27 @@ class ModelService:
             self.device = "cpu"
 
     def find_gguf(self) -> Optional[str]:
-        """Finds any valid GGUF file in project root."""
+        """Finds any valid GGUF file in project root or Downloads folder."""
+        # 1. Check exact base dir match
         exact = os.path.join(self.base_dir, "Llama-3.2-1B-Instruct.Q4_K_M.gguf")
         if os.path.isfile(exact):
             return exact
+        # 2. Check any *.gguf in project root
         matches = glob.glob(os.path.join(self.base_dir, "*.gguf"))
-        return matches[0] if matches else None
+        if matches:
+            return matches[0]
+        # 3. Check Downloads directories
+        candidate_dirs = [
+            os.path.abspath(os.path.join(self.base_dir, "..")),
+            os.path.abspath(os.path.join(self.base_dir, "..", "..")),
+            os.path.join(os.path.expanduser("~"), "Downloads"),
+        ]
+        for cdir in candidate_dirs:
+            if os.path.isdir(cdir):
+                found = glob.glob(os.path.join(cdir, "*.gguf"))
+                if found:
+                    return found[0]
+        return None
 
     def find_checkpoint(self) -> Optional[str]:
         """Safely scans allowed directories within the project for a local scratch checkpoint."""
