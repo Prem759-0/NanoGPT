@@ -173,7 +173,7 @@ class ModelService:
                 print(f"Loading GGUF model: {gguf_path}...")
                 self.llama_model = Llama(
                     model_path=gguf_path,
-                    n_ctx=2048,
+                    n_ctx=4096,
                     verbose=False,
                     n_threads=4
                 )
@@ -377,13 +377,22 @@ class ModelService:
                 {"role": "system", "content": sys_msg}
             ]
             if history:
-                for turn in history[-10:]:
+                # Retain recent conversation turns, but compress massive code blocks from older assistant turns
+                for turn in history[-6:]:
                     content = turn.get("content", "").strip()
-                    if content:
-                        messages.append({
-                            "role": "user" if turn.get("role") == "user" else "assistant",
-                            "content": content
-                        })
+                    if not content:
+                        continue
+                    role = "user" if turn.get("role") == "user" else "assistant"
+                    # If prior assistant response contains huge code (> 400 chars), sanitize to preserve context window
+                    if role == "assistant" and len(content) > 400:
+                        import re
+                        content = re.sub(r'```[a-zA-Z0-9_\-]*\s*[\s\S]{150,}?```', '[... Code block provided in previous turn ...]', content)
+                        if len(content) > 400:
+                            content = content[:350] + "... [earlier text truncated for context space]"
+                    messages.append({
+                        "role": role,
+                        "content": content
+                    })
 
                 # Follow-up intent bridging for small 1B model context retention
                 followup_starters = ("in ", "now in ", "rewrite in ", "convert to ", "give full", "full code", "not full", "not working", "why ")
@@ -402,12 +411,43 @@ class ModelService:
 
             messages.append({"role": "user", "content": clean_prompt})
 
-            res = self.llama_model.create_chat_completion(
-                messages=messages,
-                max_tokens=min(max_new_tokens, 1800),
-                temperature=temperature if not is_coding else min(temperature, 0.4),  # Lower temp for precise code
-                stop=["<|eot_id|>", "<|start_header_id|>", "User:"]
-            )
+            # Robust Context Budget Guard (n_ctx = 4096)
+            n_ctx_val = 4096
+            # Measure approximate tokens (1 token ~= 3.4 chars)
+            total_chars = sum(len(m["content"]) for m in messages)
+            approx_prompt_tokens = int(total_chars / 3.4)
+
+            # Prune oldest history messages if prompt is dangerously close to limit
+            while len(messages) > 2 and (sum(len(m["content"]) for m in messages) / 3.4) > (n_ctx_val - 600):
+                messages.pop(1)
+
+            # Dynamically compute safe generation token budget
+            final_prompt_tokens = int(sum(len(m["content"]) for m in messages) / 3.4)
+            safe_max_tokens = max(100, min(max_new_tokens, n_ctx_val - final_prompt_tokens - 64))
+            safe_max_tokens = min(safe_max_tokens, 1800)
+
+            try:
+                res = self.llama_model.create_chat_completion(
+                    messages=messages,
+                    max_tokens=safe_max_tokens,
+                    temperature=temperature if not is_coding else min(temperature, 0.4),
+                    stop=["<|eot_id|>", "<|start_header_id|>", "User:"]
+                )
+            except Exception as exc:
+                if "exceed context window" in str(exc).lower():
+                    # Emergency fallback: run with clean system and user prompt
+                    res = self.llama_model.create_chat_completion(
+                        messages=[
+                            {"role": "system", "content": sys_msg},
+                            {"role": "user", "content": clean_prompt}
+                        ],
+                        max_tokens=min(max_new_tokens, 1024),
+                        temperature=temperature if not is_coding else min(temperature, 0.4),
+                        stop=["<|eot_id|>", "<|start_header_id|>", "User:"]
+                    )
+                else:
+                    raise
+
             reply = res["choices"][0]["message"].get("content", "").strip()
             if not reply:
                 reply = "I understand. How can I assist you with your code today?"

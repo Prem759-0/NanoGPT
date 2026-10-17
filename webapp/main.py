@@ -16,7 +16,7 @@ from webapp.model_service import ModelService, ModelNotTrainedException
 from webapp.image_service import ImageService
 from webapp.video_service import VideoService
 from webapp.code_service import CodeService
-from webapp.game_templates import get_snake_game_html
+from webapp.game_templates import get_snake_game_html, get_chess_game_html
 from webapp.database import db
 
 
@@ -278,7 +278,36 @@ async def chat(request: ChatRequest):
             session_id=session_id
         )
 
-    # 4. Context Memory / "Why did you forget" intent check
+    # 4. Chess Game Intent Check (e.g. "chesse game", "chess game", "chess in html")
+    is_chess = (
+        any(k in msg_low for k in ["chess game", "chesse game", "play chess", "chess in html", "chesse in html", "code of chess", "chess code"]) or
+        (("chess" in msg_low or "chesse" in msg_low) and any(w in msg_low for w in ["game", "play", "html", "javascript", "js", "code"])) or
+        msg_low in ["chess", "chesse", "chess game", "chesse game"]
+    )
+    if is_chess:
+        chess_html = get_chess_game_html()
+        reply = (
+            "Here is the **100% complete, interactive Cyber Chess Game** in a single file combining **HTML5, CSS3, and JavaScript**!\n\n"
+            "🎮 **Click the '🎮 Play Live Preview' button below to play right inside your browser**, or click **'📋 Copy'** to paste it into an `index.html` file:\n\n"
+            "```html\n"
+            f"{chess_html}\n"
+            "```\n\n"
+            "### ♟️ How to Play:\n"
+            "• **Live Preview**: Click **🎮 Play Live Preview** above to launch the interactive chessboard directly in your browser!\n"
+            "• **Controls**: Click on any piece on your turn (White moves first) to see all valid destinations highlighted in green (or red for captures), then click the destination square to move.\n"
+            "• **Features**: Includes pawn two-square opening moves, diagonal pawn captures, promotion to Queen, knight jump movements, captured piece display trays, turn indicator badges, move undo, and synthesized sound effects via Web Audio API!"
+        )
+        db.add_message(session_id, "assistant", reply, meta={"feature": "chess_game_html"})
+        return ChatResponse(
+            reply=reply,
+            model_name="NanoGPT Coder Engine (Interactive Web App)",
+            prompt_length=len(clean_msg),
+            tokens_generated=850,
+            device="CPU Local Engine",
+            session_id=session_id
+        )
+
+    # 5. Context Memory / "Why did you forget" intent check
     forgot_patterns = [
         r"why (did you|did the ai) (forget|forgot|loose|lose)",
         r"(forght|forgot|forget|lost) (last|previous) (msg|masg|message|context)",
