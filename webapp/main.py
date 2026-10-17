@@ -153,6 +153,56 @@ async def chat(request: ChatRequest):
     # Save user message to database
     db.add_message(session_id, "user", request.message)
 
+    import re
+    clean_msg = request.message.strip()
+
+    # Backend Autonomous Multi-Modal Tool Routing
+    # 1. Image intent check (e.g. "show india map image", "generate image of ...")
+    img_m1 = re.search(r'^(?:please\s+)?(?:show|generate|create|draw|make|render|display|give me)(?:\s+me)?\s+(?:an?\s+)?(?:image|picture|photo|artwork|drawing|painting|render|map|visual)\s+(?:of\s+)?(.+)', clean_msg, re.I)
+    img_m2 = re.search(r'^(?:show|display|give me)?\s*(.+?)\s+(?:image|picture|photo|artwork|drawing|painting|wallpaper|render)$', clean_msg, re.I)
+    img_subject = (img_m1.group(1) if img_m1 else (img_m2.group(1) if img_m2 else None))
+
+    if img_subject and len(img_subject.strip()) > 1 and not clean_msg.startswith("/code"):
+        subject = img_subject.strip()
+        img_res = image_service.generate_image(subject)
+        reply = (
+            f"Here is the generated image of **{subject}** ({img_res.get('style', 'Studio')})!\n\n"
+            f"![{subject}]({img_res['image_url']})\n\n"
+            f"[Download Full Resolution Image ({img_res['width']}x{img_res['height']})]({img_res['image_url']})"
+        )
+        db.add_message(session_id, "assistant", reply, meta={"media": "image", "url": img_res["image_url"]})
+        return ChatResponse(
+            reply=reply,
+            model_name="Image Studio (Higgsfield & Midjourney Engine)",
+            prompt_length=len(clean_msg),
+            tokens_generated=35,
+            device="CPU Local Visualizer",
+            session_id=session_id
+        )
+
+    # 2. Video intent check (e.g. "show video of...", "generate video of...")
+    vid_m = re.search(r'^(?:please\s+)?(?:show|generate|create|make|render|produce)(?:\s+me)?\s+(?:an?\s+)?(?:video|animation|clip|mp4|short movie)\s+(?:of\s+)?(.+)', clean_msg, re.I)
+    vid_s = re.search(r'^(?:show|display|give me)?\s*(.+?)\s+(?:video|animation|clip|mp4)$', clean_msg, re.I)
+    vid_subject = (vid_m.group(1) if vid_m else (vid_s.group(1) if vid_s else None))
+
+    if vid_subject and len(vid_subject.strip()) > 1 and not clean_msg.startswith("/code"):
+        subject = vid_subject.strip()
+        vid_res = video_service.generate_video(subject, duration_sec=3.0, fps=15)
+        reply = (
+            f"Here is your synthesized video for **{subject}** ({vid_res['duration']}s @ {vid_res['fps']}fps, mode: {vid_res['mode']})!\n\n"
+            f"🎬 **Video Clip**: [{vid_res['filename']}]({vid_res['video_url']})\n\n"
+            f"[Download Full MP4 Video]({vid_res['video_url']})"
+        )
+        db.add_message(session_id, "assistant", reply, meta={"media": "video", "url": vid_res["video_url"]})
+        return ChatResponse(
+            reply=reply,
+            model_name="Video Studio (Kling & Runway Engine)",
+            prompt_length=len(clean_msg),
+            tokens_generated=40,
+            device="CPU Video Encoder",
+            session_id=session_id
+        )
+
     try:
         result = model_service.generate(
             prompt=request.message,

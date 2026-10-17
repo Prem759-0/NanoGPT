@@ -458,19 +458,44 @@ document.addEventListener("DOMContentLoaded", () => {
     const loadingElem = appendLoadingBubble();
     setGeneratingState(true);
 
-    // 1. Tool Check: /video
-    if (prompt.startsWith("/video ")) {
-      const vidPrompt = prompt.replace(/^\/video\s+/, "").trim();
+    // 0. Smart Multi-Modal Intent Classifiers (Autonomous Tool Calling)
+    function extractVideoIntent(text) {
+      const t = text.trim();
+      if (/^\/video\s+/i.test(t)) return t.replace(/^\/video\s+/i, "").trim();
+      const pMatch = t.match(/^(?:please\s+)?(?:show|generate|create|make|render|produce)(?:\s+me)?\s+(?:an?\s+)?(?:video|animation|clip|mp4|short movie)\s+(?:of\s+)?(.+)/i);
+      if (pMatch && pMatch[1]) return pMatch[1].trim();
+      const animMatch = t.match(/^(?:please\s+)?(?:animate)\s+(?:an?\s+)?(.+)/i);
+      if (animMatch && animMatch[1]) return animMatch[1].trim();
+      const sMatch = t.match(/^(?:show|display|give me)?\s*(.+?)\s+(?:video|animation|clip|mp4)$/i);
+      if (sMatch && sMatch[1] && sMatch[1].length > 1) return sMatch[1].trim();
+      return null;
+    }
+
+    function extractImageIntent(text) {
+      const t = text.trim();
+      if (/^\/(imagine|image)\s+/i.test(t)) return t.replace(/^\/(imagine|image)\s+/i, "").trim();
+      const pMatch = t.match(/^(?:please\s+)?(?:show|generate|create|draw|make|render|display|give me)(?:\s+me)?\s+(?:an?\s+)?(?:image|picture|photo|artwork|drawing|painting|render|map|visual)\s+(?:of\s+)?(.+)/i);
+      if (pMatch && pMatch[1]) return pMatch[1].trim();
+      const sMatch = t.match(/^(?:show|display|give me)?\s*(.+?)\s+(?:image|picture|photo|artwork|drawing|painting|wallpaper|render)$/i);
+      if (sMatch && sMatch[1] && sMatch[1].length > 1) return sMatch[1].trim();
+      const drawMatch = t.match(/^(?:draw|paint|illustrate)\s+(?:an?\s+)?(.+)/i);
+      if (drawMatch && drawMatch[1]) return drawMatch[1].trim();
+      return null;
+    }
+
+    // 1. Tool Check: Video Generation Intent
+    const detectedVideoPrompt = extractVideoIntent(prompt);
+    if (detectedVideoPrompt) {
       try {
         const response = await fetch("/api/generate-video", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: vidPrompt, duration_sec: 3.0, fps: 15 })
+          body: JSON.stringify({ prompt: detectedVideoPrompt, duration_sec: 3.0, fps: 15 })
         });
         loadingElem.remove();
         if (!response.ok) throw new Error("Video generation failed");
         const data = await response.json();
-        appendVideoMessage(data.video_url, vidPrompt, data);
+        appendVideoMessage(data.video_url, detectedVideoPrompt, data);
       } catch (err) {
         loadingElem.remove();
         appendAlertBox("error", "Video Generation Failed", err.message);
@@ -481,19 +506,19 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // 2. Tool Check: /imagine or /image
-    if (prompt.startsWith("/imagine ") || prompt.startsWith("/image ")) {
-      const imgPrompt = prompt.replace(/^\/(imagine|image)\s+/, "").trim();
+    // 2. Tool Check: Image Generation Intent
+    const detectedImagePrompt = extractImageIntent(prompt);
+    if (detectedImagePrompt) {
       try {
         const response = await fetch("/api/generate-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: imgPrompt, style: "auto" })
+          body: JSON.stringify({ prompt: detectedImagePrompt, style: "auto" })
         });
         loadingElem.remove();
         if (!response.ok) throw new Error("Image generation failed");
         const data = await response.json();
-        appendImageMessage(data.image_url, imgPrompt, data);
+        appendImageMessage(data.image_url, detectedImagePrompt, data);
       } catch (err) {
         loadingElem.remove();
         appendAlertBox("error", "Image Generation Failed", err.message);
