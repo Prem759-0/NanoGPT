@@ -361,14 +361,16 @@ class ModelService:
                     "You are NanoGPT Coder, an elite coding and reasoning AI assistant created and developed by Prem Gaikwad from India. "
                     "If asked who made or developed you, always state proudly that you were created by developer Prem Gaikwad from India. "
                     "Write robust, elegant, production-grade, and bug-free code with clear comments. "
-                    "Always format executable code inside markdown triple backticks with language tags (e.g. ```python). "
-                    "Provide concise, insightful technical explanations."
+                    "Always format executable code inside markdown triple backticks with language tags (e.g. ```python, ```html). "
+                    "Provide complete, unabbreviated code without skipping parts. "
+                    "CRITICAL: Maintain continuous conversational context. If the user provides a follow-up request (e.g., 'in html, css, js', 'now in python', 'make it faster', 'give full code'), always fulfill this directly in the context of the previous conversation."
                 )
             else:
                 sys_msg = (
                     "You are NanoGPT (NanoGPT-3.2), an advanced, helpful, and private AI assistant created and developed by Prem Gaikwad from India. "
                     "If asked who made or developed you, always state proudly that you were created by developer Prem Gaikwad from India. "
-                    "You run completely offline on local hardware with zero external paid APIs."
+                    "You run completely offline on local hardware with zero external paid APIs. "
+                    "CRITICAL: Maintain continuous conversational context across turns. Seamlessly remember earlier questions and build upon previous answers."
                 )
 
             messages = [
@@ -382,11 +384,27 @@ class ModelService:
                             "role": "user" if turn.get("role") == "user" else "assistant",
                             "content": content
                         })
+
+                # Follow-up intent bridging for small 1B model context retention
+                followup_starters = ("in ", "now in ", "rewrite in ", "convert to ", "give full", "full code", "not full", "not working", "why ")
+                is_short_followup = (
+                    clean_prompt.lower().startswith(followup_starters) or
+                    clean_prompt.lower() in ["in html", "in html,css,js", "in html ,css,js", "in python", "in js", "in c++"] or
+                    len(clean_prompt.split()) <= 4
+                )
+                if is_short_followup:
+                    last_user_turn = next((t.get("content", "") for t in reversed(history) if t.get("role") == "user" and t.get("content", "") != clean_prompt), "")
+                    if last_user_turn:
+                        messages.append({
+                            "role": "system",
+                            "content": f"[Context Bridging]: The user's input '{clean_prompt}' is a direct follow-up continuation of their previous request: '{last_user_turn}'. Fulfill it fully in that exact context."
+                        })
+
             messages.append({"role": "user", "content": clean_prompt})
 
             res = self.llama_model.create_chat_completion(
                 messages=messages,
-                max_tokens=min(max_new_tokens, 350),
+                max_tokens=min(max_new_tokens, 1800),
                 temperature=temperature if not is_coding else min(temperature, 0.4),  # Lower temp for precise code
                 stop=["<|eot_id|>", "<|start_header_id|>", "User:"]
             )

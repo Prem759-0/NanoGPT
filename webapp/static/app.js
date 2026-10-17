@@ -579,7 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
           message: cleanPrompt,
           mode: isCodeMode ? "code" : "chat",
           session_id: currentSessionId,
-          max_new_tokens: isCodeMode ? 280 : parseInt(maxTokensSlider.value, 10),
+          max_new_tokens: isCodeMode ? Math.max(900, parseInt(maxTokensSlider.value, 10)) : parseInt(maxTokensSlider.value, 10),
           temperature: isCodeMode ? 0.35 : parseFloat(temperatureSlider.value)
         })
       });
@@ -680,57 +680,150 @@ document.addEventListener("DOMContentLoaded", () => {
     const content = document.createElement("div");
     content.className = "message-content";
 
-    // Format markdown code blocks with 1-click execution
-    const codeBlockMatch = text.match(/```(?:python)?\s*([\s\S]*?)```/);
-    if (codeBlockMatch && sender === "assistant") {
-      const parts = text.split(/```(?:python)?\s*[\s\S]*?```/);
-      const extractedCode = codeBlockMatch[1].trim();
+    // Format markdown code blocks with 1-click execution & live web preview
+    const codeBlockRegex = /```([a-zA-Z0-9_\-]+)?\s*([\s\S]*?)```/g;
+    let match;
+    let lastIndex = 0;
+    let hasCodeBlock = false;
 
-      if (parts[0]) {
-        const p1 = document.createElement("div");
-        p1.textContent = parts[0].trim();
-        content.appendChild(p1);
-      }
-
-      const codeBox = document.createElement("div");
-      codeBox.className = "code-block-interactive";
-      codeBox.innerHTML = `
-        <div class="code-block-topbar">
-          <span>Python (Codex/Claude)</span>
-          <button class="run-snippet-btn" title="Run this code in local Python sandbox">▶ Run Code</button>
-        </div>
-        <pre><code>${extractedCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
-      `;
-
-      const runBtn = codeBox.querySelector(".run-snippet-btn");
-      runBtn.addEventListener("click", async () => {
-        runBtn.textContent = "⏳ Running...";
-        runBtn.disabled = true;
-        try {
-          const runRes = await fetch("/api/run-code", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code: extractedCode })
-          });
-          const runData = await runRes.json();
-          appendCodeResultMessage(extractedCode, runData);
-        } catch (e) {
-          appendAlertBox("error", "Code Execution Failed", e.message);
-        } finally {
-          runBtn.textContent = "▶ Run Code";
-          runBtn.disabled = false;
+    if (sender === "assistant" && text.includes("```")) {
+      while ((match = codeBlockRegex.exec(text)) !== null) {
+        hasCodeBlock = true;
+        const precedingText = text.substring(lastIndex, match.index).trim();
+        if (precedingText) {
+          const textDiv = document.createElement("div");
+          textDiv.style.marginBottom = "8px";
+          textDiv.textContent = precedingText;
+          content.appendChild(textDiv);
         }
-      });
 
-      content.appendChild(codeBox);
+        const lang = (match[1] || "").toLowerCase();
+        const extractedCode = match[2].trim();
+        const isHtml = lang === "html" || lang === "htm" || extractedCode.includes("<!DOCTYPE") || extractedCode.includes("<html") || extractedCode.includes("<canvas");
+        const isPython = (lang === "python" || lang === "py" || (!isHtml && (extractedCode.includes("def ") || extractedCode.includes("import ") || extractedCode.includes("print("))));
 
-      if (parts[1]) {
-        const p2 = document.createElement("div");
-        p2.style.marginTop = "8px";
-        p2.textContent = parts[1].trim();
-        content.appendChild(p2);
+        let langLabel = "Code";
+        let actionButtonsHtml = `<button class="copy-snippet-btn" title="Copy code to clipboard">📋 Copy</button>`;
+
+        if (isHtml) {
+          langLabel = "🌐 HTML5 / Web Application (Live Sandbox)";
+          actionButtonsHtml = `
+            <button class="preview-snippet-btn" title="Run and test live interactive game/web page">🎮 Play Live Preview</button>
+            <button class="copy-snippet-btn" title="Copy code to clipboard">📋 Copy</button>
+          `;
+        } else if (isPython) {
+          langLabel = "🐍 Python (Codex/Claude)";
+          actionButtonsHtml = `
+            <button class="run-snippet-btn" title="Run this code in local Python sandbox">▶ Run Python</button>
+            <button class="copy-snippet-btn" title="Copy code to clipboard">📋 Copy</button>
+          `;
+        } else {
+          langLabel = lang ? lang.toUpperCase() : "Code";
+        }
+
+        const codeBox = document.createElement("div");
+        codeBox.className = "code-block-interactive";
+        codeBox.style.marginBottom = "10px";
+        codeBox.innerHTML = `
+          <div class="code-block-topbar">
+            <span>${langLabel}</span>
+            <div style="display: flex; gap: 6px;">
+              ${actionButtonsHtml}
+            </div>
+          </div>
+          <pre><code>${extractedCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
+        `;
+
+        // Wire Copy Button
+        const copyBtn = codeBox.querySelector(".copy-snippet-btn");
+        if (copyBtn) {
+          copyBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(extractedCode);
+            const orig = copyBtn.textContent;
+            copyBtn.textContent = "✓ Copied!";
+            setTimeout(() => { copyBtn.textContent = orig; }, 2000);
+          });
+        }
+
+        // Wire Python Run Button
+        const runBtn = codeBox.querySelector(".run-snippet-btn");
+        if (runBtn) {
+          runBtn.addEventListener("click", async () => {
+            runBtn.textContent = "⏳ Running...";
+            runBtn.disabled = true;
+            try {
+              const runRes = await fetch("/api/run-code", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code: extractedCode })
+              });
+              const runData = await runRes.json();
+              appendCodeResultMessage(extractedCode, runData);
+            } catch (e) {
+              appendAlertBox("error", "Code Execution Failed", e.message);
+            } finally {
+              runBtn.textContent = "▶ Run Python";
+              runBtn.disabled = false;
+            }
+          });
+        }
+
+        // Wire HTML Live Preview Button
+        const previewBtn = codeBox.querySelector(".preview-snippet-btn");
+        if (previewBtn) {
+          let previewContainer = null;
+          previewBtn.addEventListener("click", () => {
+            if (previewContainer) {
+              previewContainer.remove();
+              previewContainer = null;
+              previewBtn.textContent = "🎮 Play Live Preview";
+              return;
+            }
+
+            previewContainer = document.createElement("div");
+            previewContainer.style.marginTop = "8px";
+            previewContainer.style.border = "1px solid var(--border-color)";
+            previewContainer.style.borderRadius = "8px";
+            previewContainer.style.overflow = "hidden";
+            previewContainer.style.background = "#0d1117";
+
+            previewContainer.innerHTML = `
+              <div style="padding: 6px 12px; background: rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; color: var(--text-secondary);">
+                <span>🎮 Live Web Sandbox</span>
+                <button class="close-p-btn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.75rem;">✕ Close</button>
+              </div>
+              <iframe style="width: 100%; height: 420px; border: none; display: block;" sandbox="allow-scripts allow-modals"></iframe>
+            `;
+
+            const iframe = previewContainer.querySelector("iframe");
+            iframe.srcdoc = extractedCode;
+
+            previewContainer.querySelector(".close-p-btn").addEventListener("click", () => {
+              previewContainer.remove();
+              previewContainer = null;
+              previewBtn.textContent = "🎮 Play Live Preview";
+            });
+
+            codeBox.appendChild(previewContainer);
+            previewBtn.textContent = "✕ Close Preview";
+            scrollToBottom();
+          });
+        }
+
+        content.appendChild(codeBox);
+        lastIndex = match.index + match[0].length;
       }
-    } else {
+
+      const trailingText = text.substring(lastIndex).trim();
+      if (trailingText) {
+        const textDiv = document.createElement("div");
+        textDiv.style.marginTop = "8px";
+        textDiv.textContent = trailingText;
+        content.appendChild(textDiv);
+      }
+    }
+
+    if (!hasCodeBlock) {
       content.textContent = text;
     }
 

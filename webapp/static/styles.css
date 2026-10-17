@@ -1165,6 +1165,39 @@ body {
   background: #2ea043;
 }
 
+.preview-snippet-btn {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.preview-snippet-btn:hover {
+  background: #0369a1;
+}
+
+.copy-snippet-btn {
+  background: #21262d;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.copy-snippet-btn:hover {
+  background: #30363d;
+  color: #ffffff;
+}
+
 .code-block-interactive pre {
   margin: 0;
   padding: 12px 14px;
