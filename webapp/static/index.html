@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NanoGPT Lab — Local Transformer AI</title>
+  <meta name="description" content="Local, API-Key-Free AI Lab built directly on nanoGPT. Inspect, test, and experiment with your own neural network.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-row">
+          <div class="brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">NanoGPT Lab</h1>
+            <span class="brand-subtitle">Local Transformer Engine</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-scrollable">
+        <!-- Active Model Switcher -->
+        <div class="panel-card model-select-card">
+          <div class="panel-card-header">
+            <span class="panel-title">Active AI Engine</span>
+          </div>
+          <div class="model-select-wrapper">
+            <select id="model-select" class="styled-select" aria-label="Select AI Model">
+              <option value="llama-3.2" selected>🔥 LLaMA-3.2 1B (Your Fine-Tuned Model)</option>
+              <option value="gpt2">✨ GPT-2 (124M - Pretrained Open Weights)</option>
+              <option value="scratch">🔬 NanoGPT (0.8M - From Scratch)</option>
+            </select>
+          </div>
+          <p id="model-info-note" class="model-info-note">Your custom fine-tuned LLaMA-3.2 model running locally with 2048 context!</p>
+        </div>
+
+        <!-- Model Status Card -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <span class="panel-title">Model Status</span>
+            <button id="refresh-status-btn" class="icon-button" title="Refresh Status" aria-label="Refresh Status">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6M1 20v-6h6"/>
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+              </svg>
+            </button>
+          </div>
+          <div class="status-badge-container">
+            <span id="model-status-badge" class="status-badge status-loading">CHECKING...</span>
+          </div>
+          <p id="model-status-desc" class="status-desc">Querying local backend...</p>
+        </div>
+
+        <!-- Model Specs Card -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <span class="panel-title">Hardware & Checkpoint</span>
+          </div>
+          <dl class="specs-grid">
+            <dt>Hardware</dt>
+            <dd id="spec-hardware">Detecting...</dd>
+            <dt>Checkpoint</dt>
+            <dd id="spec-checkpoint" class="mono-truncate">None</dd>
+            <dt>Dataset</dt>
+            <dd id="spec-dataset">shakespeare_char</dd>
+            <dt>Parameters</dt>
+            <dd id="spec-params">Not loaded</dd>
+            <dt>Vocab Size</dt>
+            <dd id="spec-vocab">Pending</dd>
+          </dl>
+        </div>
+
+        <!-- Generation Controls -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <span class="panel-title">Generation Parameters</span>
+          </div>
+          <div class="control-group">
+            <div class="control-label-row">
+              <label for="max-tokens-slider">Max Tokens</label>
+              <span id="max-tokens-val" class="control-value">150</span>
+            </div>
+            <input type="range" id="max-tokens-slider" min="20" max="400" step="10" value="150" class="styled-slider">
+          </div>
+          <div class="control-group">
+            <div class="control-label-row">
+              <label for="temperature-slider">Temperature</label>
+              <span id="temperature-val" class="control-value">0.80</span>
+            </div>
+            <input type="range" id="temperature-slider" min="0.1" max="1.5" step="0.05" value="0.80" class="styled-slider">
+          </div>
+        </div>
+
+        <!-- Voice & Audio Settings -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <span class="panel-title">Voice & Audio AI</span>
+          </div>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-primary); cursor: pointer;">
+            <input type="checkbox" id="auto-speak-toggle" class="styled-checkbox">
+            <span>🔊 Auto-Speak AI Replies</span>
+          </label>
+        </div>
+
+        <!-- Chat History Sessions Panel -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <span class="panel-title">Chat History (SQLite)</span>
+            <button id="new-session-btn" class="icon-button" title="New Session">＋</button>
+          </div>
+          <div id="sessions-list" class="sessions-list">
+            <div class="session-empty">Loading history...</div>
+          </div>
+        </div>
+
+        <!-- Super AI Tools Panel -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <span class="panel-title">Superpower Tools</span>
+          </div>
+          <div class="tool-buttons-grid">
+            <button id="tool-image-btn" class="tool-action-btn" title="Generate an image from text">
+              🎨 <span>Generate Image</span>
+            </button>
+            <button id="tool-code-btn" class="tool-action-btn" title="Run Python code in sandbox">
+              ⚡ <span>Code Runner</span>
+            </button>
+          </div>
+          <div style="margin-top: 10px; font-size: 0.72rem; color: var(--text-muted);">
+            Tip: You can also type <code>/imagine [prompt]</code> or <code>/run [code]</code> directly in the chat box!
+          </div>
+        </div>
+
+
+        <!-- Architecture Info Banner -->
+        <div class="info-callout">
+          <div class="info-callout-icon">✨</div>
+          <div class="info-callout-text">
+            <strong>Super AI Lab Mode Active</strong>
+            <p>Trained Local GPT + Neural Image Visualizer + Python Sandbox + Colab Notebook.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="clear-chat-btn" class="btn btn-secondary btn-block">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          New Conversation
+        </button>
+      </div>
+    </aside>
+
+
+    <!-- Main Chat Container -->
+    <main class="chat-container">
+      <!-- Chat Header -->
+      <header class="chat-header">
+        <div class="chat-header-info">
+          <h2 class="chat-header-title">Lab Chat Session</h2>
+          <span class="chat-header-status-indicator" id="header-status-dot"></span>
+          <span class="chat-header-status-text" id="header-status-text">Checking local model...</span>
+        </div>
+        <div class="chat-header-actions">
+          <a href="/docs" target="_blank" class="header-link" title="Open API Documentation">FastAPI Docs ↗</a>
+        </div>
+      </header>
+
+      <!-- Messages Stream -->
+      <section class="messages-stream" id="messages-stream" aria-live="polite">
+        <!-- Welcome Card -->
+        <div class="welcome-card" id="welcome-card">
+          <div class="welcome-badge">STAGE: PRE-TRAINING AUDIT</div>
+          <h3>Welcome to NanoGPT Lab</h3>
+          <p>
+            You are running a direct interface to Andrej Karpathy's <strong>nanoGPT</strong> architecture.
+            All neural network computations happen locally on your system.
+          </p>
+          <div class="honest-status-box" id="honest-status-box">
+            <div class="honest-status-title">Current Model State:</div>
+            <div id="honest-status-content" class="honest-status-content">
+              Checking checkpoint status...
+            </div>
+          </div>
+          <div class="welcome-guide">
+            <div class="guide-step">
+              <span class="step-num">1</span>
+              <span>Test this interface & backend connection</span>
+            </div>
+            <div class="guide-step">
+              <span class="step-num">2</span>
+              <span>Prepare dataset (e.g. Shakespeare)</span>
+            </div>
+            <div class="guide-step">
+              <span class="step-num">3</span>
+              <span>Train a small local GPT model</span>
+            </div>
+            <div class="guide-step">
+              <span class="step-num">4</span>
+              <span>Generate text locally through this UI</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Input Area -->
+      <footer class="chat-input-area">
+        <form id="chat-form" class="chat-form" onsubmit="return false;">
+          <div class="input-wrapper">
+            <textarea
+              id="user-input"
+              class="chat-textarea"
+              placeholder="Chat with AI, or type /imagine [prompt] to generate images, or /run [code]..."
+              rows="1"
+              maxlength="1000"
+              required
+            ></textarea>
+            <div class="input-actions">
+              <span id="char-counter" class="char-counter">0/1000</span>
+              <button type="button" id="mic-btn" class="mic-btn" title="Voice Input (Click to speak)" aria-label="Microphone Voice Input">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+              </button>
+              <button type="submit" id="send-btn" class="send-btn" title="Send message (Enter)" aria-label="Send message">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="input-footnote">
+            <span>Press <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for a new line</span>
+            <span id="backend-ping" class="ping-indicator">Backend: Checking</span>
+          </div>
+
+        </form>
+      </footer>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
