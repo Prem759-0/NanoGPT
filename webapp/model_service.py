@@ -375,11 +375,13 @@ class ModelService:
                 {"role": "system", "content": sys_msg}
             ]
             if history:
-                for turn in history[-4:]:
-                    messages.append({
-                        "role": "user" if turn.get("role") == "user" else "assistant",
-                        "content": turn.get("content", "").strip()
-                    })
+                for turn in history[-10:]:
+                    content = turn.get("content", "").strip()
+                    if content:
+                        messages.append({
+                            "role": "user" if turn.get("role") == "user" else "assistant",
+                            "content": content
+                        })
             messages.append({"role": "user", "content": clean_prompt})
 
             res = self.llama_model.create_chat_completion(
@@ -408,9 +410,11 @@ class ModelService:
         if self.active_model_name == "gpt2":
             if history:
                 turns = []
-                for turn in history[-3:]:
-                    r = "User" if turn.get("role") == "user" else "Assistant"
-                    turns.append(f"{r}: {turn.get('content', '').strip()}")
+                for turn in history[-6:]:
+                    content = turn.get("content", "").strip()
+                    if content:
+                        r = "User" if turn.get("role") == "user" else "Assistant"
+                        turns.append(f"{r}: {content}")
                 turns.append(f"User: {prompt.strip()}\nAssistant:")
                 prompt_str = "\n".join(turns)
             else:
@@ -418,9 +422,11 @@ class ModelService:
         else:
             if history:
                 turns = []
-                for turn in history[-2:]:
-                    r = "User" if turn.get("role") == "user" else "Assistant"
-                    turns.append(f"{r}: {turn.get('content', '').strip()}")
+                for turn in history[-4:]:
+                    content = turn.get("content", "").strip()
+                    if content:
+                        r = "User" if turn.get("role") == "user" else "Assistant"
+                        turns.append(f"{r}: {content}")
                 turns.append(f"User: {prompt.strip()}\nAssistant:")
                 prompt_str = "\n".join(turns)
             else:

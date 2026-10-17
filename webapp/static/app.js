@@ -283,6 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sessions.forEach((s) => {
       const item = document.createElement("div");
+      item.dataset.id = s.id;
       item.className = `session-item ${s.id === currentSessionId ? "active" : ""}`;
       item.innerHTML = `
         <span class="session-title-text" title="${s.title}">${s.title}</span>
@@ -302,28 +303,43 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  async function switchSession(sessionId) {
-    currentSessionId = sessionId;
-    localStorage.setItem("nanogpt_session_id", sessionId);
-    loadSessions();
-
+  async function loadSessionMessages(sessionId) {
+    if (!sessionId) return;
     try {
       const res = await fetch(`/api/sessions/${sessionId}`);
       if (!res.ok) return;
       const data = await res.json();
 
       messagesStream.innerHTML = "";
-      if (welcomeCard) messagesStream.appendChild(welcomeCard);
+      if (welcomeCard) {
+        if (data.messages && data.messages.length > 0) {
+          welcomeCard.style.display = "none";
+        } else {
+          welcomeCard.style.display = "block";
+          messagesStream.appendChild(welcomeCard);
+        }
+      }
 
-      data.messages.forEach((msg) => {
-        appendMessage(msg.role, msg.content, {
-          tokens: msg.meta ? msg.meta.tokens : undefined,
-          device: msg.meta ? msg.meta.device : undefined
+      if (data.messages) {
+        data.messages.forEach((msg) => {
+          appendMessage(msg.role, msg.content, {
+            tokens: msg.meta ? msg.meta.tokens : undefined,
+            device: msg.meta ? msg.meta.device : undefined
+          });
         });
-      });
+      }
     } catch (err) {
       console.error("Failed to load session messages:", err);
     }
+  }
+
+  async function switchSession(sessionId) {
+    currentSessionId = sessionId;
+    localStorage.setItem("nanogpt_session_id", sessionId);
+    document.querySelectorAll(".session-item").forEach((el) => {
+      el.classList.toggle("active", el.dataset.id === sessionId);
+    });
+    await loadSessionMessages(sessionId);
   }
 
   async function startNewSession() {
@@ -864,5 +880,9 @@ ${res.error ? res.error : res.output}
 
   // Initial fetch
   refreshStatus();
-  loadSessions();
+  loadSessions().then(() => {
+    if (currentSessionId) {
+      loadSessionMessages(currentSessionId);
+    }
+  });
 });

@@ -147,8 +147,8 @@ async def chat(request: ChatRequest):
         title=request.message[:28] + ("..." if len(request.message) > 28 else "")
     )
     
-    # Fetch recent history for memory context
-    history = db.get_session_messages(session_id, limit=6)
+    # Fetch recent history for memory context (last 16 messages = 8 conversational turns)
+    history = db.get_session_messages(session_id, limit=16)
     
     # Save user message to database
     db.add_message(session_id, "user", request.message)

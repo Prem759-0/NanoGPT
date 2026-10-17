@@ -79,10 +79,14 @@ class Database:
             cursor = conn.execute(
                 """
                 SELECT id, session_id, role, content, meta_json, timestamp 
-                FROM messages 
-                WHERE session_id = ? 
+                FROM (
+                    SELECT id, session_id, role, content, meta_json, timestamp 
+                    FROM messages 
+                    WHERE session_id = ? 
+                    ORDER BY id DESC 
+                    LIMIT ?
+                ) 
                 ORDER BY id ASC
-                LIMIT ?
                 """,
                 (session_id, limit)
             )
