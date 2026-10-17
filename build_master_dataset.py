@@ -1,0 +1,444 @@
+import json
+import re
+
+def normalize_key(text: str) -> str:
+    return re.sub(r"\W+", " ", text.lower()).strip()
+
+raw_dataset = [
+  # Block 1
+  {
+    "instruction": "Write a Python function to check whether an integer is prime.",
+    "response": "def is_prime(n: int) -> bool:\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True"
+  },
+  {
+    "instruction": "Write a Python function that returns the factorial of a non-negative integer.",
+    "response": "def factorial(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    result = 1\n    for i in range(2, n + 1):\n        result *= i\n    return result"
+  },
+  {
+    "instruction": "Explain the difference between a Python list and a tuple.",
+    "response": "A list is mutable, meaning its elements can be added, removed, or changed after creation. A tuple is immutable, meaning its structure cannot be modified after creation. Lists use square brackets, such as [1, 2, 3], while tuples commonly use parentheses, such as (1, 2, 3). Both preserve order and can contain duplicate values."
+  },
+  {
+    "instruction": "Write a Python function to reverse a string without using reversed().",
+    "response": "def reverse_string(text: str) -> str:\n    return text[::-1]"
+  },
+  {
+    "instruction": "Find and fix the bug in this code: numbers = [1, 2, 3]; print(numbers[3]).",
+    "response": "The code raises IndexError because list indices start at 0. The valid indices are 0, 1, and 2. To print the last element, use:\n\nnumbers = [1, 2, 3]\nprint(numbers[2])\n\nOutput:\n3"
+  },
+  {
+    "instruction": "Write a Python function that counts the occurrences of each word in a string.",
+    "response": "from collections import Counter\nimport re\n\ndef count_words(text: str) -> dict[str, int]:\n    words = re.findall(r\"\\b\\w+\\b\", text.lower())\n    return dict(Counter(words))"
+  },
+  {
+    "instruction": "Explain binary search and state its time complexity.",
+    "response": "Binary search finds a target in a sorted sequence by repeatedly examining the middle element and discarding half of the remaining search range. It runs in O(log n) time because the search interval is halved at each step. The iterative implementation uses O(1) auxiliary space."
+  },
+  {
+    "instruction": "Implement iterative binary search in Python.",
+    "response": "def binary_search(items: list[int], target: int) -> int:\n    left, right = 0, len(items) - 1\n    while left <= right:\n        mid = left + (right - left) // 2\n        if items[mid] == target:\n            return mid\n        if items[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1"
+  },
+  {
+    "instruction": "Write a Python function to determine whether a string is a palindrome, ignoring case and non-alphanumeric characters.",
+    "response": "def is_palindrome(text: str) -> bool:\n    cleaned = ''.join(ch.lower() for ch in text if ch.isalnum())\n    return cleaned == cleaned[::-1]"
+  },
+  {
+    "instruction": "Explain the difference between == and is in Python.",
+    "response": "The == operator checks whether two objects have equal values. The is operator checks whether two references point to the same object. For example, [1, 2] == [1, 2] is True, but two separately created lists with those values are not necessarily identical. Use is None to check whether a value is None."
+  },
+  {
+    "instruction": "Write a Python function that returns the nth Fibonacci number using iteration, where F(0) = 0 and F(1) = 1.",
+    "response": "def fibonacci(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a"
+  },
+  {
+    "instruction": "Debug this Python code: for i in range(5): print(i) prints 1 through 5.",
+    "response": "The premise is incorrect: range(5) produces 0, 1, 2, 3, and 4. To print 1 through 5, use:\n\nfor i in range(1, 6):\n    print(i)"
+  },
+  {
+    "instruction": "Write a Python function to remove duplicates from a list while preserving the original order.",
+    "response": "def remove_duplicates(items: list) -> list:\n    return list(dict.fromkeys(items))\n\nThis approach works when the elements are hashable."
+  },
+  {
+    "instruction": "Explain what a Python dictionary is and provide an example.",
+    "response": "A dictionary stores key-value pairs and allows efficient lookup by key. Keys must be hashable and unique. Example:\n\nstudent = {'name': 'Asha', 'age': 20}\nprint(student['name'])\n\nOutput:\nAsha"
+  },
+  {
+    "instruction": "Write a Python function that finds the largest number in a non-empty list without using max().",
+    "response": "def largest_number(numbers: list[float]) -> float:\n    if not numbers:\n        raise ValueError('numbers must not be empty')\n    largest = numbers[0]\n    for number in numbers[1:]:\n        if number > largest:\n            largest = number\n    return largest"
+  },
+  {
+    "instruction": "What is the difference between a syntax error and a runtime error?",
+    "response": "A syntax error occurs when Python cannot parse code because its grammar is invalid, such as an unclosed parenthesis. A runtime error occurs while validly parsed code executes, such as dividing an integer by zero. Syntax errors must be corrected before the affected code can execute."
+  },
+  {
+    "instruction": "Implement a Python function that returns the greatest common divisor of two integers.",
+    "response": "def gcd(a: int, b: int) -> int:\n    a, b = abs(a), abs(b)\n    while b:\n        a, b = b, a % b\n    return a"
+  },
+  {
+    "instruction": "Explain the purpose of a try-except block in Python.",
+    "response": "A try-except block lets a program handle specified exceptions instead of terminating unexpectedly. Code that may raise an exception goes inside try, and matching recovery logic goes inside except. Catch specific exception types whenever possible. For example:\n\ntry:\n    value = int(input('Enter an integer: '))\nexcept ValueError:\n    print('Invalid integer.')"
+  },
+  {
+    "instruction": "Write a Python function to sort a list of dictionaries by the age key in ascending order.",
+    "response": "def sort_by_age(people: list[dict]) -> list[dict]:\n    return sorted(people, key=lambda person: person['age'])"
+  },
+  {
+    "instruction": "What is Big O notation?",
+    "response": "Big O notation describes an upper bound on how an algorithm's resource requirements grow with input size, commonly time or memory. For example, O(1) describes constant growth, O(n) linear growth, and O(n^2) quadratic growth. It helps compare scalability without relying solely on machine-specific timings."
+  },
+  {
+    "instruction": "Write a Python function that checks whether two strings are anagrams, ignoring case and spaces.",
+    "response": "from collections import Counter\n\ndef are_anagrams(first: str, second: str) -> bool:\n    normalize = lambda s: ''.join(s.lower().split())\n    return Counter(normalize(first)) == Counter(normalize(second))"
+  },
+  {
+    "instruction": "Explain why this code fails: x = '10'; print(x + 5).",
+    "response": "The code raises TypeError because x is a string and 5 is an integer. Python does not automatically convert the string to a number for addition. If numeric addition is intended, use:\n\nx = '10'\nprint(int(x) + 5)\n\nOutput:\n15"
+  },
+  {
+    "instruction": "Implement a stack in Python using a list.",
+    "response": "class Stack:\n    def __init__(self):\n        self._items = []\n\n    def push(self, item):\n        self._items.append(item)\n\n    def pop(self):\n        if not self._items:\n            raise IndexError('pop from empty stack')\n        return self._items.pop()\n\n    def peek(self):\n        if not self._items:\n            raise IndexError('peek from empty stack')\n        return self._items[-1]\n\n    def is_empty(self) -> bool:\n        return not self._items"
+  },
+  {
+    "instruction": "What is the difference between a stack and a queue?",
+    "response": "A stack follows last-in, first-out (LIFO): the most recently added item is removed first. A queue follows first-in, first-out (FIFO): the earliest added item is removed first. Stacks are useful for undo operations and function-call management, while queues are useful for scheduling and breadth-first search."
+  },
+  {
+    "instruction": "Write a Python function that performs breadth-first search on a graph represented by an adjacency dictionary.",
+    "response": "from collections import deque\n\ndef bfs(graph: dict, start) -> list:\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbor in graph.get(node, []):\n            if neighbor not in visited:\n                visited.add(neighbor)\n                queue.append(neighbor)\n    return order"
+  },
+  {
+    "instruction": "Write a Python function that calculates the sum of the digits of a non-negative integer.",
+    "response": "def digit_sum(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    total = 0\n    while n:\n        total += n % 10\n        n //= 10\n    return total"
+  },
+  {
+    "instruction": "What is a Python generator?",
+    "response": "A generator produces values lazily rather than storing every result in memory at once. Generator functions use yield to produce values and resume execution when the next value is requested. They are useful for large datasets and streaming computations."
+  },
+  {
+    "instruction": "Write a generator that yields positive integers from 1 through n.",
+    "response": "def positive_numbers(n: int):\n    for value in range(1, n + 1):\n        yield value"
+  },
+  {
+    "instruction": "Find the bug in this code: def add(a, b): return a - b. The function should add two numbers.",
+    "response": "The function uses subtraction instead of addition. Correct implementation:\n\ndef add(a, b):\n    return a + b\n\nFor example, add(3, 4) returns 7."
+  },
+  {
+    "instruction": "Explain the difference between a shallow copy and a deep copy in Python.",
+    "response": "A shallow copy creates a new outer container but retains references to nested objects. A deep copy recursively copies nested objects as well. Changes to a shared nested object can affect both shallow-copied structures. The copy module provides copy.copy() and copy.deepcopy() for these operations."
+  },
+  {
+    "instruction": "Write a Python function that merges two dictionaries, with values from the second dictionary taking precedence.",
+    "response": "def merge_dicts(first: dict, second: dict) -> dict:\n    return {**first, **second}"
+  },
+  {
+    "instruction": "What is recursion? Give a Python example that computes a factorial.",
+    "response": "Recursion occurs when a function calls itself to solve smaller instances of a problem. A recursive factorial function is:\n\ndef factorial(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\n\nThe base case stops recursion when n is 0 or 1."
+  },
+  {
+    "instruction": "Write a Python function that returns all even numbers in a list.",
+    "response": "def even_numbers(numbers: list[int]) -> list[int]:\n    return [number for number in numbers if number % 2 == 0]"
+  },
+  {
+    "instruction": "What is the purpose of Python's if __name__ == '__main__' condition?",
+    "response": "It checks whether a Python file is being executed as the main program rather than imported as a module. Code inside this condition typically contains the program's entry point, such as argument parsing or calls to main()."
+  },
+  {
+    "instruction": "Write a Python function to safely divide two numbers and reject division by zero.",
+    "response": "def divide(a: float, b: float) -> float:\n    if b == 0:\n        raise ZeroDivisionError('division by zero is not allowed')\n    return a / b"
+  },
+  {
+    "instruction": "Explain the difference between a parameter and an argument in Python.",
+    "response": "A parameter is a variable named in a function definition. An argument is the actual value supplied when the function is called. In def greet(name), name is a parameter; in greet('Maya'), 'Maya' is an argument."
+  },
+  {
+    "instruction": "Implement a Python function to find the first non-repeating character in a string. Return None if none exists.",
+    "response": "from collections import Counter\n\ndef first_unique_character(text: str) -> str | None:\n    counts = Counter(text)\n    for character in text:\n        if counts[character] == 1:\n            return character\n    return None"
+  },
+  {
+    "instruction": "What is a hash table, and what is its average lookup complexity?",
+    "response": "A hash table stores key-value pairs by applying a hash function to keys to determine where values should be stored. Under typical assumptions, lookup, insertion, and deletion take average O(1) time. Collisions and poor hash distributions can make operations slower, with worst-case lookup reaching O(n) in a simple implementation."
+  },
+  {
+    "instruction": "Write a Python function to validate whether a string contains a valid positive integer representation.",
+    "response": "def is_positive_integer(text: str) -> bool:\n    return bool(text) and text.isascii() and text.isdecimal() and int(text) > 0"
+  },
+  {
+    "instruction": "What is the capital of Japan?",
+    "response": "Tokyo is the capital of Japan and the country's principal political and administrative center."
+  },
+  {
+    "instruction": "Explain the difference between weather and climate.",
+    "response": "Weather describes short-term atmospheric conditions, such as temperature, rainfall, and wind on a particular day. Climate describes long-term patterns and averages of weather in a region, commonly assessed over periods of about 30 years."
+  },
+
+  # Block 2 (Rich seeds & Advanced CS/Python)
+  {
+    "instruction": "Write a Python function that flattens an arbitrarily nested list.",
+    "response": "def flatten(obj):\n    \"\"\"Recursively flatten nested lists/tuples into a single list.\"\"\"\n    out = []\n    for item in obj:\n        if isinstance(item, (list, tuple)):\n            out.extend(flatten(item))\n        else:\n            out.append(item)\n    return out"
+  },
+  {
+    "instruction": "Write a memoization decorator in Python that supports keyword arguments.",
+    "response": "import functools\n\ndef memoize(fn):\n    cache = {}\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        key = (args, tuple(sorted(kwargs.items())))\n        if key not in cache:\n            cache[key] = fn(*args, **kwargs)\n        return cache[key]\n    wrapper.cache = cache\n    return wrapper"
+  },
+  {
+    "instruction": "How do I read a very large CSV file in Python without loading it all into memory?",
+    "response": "import csv\nfrom typing import Iterator\n\ndef iter_batches(path: str, batch_size: int = 10_000) -> Iterator[list]:\n    with open(path, newline='', encoding='utf-8') as fh:\n        reader = csv.DictReader(fh)\n        batch = []\n        for row in reader:\n            batch.append(row)\n            if len(batch) >= batch_size:\n                yield batch\n                batch = []\n        if batch:\n            yield batch"
+  },
+  {
+    "instruction": "Write a Python retry decorator with exponential backoff.",
+    "response": "import time, functools, random\n\ndef retry(times=3, base_delay=0.1, exceptions=(Exception,)):\n    def deco(fn):\n        @functools.wraps(fn)\n        def wrapper(*args, **kwargs):\n            for attempt in range(1, times + 1):\n                try:\n                    return fn(*args, **kwargs)\n                except exceptions:\n                    if attempt == times:\n                        raise\n                    delay = base_delay * 2 ** (attempt - 1)\n                    time.sleep(delay + random.random() * 0.01)\n        return wrapper\n    return deco"
+  },
+  {
+    "instruction": "Implement a thread-safe counter class in Python.",
+    "response": "import threading\n\nclass Counter:\n    def __init__(self, start: int = 0) -> None:\n        self._value = start\n        self._lock = threading.Lock()\n\n    def increment(self, by: int = 1) -> int:\n        with self._lock:\n            self._value += by\n            return self._value\n\n    @property\n    def value(self) -> int:\n        with self._lock:\n            return self._value"
+  },
+  {
+    "instruction": "Write a Python context manager that times a block of code.",
+    "response": "import time\nfrom contextlib import contextmanager\n\n@contextmanager\ndef timer(label: str = ''):\n    start = time.perf_counter()\n    try:\n        yield\n    finally:\n        elapsed = time.perf_counter() - start\n        tag = label + ': ' if label else ''\n        print(f'{tag}{elapsed * 1000:.2f} ms')"
+  },
+  {
+    "instruction": "Write a Python function that recursively merges two dictionaries.",
+    "response": "def deep_merge(a: dict, b: dict) -> dict:\n    \"\"\"Recursively merge b into a. Inputs are not mutated.\"\"\"\n    out = dict(a)\n    for k, v in b.items():\n        if k in out and isinstance(out[k], dict) and isinstance(v, dict):\n            out[k] = deep_merge(out[k], v)\n        else:\n            out[k] = v\n    return out"
+  },
+  {
+    "instruction": "How do I group a list of objects by a key in Python?",
+    "response": "from collections import defaultdict\n\ndef group_by(items, key):\n    groups = defaultdict(list)\n    for item in items:\n        groups[key(item)].append(item)\n    return dict(groups)\n\n# usage\ngroup_by(people, key=lambda p: p['city'])"
+  },
+  {
+    "instruction": "Implement an LRU cache in Python from scratch.",
+    "response": "from collections import OrderedDict\n\nclass LRUCache:\n    def __init__(self, capacity: int) -> None:\n        self.capacity = capacity\n        self._data = OrderedDict()\n\n    def get(self, key):\n        if key not in self._data:\n            return -1\n        self._data.move_to_end(key)\n        return self._data[key]\n\n    def put(self, key, value) -> None:\n        if key in self._data:\n            self._data.move_to_end(key)\n        self._data[key] = value\n        if len(self._data) > self.capacity:\n            self._data.popitem(last=False)"
+  },
+  {
+    "instruction": "Implement Dijkstra's shortest path algorithm in Python.",
+    "response": "import heapq\n\ndef dijkstra(graph, source):\n    \"\"\"graph: {node: [(neighbor, weight), ...]} -> {node: distance}\"\"\"\n    dist = {source: 0}\n    pq = [(0, source)]\n    visited = set()\n    while pq:\n        d, u = heapq.heappop(pq)\n        if u in visited:\n            continue\n        visited.add(u)\n        for v, w in graph.get(u, ()):\n            nd = d + w\n            if nd < dist.get(v, float('inf')):\n                dist[v] = nd\n                heapq.heappush(pq, (nd, v))\n    return dist"
+  },
+  {
+    "instruction": "Implement topological sort using Kahn's algorithm in Python.",
+    "response": "from collections import deque\n\ndef topo_sort(n, edges):\n    \"\"\"edges: [(u, v)] meaning u must come before v. None if a cycle exists.\"\"\"\n    adj = [[] for _ in range(n)]\n    indeg = [0] * n\n    for u, v in edges:\n        adj[u].append(v)\n        indeg[v] += 1\n    q = deque(i for i in range(n) if indeg[i] == 0)\n    order = []\n    while q:\n        u = q.popleft()\n        order.append(u)\n        for v in adj[u]:\n            indeg[v] -= 1\n            if indeg[v] == 0:\n                q.append(v)\n    return order if len(order) == n else None"
+  },
+  {
+    "instruction": "Write a Python function that returns the maximum of every sliding window of size k.",
+    "response": "from collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()\n    out = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            out.append(nums[dq[0]])\n    return out"
+  },
+  {
+    "instruction": "Implement a union-find (disjoint set) data structure with path compression and union by rank.",
+    "response": "class DSU:\n    def __init__(self, n: int) -> None:\n        self.parent = list(range(n))\n        self.rank = [0] * n\n\n    def find(self, x: int) -> int:\n        while self.parent[x] != x:\n            self.parent[x] = self.parent[self.parent[x]]\n            x = self.parent[x]\n        return x\n\n    def union(self, a: int, b: int) -> bool:\n        ra, rb = self.find(a), self.find(b)\n        if ra == rb:\n            return False\n        if self.rank[ra] < self.rank[rb]:\n            ra, rb = rb, ra\n        self.parent[rb] = ra\n        if self.rank[ra] == self.rank[rb]:\n            self.rank[ra] += 1\n        return True"
+  },
+  {
+    "instruction": "Implement the Knuth-Morris-Pratt string search algorithm in Python.",
+    "response": "def kmp_search(text: str, pattern: str):\n    if not pattern:\n        return []\n    lps = [0] * len(pattern)\n    j = 0\n    for i in range(1, len(pattern)):\n        while j and pattern[i] != pattern[j]:\n            j = lps[j - 1]\n        if pattern[i] == pattern[j]:\n            j += 1\n            lps[i] = j\n    res, j = [], 0\n    for i, ch in enumerate(text):\n        while j and ch != pattern[j]:\n            j = lps[j - 1]\n        if ch == pattern[j]:\n            j += 1\n        if j == len(pattern):\n            res.append(i - j + 1)\n            j = lps[j - 1]\n    return res"
+  },
+  {
+    "instruction": "Use binary search on the answer to solve the 'ship packages within D days' problem.",
+    "response": "def ship_within_days(weights, days):\n    def feasible(cap):\n        needed, cur = 1, 0\n        for w in weights:\n            if cur + w > cap:\n                needed += 1\n                cur = 0\n            cur += w\n        return needed <= days\n\n    lo, hi = max(weights), sum(weights)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if feasible(mid):\n            hi = mid\n        else:\n            lo = mid + 1\n    return lo"
+  },
+  {
+    "instruction": "This function returns a list that keeps growing across calls. Explain the bug and fix it.\n\ndef add_item(x, bucket=[]):\n    bucket.append(x)\n    return bucket",
+    "response": "The default argument `bucket=[]` is evaluated once at function definition time, so every call that omits `bucket` shares and mutates the same list object.\n\nFix with a sentinel:\n\ndef add_item(x, bucket=None):\n    if bucket is None:\n        bucket = []\n    bucket.append(x)\n    return bucket\n\nRule: never use a mutable object as a default argument."
+  },
+  {
+    "instruction": "Why does this print [3, 3, 3, 3] instead of [0, 1, 2, 3]?\n\nfns = [lambda: i for i in range(4)]\nprint([f() for f in fns])",
+    "response": "Late binding. A lambda closes over the *variable* `i`, not its value at creation time. By the time the lambdas run, the loop has finished and `i == 3`.\n\nFix by binding the current value as a default argument:\n\nfns = [lambda i=i: i for i in range(4)]\nprint([f() for f in fns])   # [0, 1, 2, 3]\n\nOr use functools.partial."
+  },
+  {
+    "instruction": "This is supposed to remove all even numbers but it skips some. Why?\n\nnums = [1, 2, 2, 3, 4, 4, 5]\nfor n in nums:\n    if n % 2 == 0:\n        nums.remove(n)",
+    "response": "Mutating a list while iterating shifts the indices underneath the iterator, so elements get skipped.\n\nFix by building a new list:\n\nnums = [n for n in nums if n % 2 != 0]\n\nOr iterate over a copy:\n\nfor n in nums[:]:\n    if n % 2 == 0:\n        nums.remove(n)"
+  },
+  {
+    "instruction": "This binary search raises TypeError. What is wrong?\n\ndef bsearch(xs, target):\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = (lo + hi) / 2\n        if xs[mid] == target:\n            return mid\n        elif xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1",
+    "response": "In Python 3 `/` is true division and always returns a float, so `mid` is e.g. 2.0 and `xs[mid]` raises `TypeError: list indices must be integers or slices, not float`.\n\nUse floor division:\n\n        mid = (lo + hi) // 2\n\nBonus: `lo + (hi - lo) // 2` avoids overflow in fixed-width-integer languages."
+  },
+  {
+    "instruction": "Why are all rows of this grid modified when I only change one?\n\ngrid = [[0] * 3] * 3\ngrid[0][0] = 1",
+    "response": "`[[0] * 3] * 3` repeats the *same inner list object* three times, so grid[0], grid[1] and grid[2] are all references to one list.\n\nFix by building independent rows with a comprehension:\n\ngrid = [[0] * 3 for _ in range(3)]\ngrid[0][0] = 1   # only the first row changes\n\nThe same trap applies to copy.copy() on nested structures; use copy.deepcopy() there."
+  },
+  {
+    "instruction": "Why is 0.1 + 0.2 == 0.3 False in Python?",
+    "response": "IEEE-754 binary floating point cannot represent 0.1, 0.2 or 0.3 exactly, so 0.1 + 0.2 evaluates to 0.30000000000000004.\n\nCompare with a tolerance:\n\nimport math\nmath.isclose(0.1 + 0.2, 0.3, rel_tol=1e-9)   # True\n\nUse decimal.Decimal or fractions.Fraction when exact decimal arithmetic is required (money, etc.)."
+  },
+  {
+    "instruction": "Why does modifying a class attribute affect every instance in this code?\n\nclass C:\n    items = []\n\na = C()\nb = C()\na.items.append(1)\nprint(b.items)",
+    "response": "items is a class attribute, so a.items resolves to the same list object shared by every instance. Mutating it in place is visible everywhere.\n\nFix by creating a per-instance attribute in __init__:\n\nclass C:\n    def __init__(self):\n        self.items = []\n\nClass attributes are fine for immutable defaults or intentional shared state."
+  },
+  {
+    "instruction": "This raises KeyError even though I check the key first. Why?\n\nif cfg['retries']:\n    ...\nif 'retries' not in cfg:\n    cfg['retries'] = 3",
+    "response": "The lookup happens before the guard, so the missing key raises KeyError immediately. Check first, or use dict.get with a default:\n\nif 'retries' not in cfg:\n    cfg['retries'] = 3\n\nretries = cfg.get('retries', 3)\n\nFor nested configs, use a defaultdict or chain of .get() calls, and consider setdefault() for one-shot defaults."
+  },
+  {
+    "instruction": "What is the GIL and how does it affect Python concurrency?",
+    "response": "The Global Interpreter Lock is a mutex in CPython that allows only one thread to execute Python bytecode at a time.\n\nConsequences:\n- Threads do NOT provide CPU-bound parallelism. Use multiprocessing / ProcessPoolExecutor, or native extensions that release the GIL (NumPy).\n- Threads DO help I/O-bound work, because the GIL is released during blocking I/O and in many C extensions.\n- asyncio is a single-threaded cooperative alternative for high-concurrency I/O.\n\nPython 3.13+ ships an experimental free-threaded build (PEP 703) that removes the GIL."
+  },
+  {
+    "instruction": "When should I use a list vs a tuple in Python?",
+    "response": "list - mutable, dynamic size. Use for homogeneous collections you will modify (append/pop/sort). Not hashable, so it cannot be a dict key.\n\ntuple - immutable, fixed size. Use for heterogeneous records like a point (x, y), for returning multiple values, and as dict/set keys because tuples are hashable. Tuples are slightly cheaper and their immutability documents intent.\n\nRule of thumb: immutability by default, mutate only when you need to."
+  },
+  {
+    "instruction": "Explain the difference between assignment, shallow copy, and deep copy in Python.",
+    "response": "Assignment (b = a) binds a new name to the same object - no copy at all.\nShallow copy (copy.copy(a), a[:], a.copy(), dict(a)) creates a new outer container but the inner objects are shared. Mutating a nested list through the copy is visible in the original.\nDeep copy (copy.deepcopy(a)) recursively copies everything, so the structures are fully independent. Slower; handles cycles and custom objects via __deepcopy__.\n\nimport copy\nb = a                 # same object\nc = copy.copy(a)      # new outer, shared inner\nd = copy.deepcopy(a)  # fully independent"
+  },
+  {
+    "instruction": "Is dictionary insertion order guaranteed in Python?",
+    "response": "Yes. As of Python 3.7 (and as a CPython 3.6 implementation detail), dicts preserve insertion order - iteration, keys(), values() and items() follow the order keys were first inserted. Re-assigning an existing key keeps its position; deleting and re-inserting moves it to the end.\n\ncollections.OrderedDict is now only needed for order-sensitive operations like move_to_end() and popitem(last=True), or for explicitness.\n\nSets remain unordered."
+  },
+  {
+    "instruction": "What is the difference between __new__ and __init__ in Python?",
+    "response": "__new__ is the allocator: a static method that creates and returns the instance, called first. __init__ is the initializer: an instance method that configures the already-created object and must return None.\n\nOverride __new__ when you need to control instance creation - immutable subclasses (int, str, tuple), singletons, or factories:\n\nclass Singleton:\n    _inst = None\n    def __new__(cls, *a, **kw):\n        if cls._inst is None:\n            cls._inst = super().__new__(cls)\n        return cls._inst"
+  },
+  {
+    "instruction": "When should I use a generator instead of a list in Python?",
+    "response": "Use a generator when you only need to iterate once and the data is large or produced lazily - generators are O(1) memory and stream values on demand.\n\nUse a list when you need random access, len(), multiple passes, slicing, or mutation.\n\ndef read_lines(path):\n    with open(path) as fh:\n        for line in fh:\n            yield line.rstrip()\n\nGenerators are single-use: a second iteration yields nothing."
+  },
+  {
+    "instruction": "Why should a decorator use functools.wraps?",
+    "response": "Without @functools.wraps, the wrapper replaces the original function's metadata - __name__, __doc__, __module__, __qualname__, __dict__ - which breaks introspection, help(), logging, pickling and some frameworks.\n\nimport functools\n\ndef logged(fn):\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        print(f'calling {fn.__name__}')\n        return fn(*args, **kwargs)\n    return wrapper\n\nfunctools.wraps also sets wrapper.__wrapped__ = fn."
+  },
+  {
+    "instruction": "Explain the try/except/else/finally control flow in Python.",
+    "response": "try - code that may raise.\nexcept - handles matching exceptions; the first matching clause wins, so order from most specific to most general.\nelse - runs only if the try block completed without raising; keeps the try block minimal.\nfinally - always runs, even on return, break or an unhandled exception. Used for cleanup.\n\ntry:\n    data = load(path)\nexcept FileNotFoundError:\n    data = {}\nexcept (ValueError, KeyError) as exc:\n    log(exc)\n    raise\nelse:\n    validate(data)\nfinally:\n    close_handles()"
+  },
+  {
+    "instruction": "How do I memoize a function in Python with a bounded cache?",
+    "response": "Use functools.lru_cache (or functools.cache for an unbounded cache in 3.9+):\n\nfrom functools import lru_cache\n\n@lru_cache(maxsize=1024)\ndef fib(n: int) -> int:\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n\nfib.cache_info()\nfib.cache_clear()\n\nArguments must be hashable. For methods the cache is keyed on self, which keeps instances alive - prefer a per-instance cache or functools.cached_property."
+  },
+  {
+    "instruction": "Write a context manager class in Python using __enter__ and __exit__.",
+    "response": "class ManagedFile:\n    def __init__(self, path: str, mode: str = 'r'):\n        self.path = path\n        self.mode = mode\n        self.fh = None\n\n    def __enter__(self):\n        self.fh = open(self.path, self.mode, encoding='utf-8')\n        return self.fh\n\n    def __exit__(self, exc_type, exc, tb):\n        if self.fh is not None:\n            self.fh.close()\n        return False  # do not suppress exceptions\n\nwith ManagedFile('data.txt') as fh:\n    print(fh.read())"
+  },
+  {
+    "instruction": "Show how to use dataclasses in Python and when they beat plain classes.",
+    "response": "from dataclasses import dataclass\n\n@dataclass(order=True, frozen=True)\nclass Point:\n    x: float\n    y: float\n    tags: tuple = ()\n\n__init__, __repr__, __eq__ (and __lt__ with order=True) are generated. frozen=True makes instances immutable and hashable; slots=True (3.10+) reduces memory.\n\nUse a dataclass for plain data containers. Use a regular class when you need custom validation, heavy behaviour, or non-trivial __init__ logic."
+  },
+  {
+    "instruction": "How do I run multiple coroutines concurrently and collect their results in asyncio?",
+    "response": "import asyncio\n\nasync def main():\n    results = await asyncio.gather(\n        fetch(1),\n        fetch(2),\n        fetch(3),\n        return_exceptions=True,\n    )\n    return results\n\nasyncio.run(main())\n\nNotes:\n- gather preserves input order in the result list.\n- With return_exceptions=False (default) the first exception propagates and siblings are cancelled.\n- For bounded concurrency use asyncio.Semaphore or asyncio.TaskGroup (3.11+)."
+  },
+  {
+    "instruction": "How do I sort a list of dictionaries by two keys in Python?",
+    "response": "Use a tuple key; Python sorts tuples element by element and the sort is stable:\n\nrows.sort(key=lambda r: (r['age'], r['name']))\n\nFor descending on one field while ascending on another, sort twice (stable) or negate numeric keys:\n\nrows.sort(key=lambda r: r['name']) # secondary\nrows.sort(key=lambda r: -r['age']) # primary\n\noperator.itemgetter('age', 'name') is a faster alternative when keys are plain fields."
+  },
+  {
+    "instruction": "Write a Python function that returns the indices of the two numbers in a list summing to a target, in O(n) time.",
+    "response": "def two_sum(nums, target):\n    \"\"\"Return (i, j) with nums[i] + nums[j] == target, or None.\"\"\"\n    seen = {}\n    for i, x in enumerate(nums):\n        need = target - x\n        if need in seen:\n            return (seen[need], i)\n        seen[x] = i\n    return None"
+  },
+  {
+    "instruction": "Write a Python function to check whether a string of brackets is balanced.",
+    "response": "def is_balanced(s: str) -> bool:\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in s:\n        if ch in '([{':\n            stack.append(ch)\n        elif ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack"
+  },
+  {
+    "instruction": "Write a Python function that merges overlapping intervals.",
+    "response": "def merge_intervals(intervals):\n    if not intervals:\n        return []\n    intervals = sorted(intervals, key=lambda x: x[0])\n    merged = [list(intervals[0])]\n    for start, end in intervals[1:]:\n        if start <= merged[-1][1]:\n            merged[-1][1] = max(merged[-1][1], end)\n        else:\n            merged.append([start, end])\n    return [tuple(m) for m in merged]\n\nTime O(n log n) for the sort, O(n) for the sweep."
+  },
+  {
+    "instruction": "Implement quickselect to find the k-th smallest element in average O(n) time.",
+    "response": "import random\n\ndef quickselect(nums, k):\n    \"\"\"Return the k-th smallest element (0-indexed).\"\"\"\n    def partition(lo, hi):\n        pivot_idx = random.randint(lo, hi)\n        nums[pivot_idx], nums[hi] = nums[hi], nums[pivot_idx]\n        pivot, store = nums[hi], lo\n        for i in range(lo, hi):\n            if nums[i] < pivot:\n                nums[store], nums[i] = nums[i], nums[store]\n                store += 1\n        nums[store], nums[hi] = nums[hi], nums[store]\n        return store\n\n    lo, hi = 0, len(nums) - 1\n    while True:\n        p = partition(lo, hi)\n        if p == k:\n            return nums[p]\n        if p < k:\n            lo = p + 1\n        else:\n            hi = p - 1"
+  },
+  {
+    "instruction": "Write a BFS that returns a shortest path in an unweighted graph.",
+    "response": "from collections import deque\n\ndef shortest_path(graph, start, goal):\n    \"\"\"graph: {node: [neighbors]}. Returns the node list of a shortest path, or None.\"\"\"\n    if start == goal:\n        return [start]\n    prev = {start: None}\n    q = deque([start])\n    while q:\n        u = q.popleft()\n        for v in graph.get(u, ()):\n            if v in prev:\n                continue\n            prev[v] = u\n            if v == goal:\n                path = [v]\n                while prev[path[-1]] is not None:\n                    path.append(prev[path[-1]])\n                return path[::-1]\n            q.append(v)\n    return None"
+  },
+  {
+    "instruction": "Write a function that returns the k largest elements of a list using a heap.",
+    "response": "import heapq\n\ndef top_k(nums, k):\n    \"\"\"O(n log k) time, O(k) memory.\"\"\"\n    if k <= 0:\n        return []\n    return heapq.nlargest(k, nums)\n\n# Manual min-heap of size k:\ndef top_k_manual(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k:\n            heapq.heappush(heap, x)\n        elif x > heap[0]:\n            heapq.heapreplace(heap, x)\n    return sorted(heap, reverse=True)"
+  },
+  {
+    "instruction": "Implement merge sort in Python with O(n log n) time complexity.",
+    "response": "def merge_sort(xs: list[int]) -> list[int]:\n    if len(xs) <= 1:\n        return xs\n    mid = len(xs) // 2\n    left = merge_sort(xs[:mid])\n    right = merge_sort(xs[mid:])\n    out, i, j = [], 0, 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            out.append(left[i]); i += 1\n        else:\n            out.append(right[j]); j += 1\n    out.extend(left[i:])\n    out.extend(right[j:])\n    return out\n\n# Stable, O(n log n) worst case, O(n) auxiliary space."
+  },
+  {
+    "instruction": "Implement an in-place quicksort in Python with a randomized pivot.",
+    "response": "import random\n\ndef quicksort(xs):\n    def sort(lo, hi):\n        if lo >= hi:\n            return\n        p = random.randint(lo, hi)\n        xs[p], xs[hi] = xs[hi], xs[p]\n        pivot, store = xs[hi], lo\n        for i in range(lo, hi):\n            if xs[i] < pivot:\n                xs[store], xs[i] = xs[i], xs[store]\n                store += 1\n        xs[store], xs[hi] = xs[hi], xs[store]\n        sort(lo, store - 1)\n        sort(store + 1, hi)\n    sort(0, len(xs) - 1)\n    return xs\n\n# Average O(n log n); worst O(n^2) but randomization makes it unlikely."
+  },
+  {
+    "instruction": "Write a Python function that finds the longest palindromic substring.",
+    "response": "def longest_palindrome(s: str) -> str:\n    if not s:\n        return ''\n    start, end = 0, 0\n\n    def expand(l, r):\n        while l >= 0 and r < len(s) and s[l] == s[r]:\n            l -= 1\n            r += 1\n        return l + 1, r - 1\n\n    for i in range(len(s)):\n        for l, r in (expand(i, i), expand(i, i + 1)):\n            if r - l > end - start:\n                start, end = l, r\n    return s[start:end + 1]\n\n# O(n^2) time, O(1) auxiliary space."
+  },
+  {
+    "instruction": "How do I reverse a singly linked list in Python?",
+    "response": "class ListNode:\n    def __init__(self, val=0, nxt=None):\n        self.val = val\n        self.next = nxt\n\ndef reverse_list(head: ListNode | None) -> ListNode | None:\n    prev = None\n    cur = head\n    while cur:\n        nxt = cur.next\n        cur.next = prev\n        prev = cur\n        cur = nxt\n    return prev\n\n# O(n) time, O(1) space."
+  },
+  {
+    "instruction": "Write a Python function to compute the minimum number of coins needed to make an amount.",
+    "response": "def coin_change(coins: list[int], amount: int) -> int:\n    INF = float('inf')\n    dp = [0] + [INF] * amount\n    for a in range(1, amount + 1):\n        for c in coins:\n            if c <= a and dp[a - c] + 1 < dp[a]:\n                dp[a] = dp[a - c] + 1\n    return -1 if dp[amount] == INF else int(dp[amount])\n\n# O(amount * len(coins)) time, O(amount) space."
+  },
+  {
+    "instruction": "Write a Python function to find the length of the longest increasing subsequence.",
+    "response": "import bisect\n\ndef lis_length(nums: list[int]) -> int:\n    tails = []\n    for x in nums:\n        i = bisect.bisect_left(tails, x)\n        if i == len(tails):\n            tails.append(x)\n        else:\n            tails[i] = x\n    return len(tails)\n\n# O(n log n) time, O(n) space. tails[i] stores the smallest tail of an increasing subsequence of length i + 1."
+  },
+  {
+    "instruction": "Implement binary search in Python and explain the invariant.",
+    "response": "def binary_search(xs: list[int], target: int) -> int:\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = lo + (hi - lo) // 2\n        if xs[mid] == target:\n            return mid\n        if xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n\n# Invariant: the answer, if present, always lies in the inclusive range [lo, hi]. Each iteration halves the range, giving O(log n) time and O(1) space. Requires a sorted input."
+  },
+  {
+    "instruction": "How do I use the bisect module to maintain a sorted list efficiently?",
+    "response": "import bisect\n\nxs = [1, 3, 5, 7]\nbisect.insort(xs, 4)           # xs -> [1, 3, 4, 5, 7]\ni = bisect.bisect_left(xs, 5)  # first index where 5 could be inserted\nj = bisect.bisect_right(xs, 5) # index after existing 5s\n\n# left/right give the lower/upper bound. insort is O(n) because of the list shift, but the search is O(log n) - much faster than re-sorting for occasional inserts."
+  },
+  {
+    "instruction": "What is dynamic programming and how do I recognize a DP problem?",
+    "response": "DP solves problems that have (1) optimal substructure - the optimum is built from optima of subproblems - and (2) overlapping subproblems - the same subproblem recurs.\n\nRecognition signals: 'count the number of ways', 'minimum/maximum cost', 'is it possible', choices at each step, and a naive recursion that recomputes states.\n\nRecipe:\n1. Define the state precisely (what do the indices mean?).\n2. Write the recurrence.\n3. Identify base cases.\n4. Choose top-down (memoized recursion) or bottom-up (tabulation).\n5. Reduce space if only the last row/column is needed."
+  },
+  {
+    "instruction": "What is the difference between TCP and UDP?",
+    "response": "TCP is connection-oriented and reliable: a handshake establishes the connection, every segment is acknowledged and retransmitted if lost, and bytes arrive in order. It also provides flow control and congestion control. Used by HTTP, SSH, email.\n\nUDP is connectionless and unreliable: datagrams are sent with no handshake, acknowledgment, retransmission or ordering guarantee. Header is 8 bytes vs TCP's 20+, and there is no head-of-line blocking. Used by DNS, DHCP, VoIP, video streaming, online games - anything that prefers low latency over guaranteed delivery."
+  },
+  {
+    "instruction": "Explain recursion and why a base case is required.",
+    "response": "Recursion occurs when a function solves a problem by calling itself on a strictly smaller instance, then combining the results.\n\nA base case is the smallest instance solved directly without recursing. Without it, the recursion never terminates and Python raises RecursionError once it hits the default limit (usually 1000 frames).\n\ndef factorial(n):\n    if n <= 1: # base case\n        return 1\n    return n * factorial(n - 1) # recursive case"
+  },
+  {
+    "instruction": "How do I format strings in Python with f-strings, including alignment and number formatting?",
+    "response": "name, score, ratio = 'Ada', 42, 0.8734\n\nprint(f'{name}: {score}')      # Ada: 42\nprint(f'{score:>6}')            # right-align: '    42'\nprint(f'{name:<10}|')          # left-align:  'Ada       |'\nprint(f'{name:^10}|')          # center:      '   Ada    |'\nprint(f'{ratio:.2%}')          # percentage:  '87.34%'\nprint(f'{1234567:,}')          # comma separated: '1,234,567'\nprint(f'{3.14159:.3f}')        # decimals:    '3.142'\nprint(f'{score:08d}')          # zero-padded: '00000042'\nprint(f'{255:#x}')             # hex:         '0xff'\nprint(f'{score=}')             # debug:       'score=42'\n\n# f-strings are evaluated at runtime and are the fastest formatting option in CPython."
+  },
+
+  # Block 3 additions
+  {
+    "instruction": "Write a Python decorator that measures and prints the execution time of a function.",
+    "response": "import time\nfrom functools import wraps\n\ndef timed(func):\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        try:\n            return func(*args, **kwargs)\n        finally:\n            elapsed = time.perf_counter() - start\n            print(f\"{func.__name__} took {elapsed:.6f}s\")\n    return wrapper"
+  },
+  {
+    "instruction": "Write a generator function that yields the Fibonacci sequence indefinitely.",
+    "response": "def fib():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b"
+  },
+  {
+    "instruction": "Find the length of the longest substring without repeating characters.",
+    "response": "def longest_unique_substring(s: str) -> int:\n    last = {}\n    start = best = 0\n    for i, ch in enumerate(s):\n        if ch in last and last[ch] >= start:\n            start = last[ch] + 1\n        last[ch] = i\n        best = max(best, i - start + 1)\n    return best\n\n# Sliding window with last-seen indices. Time: O(n), Space: O(min(n, alphabet))."
+  },
+  {
+    "instruction": "Why does this code print 0 1 2 as expected only sometimes, and how do I fix it?\n\nfuncs = [lambda: i for i in range(3)]\nprint([f() for f in funcs])",
+    "response": "It prints [2, 2, 2]. The lambdas capture the variable `i`, not its value at creation time, and by the time they run `i` is 2. Bind the current value with a default argument:\n\nfuncs = [lambda i=i: i for i in range(3)]\nprint([f() for f in funcs])  # [0, 1, 2]"
+  },
+  {
+    "instruction": "My code raises 'TypeError: can only concatenate str (not \"int\") to str'. What is wrong?\n\nage = 25\nprint(\"I am \" + age + \" years old\")",
+    "response": "You cannot concatenate a string and an integer with `+`. Convert the number or use an f-string:\n\nage = 25\nprint(f\"I am {age} years old\")"
+  },
+  {
+    "instruction": "Explain why photosynthesis is important for life on Earth.",
+    "response": "Photosynthesis converts light energy into chemical energy stored in glucose, using carbon dioxide and water and releasing oxygen. It matters because it produces the oxygen most organisms breathe, forms the base of nearly every food chain, and removes carbon dioxide from the atmosphere. The fossil fuels we burn are also ancient products of photosynthesis."
+  },
+  {
+    "instruction": "What caused the French Revolution of 1789?",
+    "response": "Several factors combined: a severe fiscal crisis from war debt and an inefficient tax system, a rigid class structure in which the Third Estate bore most taxes yet had little power, food shortages and rising bread prices, and Enlightenment ideas about rights and popular sovereignty. The crisis led Louis XVI to call the Estates-General, which broke down and led to the formation of the National Assembly."
+  },
+  {
+    "instruction": "What is the difference between a stock and a bond?",
+    "response": "A stock is an ownership share in a company. Its value rises or falls with the company's performance, and holders may receive dividends. A bond is a loan to a company or government that pays fixed interest and returns the principal at maturity. Stocks generally offer higher potential returns with higher risk, while bonds usually offer more predictable income with lower risk."
+  }
+]
+
+# Deduplicate by normalized instruction
+seen = set()
+unique_data = []
+for item in raw_dataset:
+    k = normalize_key(item["instruction"])
+    if k not in seen:
+        seen.add(k)
+        unique_data.append(item)
+
+print(f"Total compiled unique high-grade records: {len(unique_data)}")
+
+with open("chatgpt_dataset.json", "w", encoding="utf-8") as f:
+    json.dump(unique_data, f, indent=2, ensure_ascii=False)
+
+with open("seeds.json", "w", encoding="utf-8") as f:
+    json.dump(unique_data, f, indent=2, ensure_ascii=False)
+
+print("Saved chatgpt_dataset.json and seeds.json successfully.")
