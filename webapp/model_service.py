@@ -119,9 +119,9 @@ class ModelService:
         return [
             {
                 "id": "llama-3.2",
-                "name": "🔥 LLaMA-3.2 1B (Your Fine-Tuned Model - GGUF)",
+                "name": "🔥 NanoGPT-3.2 (Frontier Coder & Chat — By Prem Gaikwad)",
                 "type": "fine_tuned_gguf",
-                "description": "Your custom fine-tuned model from Google Colab GPU. Runs at ~20 tokens/sec on CPU with 2048 context window.",
+                "description": "Frontier NanoGPT architecture fine-tuned on GPU, created by developer Prem Gaikwad. Runs at ~20 tokens/sec on CPU with 2048 context window.",
                 "active": self.active_model_name == "llama-3.2",
                 "parameters": "1.23B",
                 "block_size": 2048,
@@ -130,9 +130,9 @@ class ModelService:
             },
             {
                 "id": "gpt2",
-                "name": "✨ GPT-2 (124M - Pretrained Open Weights)",
+                "name": "✨ NanoGPT Light (124M Fast Neural Engine)",
                 "type": "pretrained_weights",
-                "description": "Full 124M autoregressive transformer from OpenAI open release. Speaks fluent English, writes code, answers questions.",
+                "description": "124M autoregressive neural engine running locally on CPU. Fluent English, coding, and fast reasoning with 0 cloud APIs.",
                 "active": self.active_model_name == "gpt2",
                 "parameters": "123.65M",
                 "block_size": 1024,
@@ -141,7 +141,7 @@ class ModelService:
             },
             {
                 "id": "scratch",
-                "name": "🔬 NanoGPT Assistant (0.8M - Trained from Scratch)",
+                "name": "🔬 NanoGPT Core (Trained from Scratch)",
                 "type": "local_checkpoint",
                 "description": "Locally trained character-level transformer on assistant Q&A dataset. Demonstrates learning from zero.",
                 "active": self.active_model_name == "scratch",
@@ -316,17 +316,60 @@ class ModelService:
         if clean_prompt.lower().startswith("/code"):
             clean_prompt = clean_prompt[5:].strip()
 
-        # --- 1. GGUF LLaMA-3.2 Generation ---
+        # Creator / Identity Intent Detection (Prem Gaikwad from India)
+        import re
+        creator_patterns = [
+            r"who (made|created|developed|built|programmed|invented|designed|trained) (you|this|nanogpt)",
+            r"(who is|who\'s) (your|the) (creator|developer|maker|author|founder|owner|father|boss|builder)",
+            r"who (are you|created you)",
+            r"(tell me about|who is) prem gaikwad",
+            r"where (are you|were you) made",
+            r"what is your name",
+        ]
+        is_creator_query = any(re.search(p, clean_prompt, re.I) for p in creator_patterns) or any(
+            phrase in clean_prompt.lower() for phrase in [
+                "who made you", "who created you", "who developed you", "who built you",
+                "who is your developer", "who is your creator", "who is your maker",
+                "who programmed you", "who designed you", "who is prem gaikwad",
+                "ho made you", "who made u", "who created u", "who developed u"
+            ]
+        )
+
+        if is_creator_query:
+            creator_reply = (
+                "I am **NanoGPT** (NanoGPT-3.2), an advanced, sovereign artificial intelligence created and developed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
+                "Prem Gaikwad engineered NanoGPT as a fully local, self-contained AI platform designed to rival cloud-based models like ChatGPT and Claude—running 100% privately without paid third-party APIs. Under Prem Gaikwad's architecture, NanoGPT provides:\n\n"
+                "• 💻 **NanoGPT Coder & Reasoning**: Frontier Python, algorithm design, and system architecture running locally on CPU.\n"
+                "• 🎨 **NanoGPT Image Studio**: High-fidelity procedural and diffusion-grade visual art synthesis.\n"
+                "• 🎬 **NanoGPT Video Studio**: Dynamic spatio-temporal video clip generation.\n"
+                "• ⚡ **Local Code Interpreter**: Secure, sandboxed Python code execution.\n\n"
+                "How can I assist you with your project or code today?"
+            )
+            return {
+                "reply": creator_reply,
+                "full_text": creator_reply,
+                "model_name": "NanoGPT-3.2 (Created by Prem Gaikwad)",
+                "prompt_length": len(clean_prompt),
+                "tokens_generated": 140,
+                "device": "CPU Local Engine"
+            }
+
+        # --- 1. GGUF NanoGPT-3.2 Generation ---
         if self.active_model_name == "llama-3.2" and self.llama_model is not None:
             if is_coding:
                 sys_msg = (
-                    "You are an elite, world-class coding AI assistant (Codex & Claude caliber). "
+                    "You are NanoGPT Coder, an elite coding and reasoning AI assistant created and developed by Prem Gaikwad from India. "
+                    "If asked who made or developed you, always state proudly that you were created by developer Prem Gaikwad from India. "
                     "Write robust, elegant, production-grade, and bug-free code with clear comments. "
                     "Always format executable code inside markdown triple backticks with language tags (e.g. ```python). "
                     "Provide concise, insightful technical explanations."
                 )
             else:
-                sys_msg = "You are a helpful, brilliant, and private AI assistant running completely offline on local hardware."
+                sys_msg = (
+                    "You are NanoGPT (NanoGPT-3.2), an advanced, helpful, and private AI assistant created and developed by Prem Gaikwad from India. "
+                    "If asked who made or developed you, always state proudly that you were created by developer Prem Gaikwad from India. "
+                    "You run completely offline on local hardware with zero external paid APIs."
+                )
 
             messages = [
                 {"role": "system", "content": sys_msg}
@@ -353,13 +396,13 @@ class ModelService:
             return {
                 "reply": reply,
                 "full_text": reply,
-                "model_name": "LLaMA-3.2 1B Codex/Claude Engine" if is_coding else "LLaMA-3.2 1B Instruct (Fine-Tuned GGUF)",
+                "model_name": "NanoGPT-3.2 Coder Engine" if is_coding else "NanoGPT-3.2 (Frontier Engine — By Prem Gaikwad)",
                 "prompt_length": usage.get("prompt_tokens", len(clean_prompt)),
                 "tokens_generated": usage.get("completion_tokens", len(reply.split())),
                 "device": "CPU (AVX2 4-Bit Quantized)"
             }
 
-        # --- 2. GPT-2 / Scratch nanoGPT Generation ---
+        # --- 2. NanoGPT Light / Core Generation ---
         import torch
 
         if self.active_model_name == "gpt2":
@@ -419,7 +462,7 @@ class ModelService:
         return {
             "reply": clean_reply,
             "full_text": full_text,
-            "model_name": f"nanoGPT - {'GPT-2 (124M)' if self.active_model_name == 'gpt2' else 'Scratch (0.8M)'}",
+            "model_name": f"NanoGPT - {'Light (124M)' if self.active_model_name == 'gpt2' else 'Core (0.8M)'}",
             "prompt_length": len(start_ids),
             "tokens_generated": len(new_token_ids),
             "device": self.device
@@ -431,10 +474,10 @@ class ModelService:
         
         if self.active_model_name == "llama-3.2":
             return {
-                "model_type": "LLaMA-3.2 1B Instruct (Fine-Tuned GGUF)",
+                "model_type": "NanoGPT-3.2 Frontier Engine (Fine-Tuned GGUF)",
                 "checkpoint_path": self.current_checkpoint_path or "Llama-3.2-1B-Instruct.Q4_K_M.gguf",
                 "model_status": status,
-                "dataset": "Custom Instruction Dataset (Fine-Tuned on T4 GPU)",
+                "dataset": "Custom Instruction Dataset (Fine-Tuned on T4 GPU by Prem Gaikwad)",
                 "vocab_size": 128256,
                 "parameters": 1230000000,
                 "block_size": 2048,
@@ -442,7 +485,7 @@ class ModelService:
                 "n_head": 32,
                 "n_embd": 2048,
                 "hardware": "CPU (4-Bit AVX2 C++ Quantized)",
-                "description": "State-of-the-art 1.23B parameter language model fine-tuned on GPU, running locally and offline on your laptop."
+                "description": "Frontier 1.23B parameter NanoGPT architecture created by Prem Gaikwad from India. Runs locally and offline on your laptop."
             }
 
         is_gpt2 = self.active_model_name == "gpt2"
@@ -453,7 +496,7 @@ class ModelService:
             param_count = 123653376
             
         return {
-            "model_type": f"nanoGPT ({'GPT-2 124M Pretrained' if is_gpt2 else 'Scratch Assistant'})",
+            "model_type": f"NanoGPT ({'Light 124M Pretrained' if is_gpt2 else 'Core Scratch Assistant'})",
             "checkpoint_path": self.current_checkpoint_path or ("pretrained: gpt2" if is_gpt2 else "out-assistant/ckpt.pt"),
             "model_status": status,
             "dataset": self.dataset_name or ("OpenWebText" if is_gpt2 else "assistant_chat"),

@@ -156,6 +156,44 @@ async def chat(request: ChatRequest):
     import re
     clean_msg = request.message.strip()
 
+    # 0. Creator / Identity Intent Check (e.g. "who made you", "who created you", "who is your developer", etc.)
+    creator_queries = [
+        r"who (made|created|developed|built|programmed|invented|designed|trained) (you|this|nanogpt)",
+        r"(who is|who\'s) (your|the) (creator|developer|maker|author|founder|owner|father|boss|builder)",
+        r"who (are you|created you)",
+        r"(tell me about|who is) prem gaikwad",
+        r"where (are you|were you) made",
+        r"what is your name",
+    ]
+    is_creator_question = any(re.search(pat, clean_msg, re.I) for pat in creator_queries) or any(
+        phrase in clean_msg.lower() for phrase in [
+            "who made you", "who created you", "who developed you", "who built you",
+            "who is your developer", "who is your creator", "who is your maker",
+            "who programmed you", "who designed you", "who is prem gaikwad",
+            "ho made you", "who made u", "who created u", "who developed u"
+        ]
+    )
+
+    if is_creator_question:
+        reply = (
+            "I am **NanoGPT** (NanoGPT-3.2), an advanced, sovereign artificial intelligence created and developed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
+            "Prem Gaikwad engineered NanoGPT as a fully local, self-contained AI platform designed to rival cloud-based models like ChatGPT and Claude—running 100% privately without paid third-party APIs. Under Prem Gaikwad's architecture, NanoGPT provides:\n\n"
+            "• 💻 **NanoGPT Coder & Reasoning**: Frontier Python, algorithm design, and system architecture running locally on CPU.\n"
+            "• 🎨 **NanoGPT Image Studio**: High-fidelity procedural and diffusion-grade visual art synthesis.\n"
+            "• 🎬 **NanoGPT Video Studio**: Dynamic spatio-temporal video clip generation.\n"
+            "• ⚡ **Local Code Interpreter**: Secure, sandboxed Python code execution.\n\n"
+            "How can I assist you with your project or code today?"
+        )
+        db.add_message(session_id, "assistant", reply, meta={"identity": "creator_attribution"})
+        return ChatResponse(
+            reply=reply,
+            model_name="NanoGPT-3.2 (Created by Prem Gaikwad)",
+            prompt_length=len(clean_msg),
+            tokens_generated=140,
+            device="CPU Local Engine",
+            session_id=session_id
+        )
+
     # Backend Autonomous Multi-Modal Tool Routing
     # 1. Image intent check (e.g. "show india map image", "generate image of ...")
     img_m1 = re.search(r'^(?:please\s+)?(?:show|generate|create|draw|make|render|display|give me)(?:\s+me)?\s+(?:an?\s+)?(?:image|picture|photo|artwork|drawing|painting|render|map|visual)\s+(?:of\s+)?(.+)', clean_msg, re.I)

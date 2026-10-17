@@ -232,11 +232,11 @@ document.addEventListener("DOMContentLoaded", () => {
         await refreshStatus();
         if (modelInfoNote) {
           if (selected === "llama-3.2") {
-            modelInfoNote.textContent = "🔥 LLaMA-3.2 1B active: Your custom fine-tuned model running at ~20 tokens/sec on CPU!";
+            modelInfoNote.textContent = "🔥 NanoGPT-3.2 active: Frontier coding & reasoning model created by Prem Gaikwad, running at ~20 tokens/sec on CPU!";
           } else if (selected === "gpt2") {
-            modelInfoNote.textContent = "✨ GPT-2 124M active: Fast, coherent English & coding with 0 cloud APIs.";
+            modelInfoNote.textContent = "✨ NanoGPT Light (124M) active: Fast, coherent English & coding with 0 cloud APIs.";
           } else {
-            modelInfoNote.textContent = "🔬 NanoGPT Scratch active: Raw character-level transformer trained locally.";
+            modelInfoNote.textContent = "🔬 NanoGPT Core active: Local character-level transformer trained from scratch.";
           }
         }
       } catch (err) {
@@ -418,15 +418,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Sync model select dropdown
     if (modelSelect && info.model_type) {
-      if (info.model_type.includes("LLaMA")) {
+      if (info.model_type.includes("NanoGPT-3.2") || info.model_type.includes("LLaMA")) {
         modelSelect.value = "llama-3.2";
-        if (modelInfoNote) modelInfoNote.textContent = "🔥 LLaMA-3.2 1B active: Your custom fine-tuned model running at ~20 tokens/sec on CPU!";
-      } else if (info.model_type.includes("GPT-2")) {
+        if (modelInfoNote) modelInfoNote.textContent = "🔥 NanoGPT-3.2 active: Frontier coding & reasoning model created by Prem Gaikwad, running at ~20 tokens/sec on CPU!";
+      } else if (info.model_type.includes("Light") || info.model_type.includes("GPT-2")) {
         modelSelect.value = "gpt2";
-        if (modelInfoNote) modelInfoNote.textContent = "✨ GPT-2 124M active: Fast, coherent English & coding with 0 cloud APIs.";
+        if (modelInfoNote) modelInfoNote.textContent = "✨ NanoGPT Light (124M) active: Fast, coherent English & coding with 0 cloud APIs.";
       } else {
         modelSelect.value = "scratch";
-        if (modelInfoNote) modelInfoNote.textContent = "🔬 NanoGPT Scratch active: Raw character-level transformer trained locally.";
+        if (modelInfoNote) modelInfoNote.textContent = "🔬 NanoGPT Core active: Local character-level transformer trained from scratch.";
       }
     }
 
