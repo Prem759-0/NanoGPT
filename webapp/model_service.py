@@ -282,19 +282,39 @@ class ModelService:
             raise ValueError(f"Invalid model: {model_name}. Allowed: 'llama-3.2', 'gpt2', 'scratch'")
         return self.load_model(model_name)
 
-    def generate(self, prompt: str, max_new_tokens: int = 150, temperature: float = 0.7, history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
+    def generate(self, prompt: str, max_new_tokens: int = 150, temperature: float = 0.7, history: Optional[List[Dict[str, str]]] = None, mode: str = "chat") -> Dict[str, Any]:
         """
-        Runs local inference with memory context and smart turn-stopping.
+        Runs local inference with memory context, smart turn-stopping, and Claude/Codex caliber coding capabilities.
         """
         if self.model is None and self.llama_model is None:
             success = self.load_model(self.active_model_name)
             if not success:
                 raise ModelNotTrainedException(self.error_message or "Model could not be initialized.")
 
+        # Strip /code prefix if provided
+        clean_prompt = prompt.strip()
+        is_coding = (
+            mode == "code" or
+            clean_prompt.lower().startswith("/code") or
+            any(w in clean_prompt.lower() for w in ["write a function", "write code", "python script", "implement in python", "debug this", "algorithm"])
+        )
+        if clean_prompt.lower().startswith("/code"):
+            clean_prompt = clean_prompt[5:].strip()
+
         # --- 1. GGUF LLaMA-3.2 Generation ---
         if self.active_model_name == "llama-3.2" and self.llama_model is not None:
+            if is_coding:
+                sys_msg = (
+                    "You are an elite, world-class coding AI assistant (Codex & Claude caliber). "
+                    "Write robust, elegant, production-grade, and bug-free code with clear comments. "
+                    "Always format executable code inside markdown triple backticks with language tags (e.g. ```python). "
+                    "Provide concise, insightful technical explanations."
+                )
+            else:
+                sys_msg = "You are a helpful, brilliant, and private AI assistant running completely offline on local hardware."
+
             messages = [
-                {"role": "system", "content": "You are a helpful, brilliant, and private AI assistant running completely offline on local hardware."}
+                {"role": "system", "content": sys_msg}
             ]
             if history:
                 for turn in history[-4:]:
@@ -302,24 +322,24 @@ class ModelService:
                         "role": "user" if turn.get("role") == "user" else "assistant",
                         "content": turn.get("content", "").strip()
                     })
-            messages.append({"role": "user", "content": prompt.strip()})
+            messages.append({"role": "user", "content": clean_prompt})
 
             res = self.llama_model.create_chat_completion(
                 messages=messages,
-                max_tokens=min(max_new_tokens, 300),
-                temperature=temperature,
+                max_tokens=min(max_new_tokens, 350),
+                temperature=temperature if not is_coding else min(temperature, 0.4),  # Lower temp for precise code
                 stop=["<|eot_id|>", "<|start_header_id|>", "User:"]
             )
             reply = res["choices"][0]["message"].get("content", "").strip()
             if not reply:
-                reply = "I understand. How can I assist you with your projects today?"
+                reply = "I understand. How can I assist you with your code today?"
 
             usage = res.get("usage", {})
             return {
                 "reply": reply,
                 "full_text": reply,
-                "model_name": "LLaMA-3.2 1B Instruct (Fine-Tuned GGUF)",
-                "prompt_length": usage.get("prompt_tokens", len(prompt)),
+                "model_name": "LLaMA-3.2 1B Codex/Claude Engine" if is_coding else "LLaMA-3.2 1B Instruct (Fine-Tuned GGUF)",
+                "prompt_length": usage.get("prompt_tokens", len(clean_prompt)),
                 "tokens_generated": usage.get("completion_tokens", len(reply.split())),
                 "device": "CPU (AVX2 4-Bit Quantized)"
             }

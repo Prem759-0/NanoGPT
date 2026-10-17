@@ -9,11 +9,12 @@ from fastapi.exceptions import RequestValidationError
 
 from webapp.schemas import (
     ChatRequest, ChatResponse, HealthResponse, ModelInfoResponse,
-    ImageGenRequest, ImageGenResponse, CodeRunRequest, CodeRunResponse,
-    SessionItem, CreateSessionRequest, SwitchModelRequest
+    ImageGenRequest, ImageGenResponse, VideoGenRequest, VideoGenResponse,
+    CodeRunRequest, CodeRunResponse, SessionItem, CreateSessionRequest, SwitchModelRequest
 )
 from webapp.model_service import ModelService, ModelNotTrainedException
 from webapp.image_service import ImageService
+from webapp.video_service import VideoService
 from webapp.code_service import CodeService
 from webapp.database import db
 
@@ -32,6 +33,7 @@ os.makedirs(generated_dir, exist_ok=True)
 
 model_service = ModelService()
 image_service = ImageService(output_dir=generated_dir)
+video_service = VideoService(output_dir=generated_dir)
 code_service = CodeService()
 
 
@@ -156,7 +158,8 @@ async def chat(request: ChatRequest):
             prompt=request.message,
             max_new_tokens=request.max_new_tokens,
             temperature=request.temperature,
-            history=history
+            history=history,
+            mode=request.mode or "chat"
         )
         # Save assistant reply to database
         db.add_message(session_id, "assistant", result["reply"], meta={
@@ -207,13 +210,32 @@ async def generate_image_endpoint(request: ImageGenRequest):
     Generates high-tech procedural neural artwork locally from user prompt.
     """
     try:
-        res = image_service.generate_image(request.prompt)
+        res = image_service.generate_image(request.prompt, style=request.style or "auto")
         return ImageGenResponse(**res)
     except Exception as e:
         logger.error(f"Image generation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Image generation failed: {str(e)}"
+        )
+
+@app.post("/api/generate-video", response_model=VideoGenResponse)
+async def generate_video_endpoint(request: VideoGenRequest):
+    """
+    Generates dynamic spatio-temporal video clips (.mp4) locally (Kling / Runway caliber).
+    """
+    try:
+        res = video_service.generate_video(
+            prompt=request.prompt,
+            duration_sec=request.duration_sec,
+            fps=request.fps
+        )
+        return VideoGenResponse(**res)
+    except Exception as e:
+        logger.error(f"Video generation error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Video generation failed: {str(e)}"
         )
 
 @app.post("/api/run-code", response_model=CodeRunResponse)

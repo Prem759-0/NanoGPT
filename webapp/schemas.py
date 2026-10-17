@@ -8,17 +8,21 @@ class ChatRequest(BaseModel):
         max_length=1000,
         description="Prompt or input message for the language model"
     )
+    mode: Optional[str] = Field(
+        default="chat",
+        description="Generation persona/mode: 'chat' or 'code'"
+    )
     max_new_tokens: int = Field(
-        default=150,
+        default=180,
         ge=10,
         le=500,
         description="Maximum number of tokens to generate"
     )
     temperature: float = Field(
-        default=0.8,
+        default=0.7,
         ge=0.1,
         le=2.0,
-        description="Sampling temperature (lower = more conservative, higher = more creative)"
+        description="Sampling temperature (lower = more deterministic/precise, higher = more creative)"
     )
     session_id: Optional[str] = Field(
         default=None,
@@ -50,7 +54,6 @@ class SessionItem(BaseModel):
 class CreateSessionRequest(BaseModel):
     title: Optional[str] = "New Chat"
 
-
 class HealthResponse(BaseModel):
     status: str
     model_status: str
@@ -75,12 +78,33 @@ class ModelInfoResponse(BaseModel):
 
 class ImageGenRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=500, description="Image generation prompt")
+    style: Optional[str] = Field(default="auto", description="Style preset: auto, cinematic, cyberpunk, photorealistic, anime, quantum")
 
 class ImageGenResponse(BaseModel):
     image_url: str
+    filename: str
     prompt: str
+    enhanced_prompt: Optional[str] = None
+    style: Optional[str] = None
     width: int
     height: int
+
+class VideoGenRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=500, description="Video generation prompt")
+    duration_sec: float = Field(default=3.0, ge=1.0, le=10.0, description="Video duration in seconds")
+    fps: int = Field(default=15, ge=8, le=30, description="Frames per second")
+
+class VideoGenResponse(BaseModel):
+    video_url: str
+    filename: str
+    prompt: str
+    mode: str
+    duration: float
+    fps: int
+    total_frames: int
+    width: int
+    height: int
+    render_time_ms: float
 
 class CodeRunRequest(BaseModel):
     code: str = Field(..., min_length=1, max_length=5000, description="Python code snippet to execute")
@@ -93,6 +117,4 @@ class CodeRunResponse(BaseModel):
     execution_time_ms: float
 
 class SwitchModelRequest(BaseModel):
-    model_name: str = Field(..., description="Target model name: 'gpt2' or 'scratch'")
-
-
+    model_name: str = Field(..., description="Target model name: 'llama-3.2', 'gpt2', or 'scratch'")

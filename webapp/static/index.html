@@ -129,15 +129,25 @@
             <span class="panel-title">Superpower Tools</span>
           </div>
           <div class="tool-buttons-grid">
-            <button id="tool-image-btn" class="tool-action-btn" title="Generate an image from text">
-              🎨 <span>Generate Image</span>
+            <button id="tool-image-btn" class="tool-action-btn" title="Generate an image (Midjourney & Higgsfield style)">
+              🎨 <span>Image Studio</span>
+            </button>
+            <button id="tool-video-btn" class="tool-action-btn" title="Generate an animated video clip (Kling & Runway style)">
+              🎬 <span>Video Studio</span>
             </button>
             <button id="tool-code-btn" class="tool-action-btn" title="Run Python code in sandbox">
               ⚡ <span>Code Runner</span>
             </button>
+            <button id="tool-codex-btn" class="tool-action-btn" title="Toggle Codex/Claude coding persona">
+              💻 <span id="codex-btn-label">Codex Mode</span>
+            </button>
           </div>
-          <div style="margin-top: 10px; font-size: 0.72rem; color: var(--text-muted);">
-            Tip: You can also type <code>/imagine [prompt]</code> or <code>/run [code]</code> directly in the chat box!
+          <div style="margin-top: 10px; font-size: 0.72rem; color: var(--text-muted); line-height: 1.4;">
+            Quick commands in chat:<br>
+            • <code>/code [task]</code> — Codex & Claude coding AI<br>
+            • <code>/imagine [prompt]</code> — Midjourney/Higgsfield image<br>
+            • <code>/video [prompt]</code> — Kling/Runway MP4 video<br>
+            • <code>/run [code]</code> — Execute in Python sandbox
           </div>
         </div>
 
@@ -146,8 +156,8 @@
         <div class="info-callout">
           <div class="info-callout-icon">✨</div>
           <div class="info-callout-text">
-            <strong>Super AI Lab Mode Active</strong>
-            <p>Trained Local GPT + Neural Image Visualizer + Python Sandbox + Colab Notebook.</p>
+            <strong>Tri-Frontier AI Suite Active</strong>
+            <p>Codex/Claude Code + Higgsfield/Midjourney Image + Kling/Runway Video + Colab GPU Notebooks.</p>
           </div>
         </div>
       </div>
@@ -222,7 +232,7 @@
             <textarea
               id="user-input"
               class="chat-textarea"
-              placeholder="Chat with AI, or type /imagine [prompt] to generate images, or /run [code]..."
+              placeholder="Chat, or /code [task], /imagine [prompt], /video [prompt], /run [code]..."
               rows="1"
               maxlength="1000"
               required

@@ -36,9 +36,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const backendPing = document.getElementById("backend-ping");
 
   const toolImageBtn = document.getElementById("tool-image-btn");
+  const toolVideoBtn = document.getElementById("tool-video-btn");
   const toolCodeBtn = document.getElementById("tool-code-btn");
+  const toolCodexBtn = document.getElementById("tool-codex-btn");
+  const codexBtnLabel = document.getElementById("codex-btn-label");
 
   let isGenerating = false;
+  let codexModeActive = false;
   let currentSessionId = localStorage.getItem("nanogpt_session_id") || null;
   let isRecording = false;
   let recognition = null;
@@ -143,7 +147,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Quick Tools Handlers ---
   if (toolImageBtn) {
     toolImageBtn.addEventListener("click", () => {
-      userInput.value = "/imagine a futuristic neural network AI core in cyberspace";
+      userInput.value = "/imagine a futuristic cybernetic explorer in a neon metropolis, 8k cinematic";
+      userInput.focus();
+      charCounter.textContent = `${userInput.value.length}/1000`;
+    });
+  }
+
+  if (toolVideoBtn) {
+    toolVideoBtn.addEventListener("click", () => {
+      userInput.value = "/video a cinematic drone flyover of futuristic neon skyscrapers with flying vehicles";
       userInput.focus();
       charCounter.textContent = `${userInput.value.length}/1000`;
     });
@@ -151,9 +163,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (toolCodeBtn) {
     toolCodeBtn.addEventListener("click", () => {
-      userInput.value = "/run print('Hello from NanoGPT Python sandbox!')\nfor i in range(1, 6):\n    print(f'Counting: {i}')";
+      userInput.value = "/run print('Hello from NanoGPT Python sandbox!')\nfor i in range(1, 6):\n    print(f'Step {i}: Computing neural tensors...')";
       userInput.focus();
       charCounter.textContent = `${userInput.value.length}/1000`;
+    });
+  }
+
+  if (toolCodexBtn) {
+    toolCodexBtn.addEventListener("click", () => {
+      codexModeActive = !codexModeActive;
+      if (codexModeActive) {
+        toolCodexBtn.style.borderColor = "var(--primary)";
+        toolCodexBtn.style.background = "rgba(6, 182, 212, 0.2)";
+        if (codexBtnLabel) codexBtnLabel.textContent = "Codex: ON ⚡";
+        userInput.placeholder = "Codex Mode active — ask for algorithms, debugging, or full code...";
+      } else {
+        toolCodexBtn.style.borderColor = "";
+        toolCodexBtn.style.background = "";
+        if (codexBtnLabel) codexBtnLabel.textContent = "Codex Mode";
+        userInput.placeholder = "Chat, or /code [task], /imagine [prompt], /video [prompt], /run [code]...";
+      }
     });
   }
 
@@ -429,19 +458,42 @@ document.addEventListener("DOMContentLoaded", () => {
     const loadingElem = appendLoadingBubble();
     setGeneratingState(true);
 
-    // 1. Tool Check: /imagine or /image
+    // 1. Tool Check: /video
+    if (prompt.startsWith("/video ")) {
+      const vidPrompt = prompt.replace(/^\/video\s+/, "").trim();
+      try {
+        const response = await fetch("/api/generate-video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: vidPrompt, duration_sec: 3.0, fps: 15 })
+        });
+        loadingElem.remove();
+        if (!response.ok) throw new Error("Video generation failed");
+        const data = await response.json();
+        appendVideoMessage(data.video_url, vidPrompt, data);
+      } catch (err) {
+        loadingElem.remove();
+        appendAlertBox("error", "Video Generation Failed", err.message);
+      } finally {
+        setGeneratingState(false);
+        userInput.focus();
+      }
+      return;
+    }
+
+    // 2. Tool Check: /imagine or /image
     if (prompt.startsWith("/imagine ") || prompt.startsWith("/image ")) {
       const imgPrompt = prompt.replace(/^\/(imagine|image)\s+/, "").trim();
       try {
         const response = await fetch("/api/generate-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: imgPrompt })
+          body: JSON.stringify({ prompt: imgPrompt, style: "auto" })
         });
         loadingElem.remove();
         if (!response.ok) throw new Error("Image generation failed");
         const data = await response.json();
-        appendImageMessage(data.image_url, imgPrompt);
+        appendImageMessage(data.image_url, imgPrompt, data);
       } catch (err) {
         loadingElem.remove();
         appendAlertBox("error", "Image Generation Failed", err.message);
@@ -452,7 +504,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // 2. Tool Check: /run Python code
+    // 3. Tool Check: /run Python code
     if (prompt.startsWith("/run ")) {
       const codeSnippet = prompt.replace(/^\/run\s+/, "").trim();
       try {
@@ -474,16 +526,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // 3. Regular Chat Generation with Context Memory
+    // 4. Regular or Codex Chat Generation with Context Memory
+    const isCodeMode = codexModeActive || prompt.startsWith("/code ");
+    const cleanPrompt = prompt.startsWith("/code ") ? prompt.replace(/^\/code\s+/, "").trim() : prompt;
+
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: prompt,
+          message: cleanPrompt,
+          mode: isCodeMode ? "code" : "chat",
           session_id: currentSessionId,
-          max_new_tokens: parseInt(maxTokensSlider.value, 10),
-          temperature: parseFloat(temperatureSlider.value)
+          max_new_tokens: isCodeMode ? 280 : parseInt(maxTokensSlider.value, 10),
+          temperature: isCodeMode ? 0.35 : parseFloat(temperatureSlider.value)
         })
       });
 
@@ -582,7 +638,60 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const content = document.createElement("div");
     content.className = "message-content";
-    content.textContent = text;
+
+    // Format markdown code blocks with 1-click execution
+    const codeBlockMatch = text.match(/```(?:python)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch && sender === "assistant") {
+      const parts = text.split(/```(?:python)?\s*[\s\S]*?```/);
+      const extractedCode = codeBlockMatch[1].trim();
+
+      if (parts[0]) {
+        const p1 = document.createElement("div");
+        p1.textContent = parts[0].trim();
+        content.appendChild(p1);
+      }
+
+      const codeBox = document.createElement("div");
+      codeBox.className = "code-block-interactive";
+      codeBox.innerHTML = `
+        <div class="code-block-topbar">
+          <span>Python (Codex/Claude)</span>
+          <button class="run-snippet-btn" title="Run this code in local Python sandbox">▶ Run Code</button>
+        </div>
+        <pre><code>${extractedCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
+      `;
+
+      const runBtn = codeBox.querySelector(".run-snippet-btn");
+      runBtn.addEventListener("click", async () => {
+        runBtn.textContent = "⏳ Running...";
+        runBtn.disabled = true;
+        try {
+          const runRes = await fetch("/api/run-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: extractedCode })
+          });
+          const runData = await runRes.json();
+          appendCodeResultMessage(extractedCode, runData);
+        } catch (e) {
+          appendAlertBox("error", "Code Execution Failed", e.message);
+        } finally {
+          runBtn.textContent = "▶ Run Code";
+          runBtn.disabled = false;
+        }
+      });
+
+      content.appendChild(codeBox);
+
+      if (parts[1]) {
+        const p2 = document.createElement("div");
+        p2.style.marginTop = "8px";
+        p2.textContent = parts[1].trim();
+        content.appendChild(p2);
+      }
+    } else {
+      content.textContent = text;
+    }
 
     bubble.appendChild(header);
     bubble.appendChild(content);
@@ -600,7 +709,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return row;
   }
 
-  function appendImageMessage(imageUrl, prompt) {
+  function appendImageMessage(imageUrl, prompt, meta = {}) {
     const row = document.createElement("div");
     row.className = "message-row assistant-row";
 
@@ -610,7 +719,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     bubble.innerHTML = `
       <div class="message-header">
-        <span class="message-sender">🎨 Neural Image Studio</span>
+        <span class="message-sender">🎨 Image Studio (${meta.style || 'Midjourney & Higgsfield Caliber'})</span>
         <span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
       <div class="generated-image-card">
@@ -618,6 +727,33 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="image-meta-bar">
           <span>Prompt: <em>"${prompt}"</em></span>
           <a href="${imageUrl}" target="_blank" download class="image-download-link">Download Full PNG ↗</a>
+        </div>
+      </div>
+    `;
+
+    row.appendChild(bubble);
+    messagesStream.appendChild(row);
+    scrollToBottom();
+  }
+
+  function appendVideoMessage(videoUrl, prompt, meta = {}) {
+    const row = document.createElement("div");
+    row.className = "message-row assistant-row";
+
+    const bubble = document.createElement("div");
+    bubble.className = "message-bubble assistant-bubble";
+    bubble.style.maxWidth = "90%";
+
+    bubble.innerHTML = `
+      <div class="message-header">
+        <span class="message-sender">🎬 AI Video Studio (Kling & Runway Caliber)</span>
+        <span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+      <div class="generated-video-card">
+        <video controls autoplay loop playsinline src="${videoUrl}" style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color);"></video>
+        <div class="image-meta-bar" style="margin-top: 8px;">
+          <span>Motion Prompt: <em>"${prompt}"</em> (${meta.duration || 3}s @ ${meta.fps || 15}fps)</span>
+          <a href="${videoUrl}" target="_blank" download class="image-download-link">Download MP4 ↗</a>
         </div>
       </div>
     `;

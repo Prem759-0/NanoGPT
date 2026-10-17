@@ -21,6 +21,7 @@ if sys.platform == "win32":
 from webapp.model_service import ModelService, ModelNotTrainedException
 from webapp.database import db
 from webapp.image_service import ImageService
+from webapp.video_service import VideoService
 from webapp.code_service import CodeService
 
 def main():
@@ -30,18 +31,21 @@ def main():
 
     print("Commands:")
     print("  Type your prompt to chat with your local AI")
-    print("  /model <gpt2|scratch> : Switch between GPT-2 124M and Scratch model")
-    print("  /models               : List available AI engines")
-    print("  /imagine <prompt>     : Generate procedural neural artwork")
-    print("  /run <code>           : Run Python code in sandbox")
-    print("  /history              : View recent conversation memory")
-    print("  /exit or /quit        : Exit application")
+    print("  /model <llama-3.2|gpt2|scratch> : Switch AI engine")
+    print("  /models                         : List available AI engines")
+    print("  /code <task>                    : Codex & Claude coding AI")
+    print("  /imagine <prompt>               : Generate Midjourney/Higgsfield image")
+    print("  /video <prompt>                 : Generate Kling/Runway MP4 video")
+    print("  /run <code>                     : Run Python code in sandbox")
+    print("  /history                        : View conversation memory")
+    print("  /exit or /quit                  : Exit application")
     print("=" * 65)
 
     # Initialize services
     model_service = ModelService(base_dir=PROJECT_ROOT)
     output_dir = os.path.join(PROJECT_ROOT, "webapp", "static", "generated")
     image_service = ImageService(output_dir=output_dir)
+    video_service = VideoService(output_dir=output_dir)
     code_service = CodeService()
 
     status = model_service.get_status()
@@ -85,12 +89,21 @@ def main():
                     print(f"❌ Failed to switch: {model_service.error_message}")
                 continue
 
-            # 1. Image Generation Command
+            # 1. Image Generation Command (Midjourney & Higgsfield Caliber)
             if user_input.startswith("/imagine ") or user_input.startswith("/image "):
                 prompt = user_input.split(" ", 1)[1].strip()
-                print("🎨 Generating local artwork...")
+                print("🎨 Generating local artwork with prompt enhancement...")
                 res = image_service.generate_image(prompt)
-                print(f"✅ Image saved: {res['filename']}")
+                print(f"✅ Image saved: {res['filename']} ({res['style']})")
+                print(f"📁 Path: {os.path.join(output_dir, res['filename'])}")
+                continue
+
+            # 2. Video Generation Command (Kling & Runway Caliber)
+            if user_input.startswith("/video "):
+                prompt = user_input.split(" ", 1)[1].strip()
+                print("🎬 Synthesizing local AI video clip (.mp4)...")
+                res = video_service.generate_video(prompt, duration_sec=3.0, fps=15)
+                print(f"✅ Video created: {res['filename']} ({res['duration']}s, {res['total_frames']} frames)")
                 print(f"📁 Path: {os.path.join(output_dir, res['filename'])}")
                 continue
 

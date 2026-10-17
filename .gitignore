@@ -13,4 +13,10 @@ input.txt
 env/
 venv/
 .venv/
-webapp/static/generated/*.png
+webapp/static/generated/*
+!webapp/static/generated/.gitkeep
+outputs*/
+generated_art/
+generated_videos/
+*.mp4
+*.gif

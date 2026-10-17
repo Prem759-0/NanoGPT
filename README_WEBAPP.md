@@ -1,94 +1,78 @@
-# NanoGPT Lab — User Guide & Setup Manual
+# NanoGPT Lab — Frontier Multimodal AI Suite
 
-Welcome to **NanoGPT Lab**! This project provides a 100% local, API-key-free Web Application interface around Andrej Karpathy's [`nanoGPT`](https://github.com/karpathy/nanoGPT) transformer neural network.
+Welcome to **NanoGPT Lab**! An entirely local, 100% private, API-key-free AI system spanning all three frontier domains:
+1. 💻 **Coding AI (Codex & Claude Caliber)**: Production code generation, algorithmic reasoning, debugging, and live sandboxed Python execution with 1-click running.
+2. 🎨 **Image AI (Higgsfield & Midjourney Caliber)**: High-resolution image synthesis with automatic aesthetic prompt enhancement (Cinematic 8K, Cyberpunk Neon, Photorealistic Studio, Anime, and Quantum 3D styles).
+3. 🎬 **Video AI (Kling & Runway Caliber)**: Spatio-temporal text-to-video synthesis engine compiling motion sequences into downloadable `.mp4` video clips with embedded HTML5 video playback.
 
 ---
 
 ## 🔒 100% Local & Honest Execution Guarantee
-- **Zero API Keys Required**: No OpenAI, Anthropic, Gemini, Grok, or Hugging Face cloud APIs are used.
-- **Local Neural Computation**: All models run and train on your machine's hardware using PyTorch.
-- **Honest State Tracking**: If no trained checkpoint exists on disk, the system explicitly reports **`NOT TRAINED`** and returns a `409 Conflict` error when chat is requested. No simulated or fake AI answers are fabricated.
+- **Zero External Paid AI APIs**: No OpenAI, Anthropic, Gemini, Grok, or Hugging Face hosted inference endpoints.
+- **Local Neural Computation**: Fine-tuned 1.23B LLaMA-3.2 running via `llama-cpp-python` (AVX2 4-bit quantization) on your laptop CPU at ~20 tokens/sec.
+- **Free Cloud GPU Training**: Pre-configured, 1-click Google Colab notebooks for scaling models on free NVIDIA Tesla T4 GPUs (15GB VRAM).
 
 ---
 
-## 📁 Repository Structure
-```
-nanoGPT/
-├── config/                     # Original nanoGPT training configurations
-│   └── train_shakespeare_char.py
-├── data/                       # Dataset preparation scripts
-│   └── shakespeare_char/
-├── model.py                    # Original Transformer GPT neural network
-├── train.py                    # Original training loop
-├── sample.py                   # Original generation / sampling script
-├── webapp/                     # Web Application Layer
-│   ├── main.py                 # FastAPI application and route endpoints
-│   ├── model_service.py        # Local model loading, safety, & inference
-│   ├── schemas.py              # Pydantic request and response models
-│   └── static/
-│       ├── index.html          # Responsive Dark Developer-Lab UI
-│       ├── styles.css          # Vanilla CSS design tokens & animations
-│       └── app.js              # Client controller & state polling
-├── tests/
-│   └── test_webapp.py          # Automated verification test suite
-├── requirements-webapp.txt     # Web dependencies (FastAPI, Uvicorn, Pydantic, HTTPX, NumPy)
-└── README_WEBAPP.md            # This documentation file
-```
+## 🚀 The Three Frontier Pillars
+
+### 1. 💻 Coding AI (Codex & Claude Caliber)
+- **Local Engine**: Fine-tuned LLaMA-3.2 equipped with Codex & Claude system prompts for clean, idiomatic code generation with syntax highlighting.
+- **Interactive Python Sandbox**: Execute Python scripts safely with execution timers, stdout/stderr capture, and return code tracking.
+- **1-Click Sandbox Execution**: Click **`▶ Run Code`** on any generated code block in the chat stream to execute it locally.
+- **Cloud Fine-Tuning**: [`Train_Coding_AI_Colab.ipynb`](Train_Coding_AI_Colab.ipynb) trains LLaMA-3.2 on CodeAlpaca datasets and exports quantized `.gguf` models directly.
+
+### 2. 🎨 Image Generation (Higgsfield & Midjourney Caliber)
+- **Prompt Enhancer**: Automatically enriches simple user prompts with cinematic lighting, depth-of-field, volumetric smoke, 8K resolution, and lens specifications.
+- **5 Aesthetic Styles**:
+  - `cinematic`: 8K IMAX 70mm, volumetric fog, octane render
+  - `cyberpunk`: Neon reflections, rainy pavement, holograms
+  - `photorealistic`: Hasselblad 85mm f/1.4 studio lighting
+  - `anime`: Makoto Shinkai aesthetic, ArtStation trending
+  - `quantum`: Holographic particle core, neural network nodes
+- **Cloud Diffusion Studio**: [`Train_And_Generate_Images_Colab.ipynb`](Train_And_Generate_Images_Colab.ipynb) runs Stable Diffusion XL / SD-Turbo for 1024x1024 photorealistic rendering on Colab GPU.
+
+### 3. 🎬 Video Generation (Kling & Runway Caliber)
+- **Local MP4 Synthesis**: Generates spatio-temporal animated video clips locally and encodes them into standard H.264 MP4 files.
+- **Motion Simulation Modes**: Matrix digital rain, neural network pulse, cosmic starfield warp, cyberpunk synthwave horizon, and kinetic particle vortex.
+- **Embedded Player**: Video clips play directly in the chat stream with `<video controls autoplay loop>` and direct MP4 download links.
+- **Cloud Video Diffusion**: [`Generate_AI_Video_Colab.ipynb`](Generate_AI_Video_Colab.ipynb) runs Text-to-Video spatio-temporal diffusion on Colab GPU to render high-frame video clips.
 
 ---
 
-## 🚀 Quickstart Instructions (Windows PowerShell)
+## 🛠️ Quickstart Guide
 
-### Step 1: Open PowerShell in the Project Directory
-Make sure your terminal is opened in `d:\Downloads\linkden post\ai`:
+### Starting the Web Application
 ```powershell
+# Open terminal in project root
 cd "d:\Downloads\linkden post\ai"
+
+# Run Uvicorn server
+.\.venv\Scripts\python.exe -m uvicorn webapp.main:app --host 127.0.0.1 --port 8000
 ```
+Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser.
 
-### Step 2: Activate the Virtual Environment
-A virtual environment has been created in `.venv` using Python 3.13:
+### Chat & Command Shortcuts
+| Command | Domain | Description |
+| :--- | :--- | :--- |
+| `[text]` | **Chat** | Converse with active model (LLaMA-3.2, GPT-2, or Scratch) |
+| `/code [task]` | **Coding AI** | Generate production code with Claude/Codex persona |
+| `/imagine [prompt]` | **Image AI** | Generate Midjourney/Higgsfield caliber image |
+| `/video [prompt]` | **Video AI** | Generate Kling/Runway caliber MP4 video |
+| `/run [code]` | **Sandbox** | Execute Python code snippet directly |
+| `/model [name]` | **Engine** | Switch between `llama-3.2`, `gpt2`, and `scratch` |
+
+### Running the Terminal CLI Assistant
 ```powershell
-.\.venv\Scripts\Activate.ps1
-```
-*(If PowerShell shows an execution policy warning, run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` first).*
-
-### Step 3: Install Web Dependencies (if not already installed)
-```powershell
-python -m pip install -r requirements-webapp.txt
-```
-
-### Step 4: Start the Web Application Server
-```powershell
-python -m uvicorn webapp.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-### Step 5: Open in Your Browser
-- **Web Application UI**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- **API Health Check**: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
-- **Interactive Swagger Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
-### How to Stop the Server
-Press `Ctrl + C` in the PowerShell terminal where Uvicorn is running.
-
----
-
-## 🧪 Running Automated Tests
-To run the automated test suite and verify endpoints, rejection of empty/oversized messages, and honest status:
-```powershell
-.\.venv\Scripts\python.exe -m unittest tests/test_webapp.py
+.\.venv\Scripts\python.exe chat_cli.py
 ```
 
 ---
 
-## 🧠 Understanding Current vs. Future Capabilities
-
-### What Works Right Now (Pre-Training Phase):
-1. ✅ **Local Web Server**: FastAPI serving the responsive Developer-Lab interface at `127.0.0.1:8000`.
-2. ✅ **Health & Status Reporting**: `/api/health` and `/api/model-info` report the accurate status: `NOT TRAINED`.
-3. ✅ **Input Validation**: Rejects empty prompts, whitespace-only messages, and inputs exceeding 1,000 characters with HTTP 422.
-4. ✅ **Honest Conflict Error**: Submitting a prompt before training returns HTTP 409 (`NOT TRAINED`) with instructions rather than fake text.
-5. ✅ **Security Protections**: Safe model loading paths, no `eval`/`exec`, bound to localhost.
-
-### What Requires Training (Next Phase):
-- **Checkpoint Generation**: Running dataset preparation and model training creates `out-shakespeare-char/ckpt.pt`.
-- **Text Generation**: Once `ckpt.pt` exists, the web application automatically transitions from `NOT TRAINED` to `READY`, allowing you to generate text directly from your local transformer.
+## ☁️ Google Colab Notebooks (Free GPU Training)
+| Notebook | Domain | GPU Type | Output |
+| :--- | :--- | :--- | :--- |
+| [`Train_Super_AI_Colab.ipynb`](Train_Super_AI_Colab.ipynb) | General LLM | T4 GPU | Fine-tuned LLaMA-3.2 GGUF |
+| [`Train_Coding_AI_Colab.ipynb`](Train_Coding_AI_Colab.ipynb) | Coding AI | T4 GPU | Code-specialized GGUF |
+| [`Train_And_Generate_Images_Colab.ipynb`](Train_And_Generate_Images_Colab.ipynb) | Image Studio | T4 GPU | 1024x1024 Photorealistic Images |
+| [`Generate_AI_Video_Colab.ipynb`](Generate_AI_Video_Colab.ipynb) | Video Studio | T4 GPU | Downloadable `.mp4` Video Clips |
