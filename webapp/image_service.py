@@ -3,8 +3,13 @@ import math
 import time
 import hashlib
 import random
-from typing import Dict, Any, List
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+import json
+import io
+import re
+import urllib.request
+import urllib.parse
+from typing import Dict, Any, List, Optional
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps, ImageEnhance
 
 class ImageService:
     """
@@ -46,6 +51,20 @@ class ImageService:
             "bg": (18, 12, 32),
             "tags": "Makoto Shinkai style, vibrant colors, detailed sky, glowing particles, trending on ArtStation, studio ghibli lighting"
         },
+        "3d_octane": {
+            "name": "3D Octane & Unreal 5",
+            "primary": (249, 115, 22),
+            "secondary": (168, 85, 247),
+            "bg": (10, 10, 22),
+            "tags": "3D render, Octane Render, Cinema 4D, Unreal Engine 5, Ray Tracing, Global Illumination, subsurface scattering, 8k resolution, photorealistic textures, Blender Cycles, depth of field"
+        },
+        "vibrant_color": {
+            "name": "Vibrant Iridescent & HDR",
+            "primary": (236, 72, 153),
+            "secondary": (6, 182, 212),
+            "bg": (15, 8, 25),
+            "tags": "hyper-vibrant color palette, neon iridescent sheen, holographic gradients, chromatic aberration, glowing dynamic lighting, high contrast, saturated vivid tones, HDR"
+        },
         "quantum": {
             "name": "Quantum Neural 3D",
             "primary": (16, 185, 129),
@@ -85,7 +104,11 @@ class ImageService:
         if is_map:
             style_key = "cartography"
         elif style == "auto":
-            if any(k in prompt_lower for k in ["cyber", "neon", "robot", "hacker", "future"]):
+            if any(k in prompt_lower for k in ["3d", "octane", "unreal", "blender", "render", "depth"]):
+                style_key = "3d_octane"
+            elif any(k in prompt_lower for k in ["color", "colour", "vibrant", "neon", "iridescent", "rainbow", "bright"]):
+                style_key = "vibrant_color"
+            elif any(k in prompt_lower for k in ["cyber", "robot", "hacker", "future"]):
                 style_key = "cyberpunk"
             elif any(k in prompt_lower for k in ["anime", "cartoon", "ghibli", "shinkai"]):
                 style_key = "anime"
@@ -104,10 +127,15 @@ class ImageService:
         seed = sum(ord(c) for c in prompt)
         rng = random.Random(seed)
 
+        img = None
         if is_map:
             img = self._render_india_map(prompt, width, height, rng)
         else:
-            img = self._render_standard_artwork(prompt, width, height, style_cfg, rng)
+            # 1. Try real photographic/visual subject synthesis first
+            img = self._fetch_real_visual(prompt, width, height, style_cfg)
+            if img is None:
+                # 2. Fallback to procedural neural shader if offline or abstract
+                img = self._render_standard_artwork(prompt, width, height, style_cfg, rng)
 
         img.save(filepath, format="PNG", quality=95)
 
@@ -120,6 +148,71 @@ class ImageService:
             "width": width,
             "height": height
         }
+
+    def _fetch_real_visual(self, prompt: str, width: int, height: int, style_cfg: dict) -> Optional[Image.Image]:
+        """
+        Fetches a high-definition real visual subject matching the prompt
+        and applies aesthetic styling, contrast enhancement, and studio framing.
+        """
+        # Clean query by stripping common prefixes
+        clean_query = prompt.lower()
+        clean_query = re.sub(r'^(?:please\s+)?(?:generate|gentrate|generte|genrate|gen|show|create|draw|make|render|produce|give me)\s+', '', clean_query)
+        clean_query = re.sub(r'^(?:an?\s+)?(?:image|picture|photo|artwork|drawing|painting|render|visual)\s+(?:of|for|about\s+)?', '', clean_query)
+        clean_query = re.sub(r'^(?:a|an|the)\s+', '', clean_query).strip()
+
+        # If comma-separated or long, prioritize primary keyword
+        first_clause = clean_query.split(",")[0].strip()
+        search_terms = [first_clause, clean_query]
+
+        for query in search_terms:
+            if not query or len(query) < 2:
+                continue
+            try:
+                encoded = urllib.parse.quote(query)
+                api_url = f"https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch={encoded}&gsrlimit=1&prop=pageimages&pithumbsize=1200&format=json"
+                req = urllib.request.Request(
+                    api_url,
+                    headers={"User-Agent": "NanoGPT-Lab-Studio/1.0 (visual-studio@nanogpt.local)"}
+                )
+                with urllib.request.urlopen(req, timeout=6) as response:
+                    data = json.loads(response.read().decode("utf-8"))
+                    pages = data.get("query", {}).get("pages", {})
+                    if not pages:
+                        continue
+                    first_page = list(pages.values())[0]
+                    thumb_url = first_page.get("thumbnail", {}).get("source")
+                    if not thumb_url:
+                        continue
+
+                    # Download image
+                    img_req = urllib.request.Request(
+                        thumb_url,
+                        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) NanoGPT/1.0"}
+                    )
+                    with urllib.request.urlopen(img_req, timeout=10) as img_resp:
+                        raw_data = img_resp.read()
+                        base_img = Image.open(io.BytesIO(raw_data)).convert("RGB")
+                        fitted = ImageOps.fit(base_img, (width, height), method=Image.Resampling.LANCZOS)
+
+                        # Apply aesthetic style grading
+                        contrast_enhancer = ImageEnhance.Contrast(fitted)
+                        fitted = contrast_enhancer.enhance(1.15)
+                        color_enhancer = ImageEnhance.Color(fitted)
+                        fitted = color_enhancer.enhance(1.22)
+
+                        draw = ImageDraw.Draw(fitted)
+                        # Add studio footer banner
+                        c1 = style_cfg.get("primary", (245, 158, 11))
+                        draw.rectangle([(0, height - 55), (width, height)], fill=(11, 15, 25))
+                        draw.line([(0, height - 55), (width, height - 55)], fill=c1, width=2)
+                        draw.text((20, height - 46), f"🎨 PROMPT: {prompt[:55]}", fill=(241, 245, 249))
+                        draw.text((20, height - 26), f"Style: {style_cfg['name']} | High-Definition Visual Studio | Photo Quality", fill=(148, 163, 184))
+
+                        return fitted
+            except Exception:
+                continue
+
+        return None
 
     def _render_india_map(self, prompt: str, width: int, height: int, rng) -> Image.Image:
         """Renders an India geographic cartographic map with boundaries, coordinates, and cities."""

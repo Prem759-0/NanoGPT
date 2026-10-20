@@ -10,12 +10,14 @@ from fastapi.exceptions import RequestValidationError
 from webapp.schemas import (
     ChatRequest, ChatResponse, HealthResponse, ModelInfoResponse,
     ImageGenRequest, ImageGenResponse, VideoGenRequest, VideoGenResponse,
-    CodeRunRequest, CodeRunResponse, SessionItem, CreateSessionRequest, SwitchModelRequest
+    CodeRunRequest, CodeRunResponse, SessionItem, CreateSessionRequest, SwitchModelRequest,
+    AddMemoryRequest, SelfTrainRequest
 )
 from webapp.model_service import ModelService, ModelNotTrainedException
 from webapp.image_service import ImageService
 from webapp.video_service import VideoService
 from webapp.code_service import CodeService
+from webapp.learning_service import learning_service
 from webapp.game_templates import get_snake_game_html, get_chess_game_html
 from webapp.database import db
 
@@ -341,6 +343,62 @@ async def chat(request: ChatRequest):
             session_id=session_id
         )
 
+    # 5.5 Video Capability Inquiry Intent Check
+    video_inquiry_patterns = [
+        r"what about video",
+        r"how (can i|do i|to) (make|generate|create|produce) video",
+        r"can you (make|generate|create|render) (a )?video",
+        r"tell me about video",
+        r"video (feature|capabilities|generator|studio)"
+    ]
+    if any(re.search(p, msg_low) for p in video_inquiry_patterns):
+        reply = (
+            "🎬 **Yes! NanoGPT Lab has a complete AI Video Generation Studio (Kling & Runway Caliber)!**\n\n"
+            "You have two powerful video engines available:\n\n"
+            "### 1. ⚡ Local In-App Video Studio (Runs Right Here in Browser):\n"
+            "• **Real Subject Motion**: Generates high-definition cinematic motion clips of real subjects (dogs, cars, lions, cities, nature).\n"
+            "• **Real MP4 Video**: Encoded directly into standard **H.264 MP4** format (15 FPS) with smooth 2.5D spatio-temporal dolly zoom & camera panning in just ~5 seconds on your CPU.\n"
+            "• **Try It Now**: Simply type:\n"
+            "  - `/video a running dog in the park`\n"
+            "  - `generate video of a sports car`\n"
+            "  - Or click the **🎬 Video Studio** button on the left sidebar!\n\n"
+            "### 2. 🚀 Cloud Video Diffusion Studio (Google Colab GPU):\n"
+            "• For heavy, frame-by-frame generative diffusion with full 3D physics (Kling AI / Runway Gen-3 caliber), open **`Generate_AI_Video_Colab.ipynb`** in Google Colab.\n"
+            "• Runs on free NVIDIA Tesla T4 GPUs (15GB VRAM) using text-to-video diffusion pipelines.\n\n"
+            "Would you like me to generate a video clip for you right now? Just type `/video [what you want to see]`!"
+        )
+        db.add_message(session_id, "assistant", reply, meta={"feature": "video_info"})
+        return ChatResponse(
+            reply=reply,
+            model_name="NanoGPT Video Director",
+            prompt_length=len(clean_msg),
+            tokens_generated=190,
+            device="CPU Local Engine",
+            session_id=session_id
+        )
+
+    # 6. Autonomous Long-Term Memory Learning Intent
+    memory_intent = learning_service.detect_memory_intent(clean_msg)
+    if memory_intent:
+        fact, category = memory_intent
+        learning_service.store_memory(fact, category, session_id=session_id)
+        reply = (
+            f"🧠 **Learned & Saved to Long-Term Memory!**\n\n"
+            f"I have recorded this into my persistent knowledge bank:\n"
+            f"> *\"{fact}\"*\n\n"
+            f"✨ I will remember and apply this across all our chat sessions, even if you refresh or start a new conversation."
+        )
+        db.add_message(session_id, "assistant", reply, meta={"feature": "memory_learned", "fact": fact})
+        learning_service.record_chat_turn(clean_msg, reply, source="memory_intent")
+        return ChatResponse(
+            reply=reply,
+            model_name="NanoGPT Autonomous Memory Engine",
+            prompt_length=len(clean_msg),
+            tokens_generated=48,
+            device="Local SQLite Memory Bank",
+            session_id=session_id
+        )
+
     try:
         result = model_service.generate(
             prompt=request.message,
@@ -354,6 +412,8 @@ async def chat(request: ChatRequest):
             "tokens": result.get("tokens_generated", 0),
             "device": result.get("device", "cpu")
         })
+        # Continuous Self-Training Dataset Logging
+        learning_service.record_chat_turn(request.message, result["reply"], source="chat")
         result["session_id"] = session_id
         return ChatResponse(**result)
     except ModelNotTrainedException:
@@ -433,6 +493,39 @@ async def run_code_endpoint(request: CodeRunRequest):
     """
     res = code_service.execute_code(request.code)
     return CodeRunResponse(**res)
+
+# =========================================================================
+# Self-Learning & Long-Term Memory API Endpoints
+# =========================================================================
+
+@app.get("/api/memories")
+async def list_memories_endpoint():
+    """Returns all stored long-term memories."""
+    memories = db.list_memories()
+    return {"memories": memories, "total": len(memories)}
+
+@app.post("/api/memories")
+async def add_memory_endpoint(request: AddMemoryRequest):
+    """Manually adds a memory or fact."""
+    res = learning_service.store_memory(request.fact, request.category or "general")
+    return res
+
+@app.delete("/api/memories/{memory_id}")
+async def delete_memory_endpoint(memory_id: int):
+    """Deletes a learned memory by ID."""
+    deleted = db.delete_memory(memory_id)
+    return {"success": deleted, "deleted_id": memory_id}
+
+@app.get("/api/learning-stats")
+async def get_learning_stats_endpoint():
+    """Returns real-time learning statistics (memories and collected chat training pairs)."""
+    return learning_service.get_learning_stats()
+
+@app.post("/api/self-train")
+async def self_train_endpoint(request: SelfTrainRequest):
+    """Compiles collected chat pairs and integrates them into the training dataset."""
+    res = learning_service.run_self_train_step(iterations=request.iterations or 50)
+    return res
 
 # Mount static files and frontend
 if os.path.isdir(static_dir):

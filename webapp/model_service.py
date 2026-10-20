@@ -373,6 +373,15 @@ class ModelService:
                     "CRITICAL: Maintain continuous conversational context across turns. Seamlessly remember earlier questions and build upon previous answers."
                 )
 
+            # --- Inject Long-Term Learned Memories ---
+            try:
+                from webapp.learning_service import learning_service
+                mem_prompt = learning_service.get_memories_prompt_injection()
+                if mem_prompt:
+                    sys_msg = f"{sys_msg}\n\n{mem_prompt}"
+            except Exception:
+                pass
+
             messages = [
                 {"role": "system", "content": sys_msg}
             ]

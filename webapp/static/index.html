@@ -144,6 +144,7 @@
           </div>
           <div style="margin-top: 10px; font-size: 0.72rem; color: var(--text-muted); line-height: 1.4;">
             Quick commands in chat:<br>
+            • <code>/learn [fact]</code> — Teach permanent memory<br>
             • <code>/code [task]</code> — Codex & Claude coding AI<br>
             • <code>/imagine [prompt]</code> — Midjourney/Higgsfield image<br>
             • <code>/video [prompt]</code> — Kling/Runway MP4 video<br>
@@ -151,6 +152,31 @@
           </div>
         </div>
 
+        <!-- Self-Learning & Autonomous Memory Panel -->
+        <div class="panel-card" id="learning-panel">
+          <div class="panel-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="panel-title">🧠 AI Self-Learning</span>
+            <span class="badge" id="memory-count-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px;">0 facts</span>
+          </div>
+          <div style="font-size: 0.73rem; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.3;">
+            Teach AI in chat with <code>/learn [fact]</code> or <code>remember that...</code>. It stays saved across all chats!
+          </div>
+          <div id="memory-chips-container" style="max-height: 90px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px;">
+            <div style="font-size: 0.70rem; color: var(--text-muted); font-style: italic;">No memories saved yet.</div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="add-memory-btn" class="btn btn-secondary btn-sm" style="flex: 1; font-size: 0.72rem; padding: 5px 6px;">
+              ➕ Add Memory
+            </button>
+            <button id="self-train-btn" class="btn btn-primary btn-sm" style="flex: 1; font-size: 0.72rem; padding: 5px 6px; background: linear-gradient(135deg, #10b981, #06b6d4); border: none; font-weight: 600;">
+              🚀 Self-Train
+            </button>
+          </div>
+          <div style="margin-top: 6px; font-size: 0.68rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <span>Chat training pairs:</span>
+            <strong id="training-pairs-count" style="color: var(--text-primary);">0</strong>
+          </div>
+        </div>
 
         <!-- Architecture Info Banner -->
         <div class="info-callout">

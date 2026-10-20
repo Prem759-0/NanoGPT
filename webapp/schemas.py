@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 
 class ChatRequest(BaseModel):
@@ -15,7 +15,7 @@ class ChatRequest(BaseModel):
     max_new_tokens: int = Field(
         default=180,
         ge=10,
-        le=500,
+        le=2048,
         description="Maximum number of tokens to generate"
     )
     temperature: float = Field(
@@ -118,3 +118,27 @@ class CodeRunResponse(BaseModel):
 
 class SwitchModelRequest(BaseModel):
     model_name: str = Field(..., description="Target model name: 'llama-3.2', 'gpt2', or 'scratch'")
+
+# --- Self-Learning & Memory Schemas ---
+class MemoryItem(BaseModel):
+    id: int
+    fact: str
+    category: str
+    created_at: str
+
+class AddMemoryRequest(BaseModel):
+    fact: str = Field(..., min_length=2, max_length=500, description="Fact or rule to remember")
+    category: Optional[str] = Field(default="general", description="Category for the memory")
+
+class MemoryListResponse(BaseModel):
+    memories: List[Dict[str, Any]]
+    total: int
+
+class SelfTrainRequest(BaseModel):
+    iterations: Optional[int] = Field(default=50, ge=10, le=200)
+
+class SelfTrainResponse(BaseModel):
+    success: bool
+    message: str
+    training_pairs_count: int
+    dataset_ready: bool = True

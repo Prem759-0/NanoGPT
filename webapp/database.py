@@ -45,7 +45,25 @@ class Database:
                     FOREIGN KEY (session_id) REFERENCES sessions (id) ON DELETE CASCADE
                 );
 
+                CREATE TABLE IF NOT EXISTS memories (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    fact TEXT NOT NULL UNIQUE,
+                    category TEXT DEFAULT 'general',
+                    source_session_id TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS training_pairs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    instruction TEXT NOT NULL,
+                    response TEXT NOT NULL,
+                    source TEXT DEFAULT 'chat',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages (session_id, timestamp);
+                CREATE INDEX IF NOT EXISTS idx_memories_created ON memories (created_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_training_created ON training_pairs (created_at DESC);
             """)
 
     def create_session(self, title: str = "New Chat", session_id: Optional[str] = None) -> str:
@@ -133,6 +151,76 @@ class Database:
                 "UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?",
                 (new_title, datetime.utcnow().isoformat(), session_id)
             )
+
+    # --- Long-Term Memory Storage ---
+    def add_memory(self, fact: str, category: str = "general", session_id: Optional[str] = None) -> Optional[int]:
+        """Saves a permanent memory or learned fact to the database."""
+        fact_clean = fact.strip()
+        if not fact_clean:
+            return None
+        now = datetime.utcnow().isoformat()
+        with self._get_connection() as conn:
+            try:
+                cursor = conn.execute(
+                    "INSERT INTO memories (fact, category, source_session_id, created_at) VALUES (?, ?, ?, ?)",
+                    (fact_clean, category, session_id, now)
+                )
+                return cursor.lastrowid
+            except sqlite3.IntegrityError:
+                # Already remembered
+                return None
+
+    def list_memories(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Returns all stored long-term memories."""
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT id, fact, category, source_session_id, created_at FROM memories ORDER BY id DESC LIMIT ?",
+                (limit,)
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    def delete_memory(self, memory_id: int) -> bool:
+        """Deletes a specific memory by ID."""
+        with self._get_connection() as conn:
+            cursor = conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+            return cursor.rowcount > 0
+
+    def clear_all_memories(self) -> int:
+        """Clears all stored memories."""
+        with self._get_connection() as conn:
+            cursor = conn.execute("DELETE FROM memories")
+            return cursor.rowcount
+
+    # --- Self-Training Dataset Storage ---
+    def log_training_pair(self, instruction: str, response: str, source: str = "chat") -> Optional[int]:
+        """Logs an instruction-response turn into the self-learning training dataset."""
+        inst_clean = instruction.strip()
+        resp_clean = response.strip()
+        if len(inst_clean) < 3 or len(resp_clean) < 3:
+            return None
+        now = datetime.utcnow().isoformat()
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                "INSERT INTO training_pairs (instruction, response, source, created_at) VALUES (?, ?, ?, ?)",
+                (inst_clean, resp_clean, source, now)
+            )
+            return cursor.lastrowid
+
+    def list_training_pairs(self, limit: int = 500) -> List[Dict[str, Any]]:
+        """Retrieves collected training pairs."""
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT id, instruction, response, source, created_at FROM training_pairs ORDER BY id DESC LIMIT ?",
+                (limit,)
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    def count_training_pairs(self) -> int:
+        """Returns the number of collected training pairs."""
+        with self._get_connection() as conn:
+            cursor = conn.execute("SELECT COUNT(*) as count FROM training_pairs")
+            row = cursor.fetchone()
+            return row["count"] if row else 0
 
 # Global database instance
 db = Database()

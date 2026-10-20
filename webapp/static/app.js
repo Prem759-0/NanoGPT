@@ -477,9 +477,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // 0. Smart Multi-Modal Intent Classifiers (Autonomous Tool Calling)
     function extractVideoIntent(text) {
       const t = text.trim();
-      if (/^\/video\s+/i.test(t)) return t.replace(/^\/video\s+/i, "").trim();
-      const pMatch = t.match(/^(?:please\s+)?(?:show|generate|create|make|render|produce)(?:\s+me)?\s+(?:an?\s+)?(?:video|animation|clip|mp4|short movie)\s+(?:of\s+)?(.+)/i);
+      if (/^\/(video|vid|clip)\s+/i.test(t)) return t.replace(/^\/(video|vid|clip)\s+/i, "").trim();
+      const pMatch = t.match(/^(?:please\s+)?(?:show|generate|gentrate|generte|genrate|gen|create|make|render|produce)(?:\s+me)?\s+(?:an?\s+)?(?:video|animation|clip|mp4|short movie)\s+(?:of|for|about\s+)?(.+)/i);
       if (pMatch && pMatch[1]) return pMatch[1].trim();
+      const directMatch = t.match(/^(?:an?\s+)?(?:video|animation|clip|mp4|movie)\s+(?:of|for|about)\s+(.+)/i);
+      if (directMatch && directMatch[1]) return directMatch[1].trim();
       const animMatch = t.match(/^(?:please\s+)?(?:animate)\s+(?:an?\s+)?(.+)/i);
       if (animMatch && animMatch[1]) return animMatch[1].trim();
       const sMatch = t.match(/^(?:show|display|give me)?\s*(.+?)\s+(?:video|animation|clip|mp4)$/i);
@@ -489,12 +491,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function extractImageIntent(text) {
       const t = text.trim();
-      if (/^\/(imagine|image)\s+/i.test(t)) return t.replace(/^\/(imagine|image)\s+/i, "").trim();
-      const pMatch = t.match(/^(?:please\s+)?(?:show|generate|create|draw|make|render|display|give me)(?:\s+me)?\s+(?:an?\s+)?(?:image|picture|photo|artwork|drawing|painting|render|map|visual)\s+(?:of\s+)?(.+)/i);
+      if (/^\/(imagine|image|img)\s+/i.test(t)) return t.replace(/^\/(imagine|image|img)\s+/i, "").trim();
+      const pMatch = t.match(/^(?:please\s+)?(?:show|generate|gentrate|generte|genrate|gen|create|draw|make|render|display|give me)(?:\s+me)?\s+(?:an?\s+)?(?:image|picture|photo|artwork|drawing|painting|render|map|visual)\s+(?:of|for|about\s+)?(.+)/i);
       if (pMatch && pMatch[1]) return pMatch[1].trim();
+      const directMatch = t.match(/^(?:an?\s+)?(?:image|picture|photo|artwork|drawing|painting|render|wallpaper|visual)\s+(?:of|for|about)\s+(.+)/i);
+      if (directMatch && directMatch[1]) return directMatch[1].trim();
       const sMatch = t.match(/^(?:show|display|give me)?\s*(.+?)\s+(?:image|picture|photo|artwork|drawing|painting|wallpaper|render)$/i);
       if (sMatch && sMatch[1] && sMatch[1].length > 1) return sMatch[1].trim();
-      const drawMatch = t.match(/^(?:draw|paint|illustrate)\s+(?:an?\s+)?(.+)/i);
+      const drawMatch = t.match(/^(?:draw|paint|illustrate|sketch)\s+(?:an?\s+)?(.+)/i);
       if (drawMatch && drawMatch[1]) return drawMatch[1].trim();
       return null;
     }
@@ -620,6 +624,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         refreshStatus();
+        loadLearningStats();
       }
     } catch (err) {
       loadingElem.remove();
@@ -971,8 +976,101 @@ ${res.error ? res.error : res.output}
     messagesStream.scrollTop = messagesStream.scrollHeight;
   }
 
+  // --- Self-Learning & Memories Logic ---
+  const memoryCountBadge = document.getElementById("memory-count-badge");
+  const memoryChipsContainer = document.getElementById("memory-chips-container");
+  const addMemoryBtn = document.getElementById("add-memory-btn");
+  const selfTrainBtn = document.getElementById("self-train-btn");
+  const trainingPairsCount = document.getElementById("training-pairs-count");
+
+  async function loadLearningStats() {
+    try {
+      const res = await fetch("/api/learning-stats");
+      if (!res.ok) return;
+      const data = await res.json();
+
+      if (memoryCountBadge) {
+        memoryCountBadge.textContent = `${data.total_memories || 0} facts`;
+      }
+      if (trainingPairsCount) {
+        trainingPairsCount.textContent = data.total_training_pairs || 0;
+      }
+      if (memoryChipsContainer) {
+        memoryChipsContainer.innerHTML = "";
+        if (!data.memories || data.memories.length === 0) {
+          memoryChipsContainer.innerHTML = '<div style="font-size: 0.70rem; color: var(--text-muted); font-style: italic;">No memories saved yet.</div>';
+        } else {
+          data.memories.slice(0, 8).forEach(m => {
+            const chip = document.createElement("div");
+            chip.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 3px 6px; border-radius: 4px; font-size: 0.70rem; border: 1px solid var(--border-color);";
+            chip.innerHTML = `
+              <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;" title="${m.fact}">💡 ${m.fact}</span>
+              <button data-id="${m.id}" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.65rem; padding: 0 2px;">✕</button>
+            `;
+            const delBtn = chip.querySelector("button");
+            delBtn.addEventListener("click", async (e) => {
+              e.stopPropagation();
+              await fetch(`/api/memories/${m.id}`, { method: "DELETE" });
+              loadLearningStats();
+            });
+            memoryChipsContainer.appendChild(chip);
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Could not load learning stats:", err);
+    }
+  }
+
+  if (addMemoryBtn) {
+    addMemoryBtn.addEventListener("click", async () => {
+      const fact = prompt("Enter a fact, rule, or preference for the AI to remember forever across all chats:");
+      if (!fact || !fact.trim()) return;
+      try {
+        const res = await fetch("/api/memories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fact: fact.trim() })
+        });
+        if (res.ok) {
+          await loadLearningStats();
+          appendAlertBox("success", "🧠 Memory Saved", `I will now remember: "${fact.trim()}" across all sessions.`);
+        }
+      } catch (err) {
+        alert("Failed to save memory: " + err.message);
+      }
+    });
+  }
+
+  if (selfTrainBtn) {
+    selfTrainBtn.addEventListener("click", async () => {
+      selfTrainBtn.disabled = true;
+      selfTrainBtn.textContent = "⏳ Training...";
+      try {
+        const res = await fetch("/api/self-train", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ iterations: 50 })
+        });
+        const data = await res.json();
+        if (data.success) {
+          appendAlertBox("success", "🚀 AI Self-Training Complete!", data.message, "Run a prompt to test your fine-tuned model!");
+        } else {
+          appendAlertBox("warning", "Self-Training Notice", data.message, "Chat more to collect training pairs, then click Self-Train again!");
+        }
+        await loadLearningStats();
+      } catch (err) {
+        appendAlertBox("error", "Self-Training Failed", err.message);
+      } finally {
+        selfTrainBtn.disabled = false;
+        selfTrainBtn.textContent = "🚀 Self-Train";
+      }
+    });
+  }
+
   // Initial fetch
   refreshStatus();
+  loadLearningStats();
   loadSessions().then(() => {
     if (currentSessionId) {
       loadSessionMessages(currentSessionId);

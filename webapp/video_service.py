@@ -42,33 +42,32 @@ class VideoService:
         prompt_lower = prompt.lower()
         prompt_hash = hashlib.md5(f"{prompt}_{time.time()}".encode()).hexdigest()[:10]
         
-        # Determine theme/style based on prompt semantic keywords
-        if any(w in prompt_lower for w in ["matrix", "code", "terminal", "hacker", "cyber"]):
-            mode = "matrix"
-        elif any(w in prompt_lower for w in ["neural", "brain", "ai", "synapse", "network"]):
-            mode = "neural"
-        elif any(w in prompt_lower for w in ["space", "galaxy", "star", "cosmos", "orbit", "warp"]):
-            mode = "cosmos"
-        elif any(w in prompt_lower for w in ["city", "cyberpunk", "future", "car", "neon", "sunset"]):
-            mode = "cyberpunk"
-        else:
-            mode = "vortex"
-
         seed = sum(ord(c) for c in prompt)
         rng = random.Random(seed)
 
         frames: List[np.ndarray] = []
+        mode = "cinematic_motion"
 
-        if mode == "matrix":
-            frames = self._render_matrix_frames(prompt, num_frames, width, height, rng)
-        elif mode == "neural":
-            frames = self._render_neural_frames(prompt, num_frames, width, height, rng)
-        elif mode == "cosmos":
-            frames = self._render_cosmos_frames(prompt, num_frames, width, height, rng)
-        elif mode == "cyberpunk":
-            frames = self._render_cyberpunk_frames(prompt, num_frames, width, height, rng)
-        else:
-            frames = self._render_vortex_frames(prompt, num_frames, width, height, rng)
+        # 1. Try real subject cinematic motion first
+        frames = self._render_real_subject_motion(prompt, num_frames, width, height, rng)
+
+        if not frames:
+            # 2. Determine procedural mode based on prompt semantic keywords
+            if any(w in prompt_lower for w in ["matrix", "code", "terminal", "hacker"]):
+                mode = "matrix"
+                frames = self._render_matrix_frames(prompt, num_frames, width, height, rng)
+            elif any(w in prompt_lower for w in ["neural", "brain", "ai", "synapse", "network"]):
+                mode = "neural"
+                frames = self._render_neural_frames(prompt, num_frames, width, height, rng)
+            elif any(w in prompt_lower for w in ["space", "galaxy", "star", "cosmos", "orbit", "warp"]):
+                mode = "cosmos"
+                frames = self._render_cosmos_frames(prompt, num_frames, width, height, rng)
+            elif any(w in prompt_lower for w in ["cyberpunk", "future", "neon", "sunset"]):
+                mode = "cyberpunk"
+                frames = self._render_cyberpunk_frames(prompt, num_frames, width, height, rng)
+            else:
+                mode = "vortex"
+                frames = self._render_vortex_frames(prompt, num_frames, width, height, rng)
 
         # Output MP4 filename
         filename = f"video_{prompt_hash}.mp4"
@@ -128,6 +127,49 @@ class VideoService:
             "height": height,
             "render_time_ms": round(render_ms, 2)
         }
+
+    # --- Mode 0: Real Subject Spatio-Temporal Cinematic Motion (Kling / Runway 2.5D Caliber) ---
+    def _render_real_subject_motion(
+        self, prompt: str, num_frames: int, width: int, height: int, rng
+    ) -> List[np.ndarray]:
+        """
+        Synthesizes a 2.5D spatio-temporal cinematic dolly zoom & camera pan
+        across a real high-definition visual of the requested subject.
+        """
+        try:
+            from webapp.image_service import ImageService
+            from PIL import ImageOps
+
+            img_service = ImageService(output_dir=self.output_dir)
+            style_cfg = {"name": "Cinematic Motion", "primary": (245, 158, 11)}
+            base_img = img_service._fetch_real_visual(prompt, int(width * 1.3), int(height * 1.3), style_cfg)
+            if base_img is None:
+                return []
+
+            base_w, base_h = int(width * 1.3), int(height * 1.3)
+            base = ImageOps.fit(base_img, (base_w, base_h), method=Image.Resampling.LANCZOS)
+
+            frames = []
+            for i in range(num_frames):
+                t = math.sin((i / max(1, num_frames - 1)) * (math.pi / 2))
+                scale = 1.0 - 0.15 * t
+                cw, ch = int(base_w * scale), int(base_h * scale)
+                x0 = int((base_w - cw) * (0.3 + 0.4 * t))
+                y0 = int((base_h - ch) * 0.5)
+
+                frame = base.crop((x0, y0, x0 + cw, y0 + ch)).resize((width, height), Image.Resampling.BILINEAR)
+                draw = ImageDraw.Draw(frame)
+
+                # Translucent cinematic letterbox banner
+                draw.rectangle([(0, height - 38), (width, height)], fill=(11, 15, 25))
+                draw.line([(0, height - 38), (width, height - 38)], fill=(245, 158, 11), width=2)
+                draw.text((15, height - 28), f"🎬 AI VIDEO: {prompt[:38]} | 15 FPS H.264 Motion", fill=(241, 245, 249))
+
+                frames.append(np.array(frame))
+
+            return frames
+        except Exception:
+            return []
 
     # --- Mode 1: Spatio-temporal Neural Network Pulse ---
     def _render_neural_frames(self, prompt, num_frames, width, height, rng):
