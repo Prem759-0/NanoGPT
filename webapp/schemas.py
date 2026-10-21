@@ -28,6 +28,10 @@ class ChatRequest(BaseModel):
         default=None,
         description="Optional session ID for conversation memory"
     )
+    user_id: Optional[str] = Field(
+        default="guest",
+        description="User identity or Clerk user ID for isolated private storage"
+    )
 
     @field_validator("message")
     @classmethod
@@ -48,11 +52,13 @@ class ChatResponse(BaseModel):
 class SessionItem(BaseModel):
     id: str
     title: str
+    user_id: Optional[str] = "guest"
     created_at: str
     updated_at: str
 
 class CreateSessionRequest(BaseModel):
     title: Optional[str] = "New Chat"
+    user_id: Optional[str] = "guest"
 
 class HealthResponse(BaseModel):
     status: str

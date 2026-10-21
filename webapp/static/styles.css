@@ -1,27 +1,28 @@
-/* NanoGPT Lab — Developer Lab Design System */
+/* Claude AI Sovereign Studio — Design System */
 :root {
-  --bg-primary: #0a0d14;
-  --bg-secondary: #0f1422;
-  --bg-tertiary: #161e31;
-  --bg-card: #131b2e;
-  --border-subtle: #202b44;
-  --border-focus: #3b82f6;
+  --bg-primary: #181715;
+  --bg-secondary: #1f1e1b;
+  --bg-tertiary: #262421;
+  --bg-card: #252320;
+  --border-subtle: #36332f;
+  --border-focus: #d97757;
   
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-primary: #faf9f5;
+  --text-secondary: #b5b3ad;
+  --text-muted: #7c7973;
   
-  --color-accent: #06b6d4;
-  --color-accent-hover: #0891b2;
-  --color-accent-gradient: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+  /* Claude Signature Terracotta Amber */
+  --color-accent: #d97757;
+  --color-accent-hover: #c96442;
+  --color-accent-gradient: linear-gradient(135deg, #d97757 0%, #e09f67 100%);
   
   --status-not-trained-bg: rgba(245, 158, 11, 0.12);
   --status-not-trained-text: #fbbf24;
   --status-not-trained-border: rgba(245, 158, 11, 0.35);
   
-  --status-ready-bg: rgba(16, 185, 129, 0.12);
-  --status-ready-text: #34d399;
-  --status-ready-border: rgba(16, 185, 129, 0.35);
+  --status-ready-bg: rgba(217, 119, 87, 0.15);
+  --status-ready-text: #e09f67;
+  --status-ready-border: rgba(217, 119, 87, 0.4);
   
   --status-loading-bg: rgba(59, 130, 246, 0.12);
   --status-loading-text: #60a5fa;
@@ -31,17 +32,18 @@
   --status-error-text: #f87171;
   --status-error-border: rgba(239, 68, 68, 0.35);
   
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
   --radius-full: 9999px;
   
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 15px rgba(6, 182, 212, 0.25);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 20px rgba(217, 119, 87, 0.25);
 }
 
 * {
@@ -1222,6 +1224,300 @@ body {
   max-width: 100%;
   border-radius: 6px;
   background: #000;
+}
+
+/* =========================================================================
+   Claude AI & Clerk Authentication Styling Overhaul
+   ========================================================================= */
+
+.claude-chip {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: rgba(217, 119, 87, 0.15);
+  border: 1px solid rgba(217, 119, 87, 0.35);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-left: 8px;
+  vertical-align: middle;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.claude-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.claude-pill-btn:hover {
+  border-color: var(--color-accent);
+  background: rgba(217, 119, 87, 0.12);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.claude-pill-btn.auth-btn {
+  background: linear-gradient(135deg, rgba(217, 119, 87, 0.2), rgba(224, 159, 103, 0.2));
+  border-color: rgba(217, 119, 87, 0.45);
+  color: #fff;
+}
+
+.clerk-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+}
+
+.clerk-user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.7rem;
+}
+
+.chat-workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.messages-stream {
+  flex: 1;
+  overflow-y: auto;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Claude Welcome Card */
+.claude-hero-card {
+  max-width: 680px;
+  margin: 32px auto;
+  padding: 32px 36px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  text-align: left;
+}
+
+.claude-hero-title {
+  font-family: var(--font-serif);
+  font-size: 1.85rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--text-primary);
+  margin: 12px 0 10px 0;
+  letter-spacing: -0.01em;
+}
+
+.claude-hero-desc {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+
+.claude-quick-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.claude-quick-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.claude-quick-card:hover {
+  border-color: var(--color-accent);
+  background: rgba(217, 119, 87, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.quick-card-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.quick-card-content strong {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.quick-card-content span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+/* Claude Split-Screen Artifacts Drawer */
+.claude-artifacts-drawer {
+  width: 50%;
+  min-width: 360px;
+  max-width: 720px;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-subtle);
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  animation: slideInArtifact 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 5;
+}
+
+.claude-artifacts-drawer.open {
+  display: flex;
+}
+
+@keyframes slideInArtifact {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.artifacts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+}
+
+.artifacts-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.artifacts-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background: rgba(217, 119, 87, 0.18);
+  border: 1px solid rgba(217, 119, 87, 0.35);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.artifact-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.artifacts-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.artifact-tab {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.artifact-tab:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.artifact-tab.active {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+.artifacts-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.artifact-view {
+  display: none;
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.artifact-view.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.artifact-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+#artifact-code-view pre {
+  flex: 1;
+  margin: 0;
+  padding: 16px;
+  background: #141312;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #e8e6df;
+}
+
+#artifact-preview-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #fff;
+  flex: 1;
 }
 
 

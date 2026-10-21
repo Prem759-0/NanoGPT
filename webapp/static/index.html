@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NanoGPT Lab — Local Transformer AI</title>
-  <meta name="description" content="Local, API-Key-Free AI Lab built directly on nanoGPT. Inspect, test, and experiment with your own neural network.">
+  <title>Claude AI — Powered by Qwen-2.5-Coder-7B & NanoGPT</title>
+  <meta name="description" content="Frontier Sovereign Coding AI platform with Claude aesthetics, Clerk user authentication, and 100% private local inference.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
+  <!-- Clerk Authentication Browser SDK -->
+  <script async crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -36,12 +38,13 @@
           </div>
           <div class="model-select-wrapper">
             <select id="model-select" class="styled-select" aria-label="Select AI Model">
-              <option value="llama-3.2" selected>🔥 NanoGPT-3.2 (Frontier Coder & Chat — By Prem Gaikwad)</option>
+              <option value="qwen-2.5-coder-7b" selected>👑 Qwen-2.5-Coder-7B (Frontier Super-AI — By Prem Gaikwad)</option>
+              <option value="llama-3.2">🔥 NanoGPT-3.2 (1.23B Fast Coder & Chat — By Prem Gaikwad)</option>
               <option value="gpt2">✨ NanoGPT Light (124M Fast Neural Engine)</option>
               <option value="scratch">🔬 NanoGPT Core (Trained from Scratch)</option>
             </select>
           </div>
-          <p id="model-info-note" class="model-info-note">🔥 NanoGPT-3.2 active: Frontier coding & reasoning model created by Prem Gaikwad, running locally with 2048 context!</p>
+          <p id="model-info-note" class="model-info-note">👑 Qwen-2.5-Coder-7B active: Frontier 7.61B coding super-intelligence created by Prem Gaikwad, running locally with 2048 context!</p>
         </div>
 
         <!-- Model Status Card -->
@@ -202,54 +205,108 @@
 
     <!-- Main Chat Container -->
     <main class="chat-container">
-      <!-- Chat Header -->
+      <!-- Claude Chat Header -->
       <header class="chat-header">
         <div class="chat-header-info">
-          <h2 class="chat-header-title">Lab Chat Session</h2>
+          <h2 class="chat-header-title">Claude AI <span class="claude-chip">Prem Gaikwad Edition</span></h2>
           <span class="chat-header-status-indicator" id="header-status-dot"></span>
-          <span class="chat-header-status-text" id="header-status-text">Checking local model...</span>
+          <span class="chat-header-status-text" id="header-status-text">Qwen-2.5-Coder-7B Ready</span>
         </div>
         <div class="chat-header-actions">
-          <a href="/docs" target="_blank" class="header-link" title="Open API Documentation">FastAPI Docs ↗</a>
+          <!-- Clerk User Auth Widget -->
+          <div id="clerk-auth-container" class="clerk-auth-container">
+            <button id="clerk-sign-in-btn" class="claude-pill-btn auth-btn" title="Sign In with Clerk (Google, GitHub, Email)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span id="clerk-user-label">Sign In / Clerk</span>
+            </button>
+          </div>
+          <button id="toggle-artifact-btn" class="claude-pill-btn secondary-btn" title="Toggle Code & Game Artifacts Drawer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+            <span>Artifacts</span>
+          </button>
+          <a href="/docs" target="_blank" class="header-link" title="Open API Documentation">API Docs ↗</a>
         </div>
       </header>
 
-      <!-- Messages Stream -->
-      <section class="messages-stream" id="messages-stream" aria-live="polite">
-        <!-- Welcome Card -->
-        <div class="welcome-card" id="welcome-card">
-          <div class="welcome-badge">STAGE: PRE-TRAINING AUDIT</div>
-          <h3>Welcome to NanoGPT Lab</h3>
-          <p>
-            You are running a direct interface to Andrej Karpathy's <strong>nanoGPT</strong> architecture.
-            All neural network computations happen locally on your system.
-          </p>
-          <div class="honest-status-box" id="honest-status-box">
-            <div class="honest-status-title">Current Model State:</div>
-            <div id="honest-status-content" class="honest-status-content">
-              Checking checkpoint status...
+      <!-- Chat Workspace with Split-Screen Claude Artifacts -->
+      <div class="chat-workspace">
+        <!-- Messages Stream -->
+        <section class="messages-stream" id="messages-stream" aria-live="polite">
+          <!-- Claude Welcome Card -->
+          <div class="welcome-card claude-hero-card" id="welcome-card">
+            <div class="welcome-badge">CLAUDE SOVEREIGN AI • 7.61B SUPER-INTELLIGENCE</div>
+            <h3 class="claude-hero-title">How can I help you build or create today?</h3>
+            <p class="claude-hero-desc">
+              Running <strong>Qwen-2.5-Coder-7B</strong> & <strong>NanoGPT</strong> locally on your system. 100% sovereign, zero external paid APIs, and user-isolated with <strong>Clerk Auth</strong>.
+            </p>
+            
+            <div class="claude-quick-cards-grid">
+              <div class="claude-quick-card" onclick="document.getElementById('user-input').value='Write a complete playable Snake Game in a single HTML, CSS, and JS file'; document.getElementById('user-input').focus();">
+                <div class="quick-card-icon">🎮</div>
+                <div class="quick-card-content">
+                  <strong>Playable HTML5 Games</strong>
+                  <span>Snake Game or Chess in a single interactive file</span>
+                </div>
+              </div>
+              <div class="claude-quick-card" onclick="document.getElementById('user-input').value='/code Write a Python algorithm for fast Levenshtein distance with tests'; document.getElementById('user-input').focus();">
+                <div class="quick-card-icon">💻</div>
+                <div class="quick-card-content">
+                  <strong>Codex & Claude Coding</strong>
+                  <span>Algorithms, system design, and debugging</span>
+                </div>
+              </div>
+              <div class="claude-quick-card" onclick="document.getElementById('user-input').value='/imagine a breathtaking cyberpunk metropolis at sunset with flying neon vehicles, 8k cinematic'; document.getElementById('user-input').focus();">
+                <div class="quick-card-icon">🎨</div>
+                <div class="quick-card-content">
+                  <strong>Midjourney Image Studio</strong>
+                  <span>Synthesize cinematic neural artwork locally</span>
+                </div>
+              </div>
+              <div class="claude-quick-card" onclick="document.getElementById('user-input').value='/video a cinematic drone sweep over neon futuristic skyscrapers'; document.getElementById('user-input').focus();">
+                <div class="quick-card-icon">🎬</div>
+                <div class="quick-card-content">
+                  <strong>Runway Video Studio</strong>
+                  <span>Render animated MP4 video clips</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="honest-status-box" id="honest-status-box">
+              <div class="honest-status-title">Active AI Engine Status:</div>
+              <div id="honest-status-content" class="honest-status-content">
+                Checking Qwen-2.5-Coder-7B engine...
+              </div>
             </div>
           </div>
-          <div class="welcome-guide">
-            <div class="guide-step">
-              <span class="step-num">1</span>
-              <span>Test this interface & backend connection</span>
+        </section>
+
+        <!-- Claude Code & Game Artifacts Drawer -->
+        <aside class="claude-artifacts-drawer" id="artifacts-drawer">
+          <div class="artifacts-header">
+            <div class="artifacts-title-row">
+              <span class="artifacts-badge">ARTIFACT</span>
+              <span id="artifact-title" class="artifact-title">Code & Live App Studio</span>
             </div>
-            <div class="guide-step">
-              <span class="step-num">2</span>
-              <span>Prepare dataset (e.g. Shakespeare)</span>
-            </div>
-            <div class="guide-step">
-              <span class="step-num">3</span>
-              <span>Train a small local GPT model</span>
-            </div>
-            <div class="guide-step">
-              <span class="step-num">4</span>
-              <span>Generate text locally through this UI</span>
+            <div class="artifacts-actions">
+              <button id="artifact-tab-code" class="artifact-tab active">Code</button>
+              <button id="artifact-tab-preview" class="artifact-tab">Play Live Preview 🎮</button>
+              <button id="artifact-close-btn" class="icon-button" title="Close Artifact Drawer">✕</button>
             </div>
           </div>
-        </div>
-      </section>
+          <div class="artifacts-body">
+            <div id="artifact-code-view" class="artifact-view active">
+              <div class="artifact-toolbar">
+                <button id="artifact-copy-btn" class="claude-pill-btn secondary-btn" style="padding: 4px 10px; font-size: 0.72rem;">📋 Copy Code</button>
+                <button id="artifact-run-py-btn" class="claude-pill-btn secondary-btn" style="padding: 4px 10px; font-size: 0.72rem;">▶ Run in Python Sandbox</button>
+              </div>
+              <pre><code id="artifact-code-content" class="language-python"># Generate code in chat or click 'View Artifact' on any code snippet</code></pre>
+            </div>
+            <div id="artifact-preview-view" class="artifact-view">
+              <iframe id="artifact-preview-frame" sandbox="allow-scripts allow-modals allow-same-origin"></iframe>
+            </div>
+          </div>
+        </aside>
+      </div>
 
       <!-- Input Area -->
       <footer class="chat-input-area">

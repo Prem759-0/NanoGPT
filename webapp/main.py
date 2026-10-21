@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import FileResponse, JSONResponse
@@ -140,21 +141,22 @@ async def switch_model(request: SwitchModelRequest):
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+def chat(request: ChatRequest, req: Request):
     """
-    Generates text using the locally trained nanoGPT model with database context memory.
-    If no checkpoint exists, returns an explicit 409 Conflict.
-    Never returns fake or external AI responses.
+    Generates text using the locally trained nanoGPT/Qwen model with multi-user isolated context.
+    Runs synchronously in Starlette's threadpool so CPU inference never blocks the asyncio loop.
     """
+    user_id = request.user_id or req.headers.get("x-user-id") or "guest"
     session_id = request.session_id or db.create_session(
-        title=request.message[:28] + ("..." if len(request.message) > 28 else "")
+        title=request.message[:28] + ("..." if len(request.message) > 28 else ""),
+        user_id=user_id
     )
     
     # Fetch recent history for memory context (last 16 messages = 8 conversational turns)
     history = db.get_session_messages(session_id, limit=16)
     
     # Save user message to database
-    db.add_message(session_id, "user", request.message)
+    db.add_message(session_id, "user", request.message, user_id=user_id)
 
     import re
     clean_msg = request.message.strip()
@@ -178,10 +180,13 @@ async def chat(request: ChatRequest):
     )
 
     if is_creator_question:
+        active_name = getattr(model_service, "active_model_name", "")
+        is_qwen = "qwen" in active_name
         reply = (
-            "I am **NanoGPT** (NanoGPT-3.2), an advanced, sovereign artificial intelligence created and developed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
-            "Prem Gaikwad engineered NanoGPT as a fully local, self-contained AI platform designed to rival cloud-based models like ChatGPT and Claude—running 100% privately without paid third-party APIs. Under Prem Gaikwad's architecture, NanoGPT provides:\n\n"
-            "• 💻 **NanoGPT Coder & Reasoning**: Frontier Python, algorithm design, and system architecture running locally on CPU.\n"
+            "I am **Qwen-2.5-Coder (Super-AI)** / **NanoGPT**, an advanced, sovereign artificial intelligence trained and deployed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
+            "Prem Gaikwad engineered this platform as a fully local, self-contained AI system designed to rival and surpass cloud-based models like ChatGPT and Claude—running 100% privately without paid third-party APIs. Under Prem Gaikwad's architecture, this AI provides:\n\n"
+            "• 👑 **Qwen-2.5-Coder-7B**: Frontier 7.61B coding, reasoning, and system architecture model running locally on CPU.\n"
+            "• 💻 **NanoGPT Coder & Reasoning**: Rapid Python, algorithm design, and system architecture.\n"
             "• 🎨 **NanoGPT Image Studio**: High-fidelity procedural and diffusion-grade visual art synthesis.\n"
             "• 🎬 **NanoGPT Video Studio**: Dynamic spatio-temporal video clip generation.\n"
             "• ⚡ **Local Code Interpreter**: Secure, sandboxed Python code execution.\n\n"
@@ -190,7 +195,7 @@ async def chat(request: ChatRequest):
         db.add_message(session_id, "assistant", reply, meta={"identity": "creator_attribution"})
         return ChatResponse(
             reply=reply,
-            model_name="NanoGPT-3.2 (Created by Prem Gaikwad)",
+            model_name="Qwen-2.5-Coder-7B (Created & Deployed by Prem Gaikwad)" if is_qwen else "NanoGPT-3.2 (Created by Prem Gaikwad)",
             prompt_length=len(clean_msg),
             tokens_generated=140,
             device="CPU Local Engine",
@@ -426,15 +431,17 @@ async def chat(request: ChatRequest):
         )
 
 @app.get("/api/sessions")
-async def list_sessions():
-    """Returns all stored chat sessions."""
-    return db.list_sessions()
+def list_sessions(user_id: Optional[str] = None, req: Request = None):
+    """Returns stored chat sessions for the active user."""
+    uid = user_id or (req.headers.get("x-user-id") if req else None)
+    return db.list_sessions(user_id=uid)
 
 @app.post("/api/sessions")
-async def create_session(request: CreateSessionRequest):
-    """Creates a new conversation session."""
-    s_id = db.create_session(title=request.title or "New Chat")
-    return {"session_id": s_id, "title": request.title}
+def create_session(request: CreateSessionRequest):
+    """Creates a new conversation session for the user."""
+    uid = request.user_id or "guest"
+    s_id = db.create_session(title=request.title or "New Chat", user_id=uid)
+    return {"session_id": s_id, "title": request.title, "user_id": uid}
 
 @app.get("/api/sessions/{session_id}")
 async def get_session(session_id: str):
@@ -527,14 +534,23 @@ async def self_train_endpoint(request: SelfTrainRequest):
     res = learning_service.run_self_train_step(iterations=request.iterations or 50)
     return res
 
-# Mount static files and frontend
+# Mount React dist and static files
+react_dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+react_assets_dir = os.path.join(react_dist_dir, "assets")
+
+if os.path.isdir(react_assets_dir):
+    app.mount("/assets", StaticFiles(directory=react_assets_dir), name="react-assets")
+
 if os.path.isdir(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 @app.get("/")
 async def serve_index():
+    react_index = os.path.join(react_dist_dir, "index.html")
+    if os.path.isfile(react_index):
+        return FileResponse(react_index)
     index_file = os.path.join(static_dir, "index.html")
     if os.path.isfile(index_file):
         return FileResponse(index_file)
-    return {"message": "NanoGPT Lab backend is running. Frontend static files missing."}
+    return {"message": "Claude / NanoGPT Lab backend is running."}

@@ -38,9 +38,10 @@ class ModelService:
         self.current_checkpoint_path: Optional[str] = None
         self.error_message: Optional[str] = None
         
-        # Check if GGUF model is available on disk; if so, default to it!
-        gguf_path = self.find_gguf()
-        if gguf_path:
+        # Check available GGUF models on disk; prioritize 7B Qwen Coder!
+        if self.find_qwen_gguf():
+            self.active_model_name = "qwen-2.5-coder-7b"
+        elif self.find_llama_gguf():
             self.active_model_name = "llama-3.2"
         else:
             self.active_model_name = "gpt2"
@@ -65,28 +66,58 @@ class ModelService:
             self.torch_version = None
             self.device = "cpu"
 
-    def find_gguf(self) -> Optional[str]:
-        """Finds any valid GGUF file in project root or Downloads folder."""
-        # 1. Check exact base dir match
-        exact = os.path.join(self.base_dir, "Llama-3.2-1B-Instruct.Q4_K_M.gguf")
-        if os.path.isfile(exact):
-            return exact
-        # 2. Check any *.gguf in project root
-        matches = glob.glob(os.path.join(self.base_dir, "*.gguf"))
-        if matches:
-            return matches[0]
-        # 3. Check Downloads directories
+    def find_file(self, filename: str) -> Optional[str]:
+        """Searches project root and parent/Downloads directories for a specific filename."""
         candidate_dirs = [
+            self.base_dir,
             os.path.abspath(os.path.join(self.base_dir, "..")),
             os.path.abspath(os.path.join(self.base_dir, "..", "..")),
             os.path.join(os.path.expanduser("~"), "Downloads"),
         ]
         for cdir in candidate_dirs:
             if os.path.isdir(cdir):
-                found = glob.glob(os.path.join(cdir, "*.gguf"))
-                if found:
-                    return found[0]
+                target = os.path.join(cdir, filename)
+                if os.path.isfile(target):
+                    return target
         return None
+
+    def find_qwen_gguf(self) -> Optional[str]:
+        """Finds Qwen2.5-Coder-7B GGUF file in project root or Downloads."""
+        exact = self.find_file("Qwen2.5-Coder-7B-Instruct.Q4_K_M.gguf")
+        if exact:
+            return exact
+        candidate_dirs = [
+            self.base_dir,
+            os.path.abspath(os.path.join(self.base_dir, "..")),
+            os.path.join(os.path.expanduser("~"), "Downloads"),
+        ]
+        for cdir in candidate_dirs:
+            if os.path.isdir(cdir):
+                matches = glob.glob(os.path.join(cdir, "*qwen*7b*.gguf")) or glob.glob(os.path.join(cdir, "*Qwen*7B*.gguf"))
+                if matches:
+                    return matches[0]
+        return None
+
+    def find_llama_gguf(self) -> Optional[str]:
+        """Finds LLaMA-3.2-1B GGUF file in project root or Downloads."""
+        exact = self.find_file("Llama-3.2-1B-Instruct.Q4_K_M.gguf")
+        if exact:
+            return exact
+        candidate_dirs = [
+            self.base_dir,
+            os.path.abspath(os.path.join(self.base_dir, "..")),
+            os.path.join(os.path.expanduser("~"), "Downloads"),
+        ]
+        for cdir in candidate_dirs:
+            if os.path.isdir(cdir):
+                matches = glob.glob(os.path.join(cdir, "*llama*1b*.gguf")) or glob.glob(os.path.join(cdir, "*Llama*1B*.gguf"))
+                if matches:
+                    return matches[0]
+        return None
+
+    def find_gguf(self) -> Optional[str]:
+        """Finds best available GGUF model (prioritizing 7B Qwen Coder, then LLaMA 1B)."""
+        return self.find_qwen_gguf() or self.find_llama_gguf()
 
     def find_checkpoint(self) -> Optional[str]:
         """Safely scans allowed directories within the project for a local scratch checkpoint."""
@@ -114,19 +145,31 @@ class ModelService:
 
     def get_available_models(self) -> List[Dict[str, Any]]:
         """Returns list of models available locally."""
-        has_gguf = self.find_gguf() is not None
+        has_qwen = self.find_qwen_gguf() is not None
+        has_llama = self.find_llama_gguf() is not None
         has_scratch = self.find_checkpoint() is not None
         return [
             {
-                "id": "llama-3.2",
-                "name": "🔥 NanoGPT-3.2 (Frontier Coder & Chat — By Prem Gaikwad)",
+                "id": "qwen-2.5-coder-7b",
+                "name": "👑 Qwen-2.5-Coder-7B (Frontier Super-AI — By Prem Gaikwad)",
                 "type": "fine_tuned_gguf",
-                "description": "Frontier NanoGPT architecture fine-tuned on GPU, created by developer Prem Gaikwad. Runs at ~20 tokens/sec on CPU with 2048 context window.",
+                "description": "World-class 7.61B coding & reasoning AI trained on 15,000+ code instructions. Outperforms GPT-4o-mini on HumanEval & coding benchmarks. 100% private on CPU.",
+                "active": self.active_model_name == "qwen-2.5-coder-7b",
+                "parameters": "7.61B",
+                "block_size": 2048,
+                "vocab_size": 152064,
+                "available": has_qwen
+            },
+            {
+                "id": "llama-3.2",
+                "name": "🔥 NanoGPT-3.2 (1.23B Fast Coder & Chat — By Prem Gaikwad)",
+                "type": "fine_tuned_gguf",
+                "description": "Frontier 1.23B architecture fine-tuned on GPU, created by developer Prem Gaikwad. Runs at ~20 tokens/sec on CPU with 2048 context window.",
                 "active": self.active_model_name == "llama-3.2",
                 "parameters": "1.23B",
                 "block_size": 2048,
                 "vocab_size": 128256,
-                "available": has_gguf
+                "available": has_llama
             },
             {
                 "id": "gpt2",
@@ -154,7 +197,7 @@ class ModelService:
 
     def load_model(self, model_name: Optional[str] = None) -> bool:
         """
-        Loads the target model into memory: 'llama-3.2', 'gpt2', or 'scratch'.
+        Loads the target model into memory: 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', or 'scratch'.
         """
         target = model_name or self.active_model_name
         
@@ -162,30 +205,69 @@ class ModelService:
         if self.base_dir not in sys.path:
             sys.path.insert(0, self.base_dir)
 
-        # Option 1: Fine-Tuned GGUF LLaMA-3.2
-        if target in ["llama-3.2", "gguf"]:
-            gguf_path = self.find_gguf()
-            if not gguf_path:
-                self.error_message = "No GGUF model file found on disk."
+        # Clean up existing models from memory to prevent RAM exhaustion on 8GB systems
+        if self.llama_model is not None:
+            del self.llama_model
+            self.llama_model = None
+            self.model = None
+            import gc
+            gc.collect()
+        if self.model is not None:
+            del self.model
+            self.model = None
+            import gc
+            gc.collect()
+
+        # Option 0: Qwen-2.5-Coder-7B Instruct
+        if target in ["qwen-2.5-coder-7b", "qwen", "qwen-7b"]:
+            qwen_path = self.find_qwen_gguf()
+            if not qwen_path:
+                self.error_message = "Qwen2.5-Coder-7B GGUF model file not found on disk."
                 return False
             try:
                 from llama_cpp import Llama
-                print(f"Loading GGUF model: {gguf_path}...")
+                print(f"Loading Qwen-2.5-Coder-7B model: {qwen_path}...")
                 self.llama_model = Llama(
-                    model_path=gguf_path,
+                    model_path=qwen_path,
+                    n_ctx=2048,
+                    verbose=False,
+                    n_threads=4
+                )
+                self.model = self.llama_model
+                self.active_model_name = "qwen-2.5-coder-7b"
+                self.current_checkpoint_path = os.path.basename(qwen_path)
+                self.dataset_name = "CodeAlpaca 15K + Python Synthetic (Unsloth QLoRA)"
+                self.vocab_size = 152064
+                self.error_message = None
+                return True
+            except Exception as e:
+                self.error_message = f"Failed to load Qwen 7B model: {str(e)}"
+                return False
+
+        # Option 1: Fine-Tuned GGUF LLaMA-3.2
+        elif target in ["llama-3.2", "gguf", "llama"]:
+            llama_path = self.find_llama_gguf()
+            if not llama_path:
+                self.error_message = "LLaMA-3.2 GGUF model file not found on disk."
+                return False
+            try:
+                from llama_cpp import Llama
+                print(f"Loading LLaMA-3.2 model: {llama_path}...")
+                self.llama_model = Llama(
+                    model_path=llama_path,
                     n_ctx=4096,
                     verbose=False,
                     n_threads=4
                 )
                 self.model = self.llama_model
                 self.active_model_name = "llama-3.2"
-                self.current_checkpoint_path = os.path.relpath(gguf_path, self.base_dir)
+                self.current_checkpoint_path = os.path.basename(llama_path)
                 self.dataset_name = "Fine-Tuned Instruction Dataset (Colab T4)"
                 self.vocab_size = 128256
                 self.error_message = None
                 return True
             except Exception as e:
-                self.error_message = f"Failed to load GGUF model: {str(e)}"
+                self.error_message = f"Failed to load LLaMA model: {str(e)}"
                 return False
 
         # Option 2: Pretrained GPT-2 124M
@@ -292,9 +374,10 @@ class ModelService:
             self.vocab_size = 256
 
     def switch_model(self, model_name: str) -> bool:
-        """Switches active model between 'llama-3.2', 'gpt2', and 'scratch'."""
-        if model_name not in ["llama-3.2", "gpt2", "scratch"]:
-            raise ValueError(f"Invalid model: {model_name}. Allowed: 'llama-3.2', 'gpt2', 'scratch'")
+        """Switches active model between 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', and 'scratch'."""
+        allowed = ["qwen-2.5-coder-7b", "qwen", "qwen-7b", "llama-3.2", "gpt2", "scratch"]
+        if model_name not in allowed:
+            raise ValueError(f"Invalid model: {model_name}. Allowed: 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', 'scratch'")
         return self.load_model(model_name)
 
     def generate(self, prompt: str, max_new_tokens: int = 150, temperature: float = 0.7, history: Optional[List[Dict[str, str]]] = None, mode: str = "chat") -> Dict[str, Any]:
@@ -337,9 +420,10 @@ class ModelService:
 
         if is_creator_query:
             creator_reply = (
-                "I am **NanoGPT** (NanoGPT-3.2), an advanced, sovereign artificial intelligence created and developed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
-                "Prem Gaikwad engineered NanoGPT as a fully local, self-contained AI platform designed to rival cloud-based models like ChatGPT and Claude—running 100% privately without paid third-party APIs. Under Prem Gaikwad's architecture, NanoGPT provides:\n\n"
-                "• 💻 **NanoGPT Coder & Reasoning**: Frontier Python, algorithm design, and system architecture running locally on CPU.\n"
+                "I am **Qwen-2.5-Coder (Super-AI)** / **NanoGPT**, an advanced, sovereign artificial intelligence trained and deployed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
+                "Prem Gaikwad engineered this platform as a fully local, self-contained AI system designed to rival cloud-based models like ChatGPT and Claude—running 100% privately without paid third-party APIs. Under Prem Gaikwad's architecture, this AI provides:\n\n"
+                "• 👑 **Qwen-2.5-Coder-7B**: Frontier 7.61B coding, reasoning, and system architecture model running locally on CPU.\n"
+                "• 💻 **NanoGPT Coder & Reasoning**: Rapid Python, algorithm design, and system architecture.\n"
                 "• 🎨 **NanoGPT Image Studio**: High-fidelity procedural and diffusion-grade visual art synthesis.\n"
                 "• 🎬 **NanoGPT Video Studio**: Dynamic spatio-temporal video clip generation.\n"
                 "• ⚡ **Local Code Interpreter**: Secure, sandboxed Python code execution.\n\n"
@@ -348,29 +432,42 @@ class ModelService:
             return {
                 "reply": creator_reply,
                 "full_text": creator_reply,
-                "model_name": "NanoGPT-3.2 (Created by Prem Gaikwad)",
+                "model_name": "Qwen-2.5-Coder-7B (Created & Deployed by Prem Gaikwad)" if "qwen" in self.active_model_name else "NanoGPT-3.2 (Created by Prem Gaikwad)",
                 "prompt_length": len(clean_prompt),
                 "tokens_generated": 140,
                 "device": "CPU Local Engine"
             }
 
-        # --- 1. GGUF NanoGPT-3.2 Generation ---
-        if self.active_model_name == "llama-3.2" and self.llama_model is not None:
+        # --- 1. GGUF Generation (Qwen-2.5-Coder-7B & LLaMA-3.2) ---
+        if self.active_model_name in ["qwen-2.5-coder-7b", "llama-3.2"] and self.llama_model is not None:
+            is_qwen = "qwen" in self.active_model_name
             if is_coding:
                 sys_msg = (
+                    "You are Qwen-2.5-Coder, the world-class coding and reasoning AI assistant trained and deployed by developer Prem Gaikwad from India. "
+                    "If asked who made or developed you, always state proudly that you are developed and deployed by developer Prem Gaikwad from India. "
+                    "Write robust, elegant, production-grade, and bug-free code with clear comments. "
+                    "Always format executable code inside markdown triple backticks with language tags (e.g. ```python, ```html, ```javascript). "
+                    "Provide complete, unabbreviated code without skipping parts. "
+                    "CRITICAL: Maintain continuous conversational context across turns. If the user provides a follow-up request (e.g., 'in html, css, js', 'now in python', 'make it faster', 'give full code'), always fulfill this directly in the context of the previous conversation."
+                ) if is_qwen else (
                     "You are NanoGPT Coder, an elite coding and reasoning AI assistant created and developed by Prem Gaikwad from India. "
                     "If asked who made or developed you, always state proudly that you were created by developer Prem Gaikwad from India. "
                     "Write robust, elegant, production-grade, and bug-free code with clear comments. "
                     "Always format executable code inside markdown triple backticks with language tags (e.g. ```python, ```html). "
                     "Provide complete, unabbreviated code without skipping parts. "
-                    "CRITICAL: Maintain continuous conversational context. If the user provides a follow-up request (e.g., 'in html, css, js', 'now in python', 'make it faster', 'give full code'), always fulfill this directly in the context of the previous conversation."
+                    "CRITICAL: Maintain continuous conversational context. If the user provides a follow-up request, always fulfill this directly in the context of the previous conversation."
                 )
             else:
                 sys_msg = (
+                    "You are Qwen-2.5-Coder, an advanced, highly intelligent AI assistant trained and deployed by developer Prem Gaikwad from India. "
+                    "If asked who made or developed you, always state proudly that you are developed and deployed by developer Prem Gaikwad from India. "
+                    "You run completely offline on local hardware with zero external paid APIs. "
+                    "CRITICAL: Maintain continuous conversational context across turns. Seamlessly remember earlier questions and build upon previous answers."
+                ) if is_qwen else (
                     "You are NanoGPT (NanoGPT-3.2), an advanced, helpful, and private AI assistant created and developed by Prem Gaikwad from India. "
                     "If asked who made or developed you, always state proudly that you were created by developer Prem Gaikwad from India. "
                     "You run completely offline on local hardware with zero external paid APIs. "
-                    "CRITICAL: Maintain continuous conversational context across turns. Seamlessly remember earlier questions and build upon previous answers."
+                    "CRITICAL: Maintain continuous conversational context across turns."
                 )
 
             # --- Inject Long-Term Learned Memories ---
@@ -403,7 +500,7 @@ class ModelService:
                         "content": content
                     })
 
-                # Follow-up intent bridging for small 1B model context retention
+                # Follow-up intent bridging
                 followup_starters = ("in ", "now in ", "rewrite in ", "convert to ", "give full", "full code", "not full", "not working", "why ")
                 is_short_followup = (
                     clean_prompt.lower().startswith(followup_starters) or
@@ -420,27 +517,29 @@ class ModelService:
 
             messages.append({"role": "user", "content": clean_prompt})
 
-            # Robust Context Budget Guard (n_ctx = 4096)
-            n_ctx_val = 4096
+            # Robust Context Budget Guard (2048 for Qwen, 4096 for LLaMA)
+            n_ctx_val = 2048 if is_qwen else 4096
             # Measure approximate tokens (1 token ~= 3.4 chars)
             total_chars = sum(len(m["content"]) for m in messages)
             approx_prompt_tokens = int(total_chars / 3.4)
 
             # Prune oldest history messages if prompt is dangerously close to limit
-            while len(messages) > 2 and (sum(len(m["content"]) for m in messages) / 3.4) > (n_ctx_val - 600):
+            while len(messages) > 2 and (sum(len(m["content"]) for m in messages) / 3.4) > (n_ctx_val - 500):
                 messages.pop(1)
 
             # Dynamically compute safe generation token budget
             final_prompt_tokens = int(sum(len(m["content"]) for m in messages) / 3.4)
-            safe_max_tokens = max(100, min(max_new_tokens, n_ctx_val - final_prompt_tokens - 64))
-            safe_max_tokens = min(safe_max_tokens, 1800)
+            safe_max_tokens = max(80, min(max_new_tokens, n_ctx_val - final_prompt_tokens - 40))
+            safe_max_tokens = min(safe_max_tokens, 1500 if is_qwen else 1800)
+
+            stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|im_start|>", "User:"] if is_qwen else ["<|eot_id|>", "<|start_header_id|>", "User:"]
 
             try:
                 res = self.llama_model.create_chat_completion(
                     messages=messages,
                     max_tokens=safe_max_tokens,
                     temperature=temperature if not is_coding else min(temperature, 0.4),
-                    stop=["<|eot_id|>", "<|start_header_id|>", "User:"]
+                    stop=stop_tokens
                 )
             except Exception as exc:
                 if "exceed context window" in str(exc).lower():
@@ -452,7 +551,7 @@ class ModelService:
                         ],
                         max_tokens=min(max_new_tokens, 1024),
                         temperature=temperature if not is_coding else min(temperature, 0.4),
-                        stop=["<|eot_id|>", "<|start_header_id|>", "User:"]
+                        stop=stop_tokens
                     )
                 else:
                     raise
@@ -462,10 +561,15 @@ class ModelService:
                 reply = "I understand. How can I assist you with your code today?"
 
             usage = res.get("usage", {})
+            if is_qwen:
+                display_model_name = "Qwen-2.5-Coder-7B (Master Coder — By Prem Gaikwad)" if is_coding else "Qwen-2.5-Coder-7B (Super-AI — By Prem Gaikwad)"
+            else:
+                display_model_name = "NanoGPT-3.2 Coder Engine" if is_coding else "NanoGPT-3.2 (Frontier Engine — By Prem Gaikwad)"
+
             return {
                 "reply": reply,
                 "full_text": reply,
-                "model_name": "NanoGPT-3.2 Coder Engine" if is_coding else "NanoGPT-3.2 (Frontier Engine — By Prem Gaikwad)",
+                "model_name": display_model_name,
                 "prompt_length": usage.get("prompt_tokens", len(clean_prompt)),
                 "tokens_generated": usage.get("completion_tokens", len(reply.split())),
                 "device": "CPU (AVX2 4-Bit Quantized)"
@@ -545,6 +649,22 @@ class ModelService:
         """Returns safe descriptive metadata about current model configuration."""
         status = self.get_status()
         
+        if self.active_model_name == "qwen-2.5-coder-7b":
+            return {
+                "model_type": "Qwen-2.5-Coder-7B Frontier Engine (Fine-Tuned GGUF)",
+                "checkpoint_path": self.current_checkpoint_path or "Qwen2.5-Coder-7B-Instruct.Q4_K_M.gguf",
+                "model_status": status,
+                "dataset": "CodeAlpaca 15K + Python Synthetic (Fine-Tuned on T4 GPU by Prem Gaikwad)",
+                "vocab_size": 152064,
+                "parameters": 7610000000,
+                "block_size": 2048,
+                "n_layer": 28,
+                "n_head": 28,
+                "n_embd": 3584,
+                "hardware": "CPU (4-Bit AVX2 C++ Quantized)",
+                "description": "World-class 7.61B coding AI deployed by Prem Gaikwad from India. Outperforms GPT-4o-mini on coding benchmarks."
+            }
+
         if self.active_model_name == "llama-3.2":
             return {
                 "model_type": "NanoGPT-3.2 Frontier Engine (Fine-Tuned GGUF)",

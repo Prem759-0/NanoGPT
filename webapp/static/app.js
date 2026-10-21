@@ -44,6 +44,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let isGenerating = false;
   let codexModeActive = false;
   let currentSessionId = localStorage.getItem("nanogpt_session_id") || null;
+  let currentUserId = localStorage.getItem("clerk_user_id") || "guest";
+  let clerkInstance = null;
   let isRecording = false;
   let recognition = null;
 
@@ -231,8 +233,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         await refreshStatus();
         if (modelInfoNote) {
-          if (selected === "llama-3.2") {
-            modelInfoNote.textContent = "🔥 NanoGPT-3.2 active: Frontier coding & reasoning model created by Prem Gaikwad, running at ~20 tokens/sec on CPU!";
+          if (selected === "qwen-2.5-coder-7b") {
+            modelInfoNote.textContent = "👑 Qwen-2.5-Coder-7B active: Frontier 7.61B coding super-intelligence created by Prem Gaikwad, running locally with 2048 context!";
+          } else if (selected === "llama-3.2") {
+            modelInfoNote.textContent = "🔥 NanoGPT-3.2 active: Frontier 1.23B coding & reasoning model created by Prem Gaikwad, running at ~20 tokens/sec on CPU!";
           } else if (selected === "gpt2") {
             modelInfoNote.textContent = "✨ NanoGPT Light (124M) active: Fast, coherent English & coding with 0 cloud APIs.";
           } else {
@@ -434,9 +438,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Sync model select dropdown
     if (modelSelect && info.model_type) {
-      if (info.model_type.includes("NanoGPT-3.2") || info.model_type.includes("LLaMA")) {
+      if (info.model_type.includes("Qwen")) {
+        modelSelect.value = "qwen-2.5-coder-7b";
+        if (modelInfoNote) modelInfoNote.textContent = "👑 Qwen-2.5-Coder-7B active: Frontier 7.61B coding super-intelligence created by Prem Gaikwad, running locally with 2048 context!";
+      } else if (info.model_type.includes("NanoGPT-3.2") || info.model_type.includes("LLaMA")) {
         modelSelect.value = "llama-3.2";
-        if (modelInfoNote) modelInfoNote.textContent = "🔥 NanoGPT-3.2 active: Frontier coding & reasoning model created by Prem Gaikwad, running at ~20 tokens/sec on CPU!";
+        if (modelInfoNote) modelInfoNote.textContent = "🔥 NanoGPT-3.2 active: Frontier 1.23B coding & reasoning model created by Prem Gaikwad, running at ~20 tokens/sec on CPU!";
       } else if (info.model_type.includes("Light") || info.model_type.includes("GPT-2")) {
         modelSelect.value = "gpt2";
         if (modelInfoNote) modelInfoNote.textContent = "✨ NanoGPT Light (124M) active: Fast, coherent English & coding with 0 cloud APIs.";
