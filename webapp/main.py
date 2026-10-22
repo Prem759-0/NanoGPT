@@ -123,9 +123,9 @@ async def list_models():
     return model_service.get_available_models()
 
 @app.post("/api/switch-model")
-async def switch_model(request: SwitchModelRequest):
+def switch_model(request: SwitchModelRequest):
     """
-    Switches active model between GPT-2 (124M) and local scratch checkpoint.
+    Switches active model between Qwen-2.5-Coder-7B and local scratch checkpoint.
     """
     success = model_service.switch_model(request.model_name)
     if not success:

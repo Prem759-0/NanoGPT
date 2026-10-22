@@ -8,11 +8,10 @@ import {
   useUser 
 } from '@clerk/clerk-react';
 import { 
-  Sparkles, 
   Send, 
   Code2, 
   Gamepad2, 
-  Image, 
+  Image as ImageIcon, 
   Video, 
   Mic, 
   MicOff, 
@@ -20,13 +19,17 @@ import {
   Copy, 
   Check, 
   X, 
-  PanelRightClose, 
   Plus, 
   Trash2, 
   RefreshCw,
   Cpu,
   Layers,
-  Volume2
+  Flame,
+  Brain,
+  Search,
+  Sparkles,
+  Terminal,
+  ExternalLink
 } from 'lucide-react';
 import './App.css';
 
@@ -39,15 +42,15 @@ export default function App() {
   if (clerkKey && clerkKey.startsWith('pk_')) {
     return (
       <ClerkProvider publishableKey={clerkKey}>
-        <ClaudeWorkspace clerkKey={clerkKey} onUpdateKey={setClerkKey} />
+        <GrokWorkspace clerkKey={clerkKey} onUpdateKey={setClerkKey} />
       </ClerkProvider>
     );
   }
 
-  return <ClaudeWorkspace clerkKey={clerkKey} onUpdateKey={setClerkKey} isGuestMode={true} />;
+  return <GrokWorkspace clerkKey={clerkKey} onUpdateKey={setClerkKey} isGuestMode={true} />;
 }
 
-function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
+function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   // Clerk user hook (safe fallback when in guest mode)
   let clerkUser = null;
   try {
@@ -73,6 +76,9 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const [activeModel, setActiveModel] = useState('qwen-2.5-coder-7b');
   const [modelSpecs, setModelSpecs] = useState(null);
 
+  // Grok Signature Modes: 'normal', 'fun' (witty/unhinged), 'think' (deep reasoning)
+  const [grokMode, setGrokMode] = useState('normal');
+
   // Live timer during token generation
   useEffect(() => {
     let interval = null;
@@ -86,9 +92,9 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     return () => clearInterval(interval);
   }, [isGenerating]);
   
-  // Artifacts Split-Screen Drawer State
-  const [artifactDrawerOpen, setArtifactDrawerOpen] = useState(false);
-  const [artifactData, setArtifactData] = useState({ title: 'Interactive App', code: '', lang: 'html', tab: 'code' });
+  // Artifacts Split-Screen Canvas State
+  const [canvasDrawerOpen, setCanvasDrawerOpen] = useState(false);
+  const [canvasData, setCanvasData] = useState({ title: 'Grok Canvas', code: '', lang: 'html', tab: 'code' });
   const [codeCopiedIndex, setCodeCopiedIndex] = useState(null);
 
   // Voice & Audio
@@ -245,7 +251,7 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const toggleRecording = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert('Speech recognition is supported in Chrome & Edge browsers.');
+      alert('Speech recognition is supported in modern Chrome & Edge browsers.');
       return;
     }
 
@@ -285,7 +291,7 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   // Send Prompt to AI (supports direct call or form submission)
   const handleSubmit = async (e, directPrompt = null) => {
     if (e && e.preventDefault) e.preventDefault();
-    const prompt = (directPrompt !== null ? directPrompt : inputPrompt).trim();
+    let prompt = (directPrompt !== null ? directPrompt : inputPrompt).trim();
     if (!prompt || isGenerating) return;
 
     setInputPrompt('');
@@ -297,18 +303,26 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     setMessages(prev => [...prev, tempUserMsg]);
 
     const isCodeQuery = prompt.toLowerCase().includes('game') || prompt.toLowerCase().includes('code') || prompt.toLowerCase().includes('write') || prompt.startsWith('/code');
-    const tokenBudget = isCodeQuery ? 750 : 300;
+    const tokenBudget = isCodeQuery ? 750 : 320;
+
+    // Grok Mode Persona Injection
+    let outgoingMessage = prompt;
+    if (grokMode === 'fun' && !prompt.startsWith('/')) {
+      outgoingMessage = `[Grok Fun Mode: Be witty, razor-sharp, unfiltered, and creative]: ${prompt}`;
+    } else if (grokMode === 'think' && !prompt.startsWith('/')) {
+      outgoingMessage = `[Grok Deep Think Mode: Provide comprehensive architectural reasoning and step-by-step logic]: ${prompt}`;
+    }
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
         body: JSON.stringify({
-          message: prompt,
+          message: outgoingMessage,
           session_id: currentSessionId,
           user_id: activeUserId,
           max_new_tokens: tokenBudget,
-          temperature: 0.7
+          temperature: grokMode === 'fun' ? 0.85 : 0.65
         })
       });
 
@@ -336,7 +350,7 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
       setMessages(prev => [...prev, assistantMsg]);
 
-      // If response includes code or interactive game, auto-open in artifact drawer
+      // If response includes code or interactive game, auto-open in Grok Canvas drawer
       checkForArtifacts(data.reply);
 
       if (autoSpeak) {
@@ -356,33 +370,33 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     }
   };
 
-  // Detect code blocks to open in Claude Artifact Drawer
+  // Detect code blocks to open in Grok Canvas Drawer
   const checkForArtifacts = (replyText) => {
     const codeMatch = replyText.match(/```([a-zA-Z0-9_\-]+)?\s*([\s\S]*?)```/);
     if (codeMatch) {
       const lang = (codeMatch[1] || 'code').toLowerCase();
       const code = codeMatch[2].trim();
       const isHtml = lang === 'html' || code.includes('<html') || code.includes('<canvas');
-      setArtifactData({
-        title: isHtml ? '🎮 Interactive Web App' : '🐍 Python Code Studio',
+      setCanvasData({
+        title: isHtml ? '🎮 Grok Interactive App' : '🐍 Python Code Studio',
         code: code,
         lang: isHtml ? 'html' : 'python',
         tab: isHtml ? 'preview' : 'code'
       });
-      setArtifactDrawerOpen(true);
+      setCanvasDrawerOpen(true);
     }
   };
 
-  // Open specific code snippet in Artifact Drawer
-  const openSnippetInArtifact = (code, lang = 'html', title = 'Interactive Artifact') => {
+  // Open specific code snippet in Grok Canvas
+  const openSnippetInCanvas = (code, lang = 'html', title = 'Interactive Canvas') => {
     const isHtml = lang === 'html' || code.includes('<html') || code.includes('<canvas');
-    setArtifactData({
+    setCanvasData({
       title: title,
       code: code,
       lang: isHtml ? 'html' : lang,
       tab: isHtml ? 'preview' : 'code'
     });
-    setArtifactDrawerOpen(true);
+    setCanvasDrawerOpen(true);
   };
 
   // Prompt Clerk Key Input Modal
@@ -399,68 +413,100 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     }
   };
 
-  // Helper to render message content with rich code cards
-  const renderMessageContent = (text, msgIdx) => {
+  // Copy Code to Clipboard
+  const handleCopyCode = (text, index) => {
+    navigator.clipboard.writeText(text);
+    setCodeCopiedIndex(index);
+    setTimeout(() => setCodeCopiedIndex(null), 2000);
+  };
+
+  // Render markdown with code block cards and live preview triggers
+  const renderMessageContent = (content, msgIndex) => {
     const codeBlockRegex = /```([a-zA-Z0-9_\-]+)?\s*([\s\S]*?)```/g;
     const parts = [];
     let lastIndex = 0;
     let match;
 
-    while ((match = codeBlockRegex.exec(text)) !== null) {
+    while ((match = codeBlockRegex.exec(content)) !== null) {
       if (match.index > lastIndex) {
-        parts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+        parts.push({
+          type: 'text',
+          content: content.slice(lastIndex, match.index)
+        });
       }
+
+      const lang = (match[1] || 'code').toLowerCase();
+      const code = match[2].trim();
+      const isHtml = lang === 'html' || code.includes('<html') || code.includes('<canvas');
+
       parts.push({
         type: 'code',
-        lang: (match[1] || 'code').toLowerCase(),
-        code: match[2].trim()
+        lang: lang,
+        code: code,
+        isHtml: isHtml
       });
+
       lastIndex = match.index + match[0].length;
     }
 
-    if (lastIndex < text.length) {
-      parts.push({ type: 'text', content: text.substring(lastIndex) });
-    }
-
-    if (parts.length === 0) {
-      return <div className="message-text-content">{text}</div>;
+    if (lastIndex < content.length) {
+      parts.push({
+        type: 'text',
+        content: content.slice(lastIndex)
+      });
     }
 
     return (
-      <div className="message-content-wrapper">
+      <div>
         {parts.map((p, idx) => {
           if (p.type === 'text') {
             return (
-              <div key={idx} className="message-text-paragraph">
+              <div key={idx} style={{ whiteSpace: 'pre-wrap', lineHeight: 1.65 }}>
                 {p.content}
               </div>
             );
           }
-          const isHtml = p.lang === 'html' || p.code.includes('<html') || p.code.includes('<canvas');
+
+          const blockId = `${msgIndex}-${idx}`;
           return (
-            <div key={idx} className="code-card">
-              <div className="code-card-header">
-                <span>{isHtml ? '🎮 HTML5 Live Sandbox' : `🐍 ${p.lang.toUpperCase()}`}</span>
-                <div className="code-actions">
+            <div key={idx} className="grok-code-block">
+              <div className="grok-code-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Terminal size={14} color="#a1a1aa" />
+                  <span style={{ fontWeight: 600, textTransform: 'uppercase' }}>{p.lang}</span>
+                </div>
+                <div className="grok-code-actions">
+                  {p.isHtml && (
+                    <button 
+                      className="grok-action-chip"
+                      onClick={() => openSnippetInCanvas(p.code, 'html', '🎮 Interactive App')}
+                      title="Launch in Grok Canvas"
+                    >
+                      <Play size={12} color="#22c55e" />
+                      <span>Live Preview</span>
+                    </button>
+                  )}
                   <button 
-                    className="code-action-btn"
-                    onClick={() => openSnippetInArtifact(p.code, p.lang, isHtml ? 'Playable HTML App' : 'Code Artifact')}
+                    className="grok-action-chip"
+                    onClick={() => handleCopyCode(p.code, blockId)}
                   >
-                    ✨ View in Artifact Drawer
-                  </button>
-                  <button 
-                    className="code-action-btn"
-                    onClick={() => {
-                      navigator.clipboard.writeText(p.code);
-                      setCodeCopiedIndex(`${msgIdx}-${idx}`);
-                      setTimeout(() => setCodeCopiedIndex(null), 2000);
-                    }}
-                  >
-                    {codeCopiedIndex === `${msgIdx}-${idx}` ? '✓ Copied' : '📋 Copy'}
+                    {codeCopiedIndex === blockId ? (
+                      <>
+                        <Check size={12} color="#22c55e" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={12} />
+                        <span>Copy</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
-              <pre><code>{p.code}</code></pre>
+              <pre className="grok-code-content">
+                <code>{p.code}</code>
+              </pre>
             </div>
           );
         })}
@@ -470,52 +516,53 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
   return (
     <div className="app-container">
-      {/* Sidebar */}
-      <aside className="claude-sidebar">
-        <div className="sidebar-top">
-          <div className="brand-badge">
-            <div className="claude-logo-icon">C</div>
+      {/* Grok Left Sidebar */}
+      <aside className="grok-sidebar">
+        <div className="sidebar-header">
+          <a href="#" className="grok-brand">
+            <div className="grok-slash-icon">//</div>
             <div>
-              <h1 className="brand-title">Claude AI</h1>
-              <span className="brand-subtitle">Prem Gaikwad Edition</span>
+              <div className="grok-brand-title">GROK AI</div>
+              <div className="grok-brand-sub">PREM GAIKWAD EDITION</div>
             </div>
-          </div>
+          </a>
         </div>
 
-        <button className="new-chat-btn" onClick={handleNewSession}>
-          <Plus size={15} />
+        {/* New Chat Button */}
+        <button className="grok-new-chat-btn" onClick={handleNewSession}>
+          <Plus size={16} />
           <span>New Chat</span>
         </button>
 
-        <div className="sidebar-scrollable">
-          {/* Active Model Switcher */}
+        {/* Conversation History */}
+        <div className="sidebar-content">
           <div>
-            <div className="sidebar-section-title">Active AI Architecture</div>
-            <div className="model-picker-card">
-              <select 
-                className="model-picker-select" 
-                value={activeModel} 
-                onChange={(e) => handleModelChange(e.target.value)}
-              >
-                {availableModels.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-            </div>
+            <div className="sidebar-section-title">Active Engine</div>
+            <select 
+              className="grok-model-pill" 
+              style={{ width: '100%', outline: 'none' }}
+              value={activeModel}
+              onChange={(e) => handleModelChange(e.target.value)}
+            >
+              {availableModels.map(m => (
+                <option key={m.id} value={m.id} style={{ background: '#09090b', color: '#ffffff' }}>
+                  {m.id.includes('qwen') ? '👑 Qwen-2.5-Coder-7B' : '⚡ NanoGPT-3.2'}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Chat Sessions History */}
           <div style={{ flex: 1 }}>
-            <div className="sidebar-section-title">Recent Conversations</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <div className="sidebar-section-title">Conversations</div>
+            <div className="sessions-list">
               {sessions.length === 0 ? (
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '6px 8px' }}>
-                  No past conversations yet.
+                <div style={{ padding: '8px 12px', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  No previous sessions
                 </div>
               ) : (
                 sessions.map(s => (
-                  <div 
-                    key={s.id} 
+                  <div
+                    key={s.id}
                     className={`session-item ${s.id === currentSessionId ? 'active' : ''}`}
                     onClick={() => {
                       setCurrentSessionId(s.id);
@@ -532,27 +579,53 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
             </div>
           </div>
 
-          {/* Model Specs Card */}
-          <div className="model-picker-card" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-            <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Model Details:</div>
-            <div>Architecture: {modelSpecs?.model_type || 'Qwen-2.5-Coder-7B'}</div>
-            <div>Parameters: 7.61 Billion (4-Bit)</div>
-            <div>Context: 2,048 Tokens</div>
-            <div>Hardware: CPU AVX2 Local Engine</div>
+          {/* Model Hardware Specs Card */}
+          <div className="grok-specs-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontWeight: 700, color: '#ffffff' }}>System Architecture</span>
+              <span className="grok-badge-green">
+                <span className="grok-badge-dot"></span>
+                <span>ONLINE</span>
+              </span>
+            </div>
+            <div>Model: {modelSpecs?.model_type || 'Qwen-2.5-Coder-7B'}</div>
+            <div>Parameters: 7.61 Billion (4-Bit GGUF)</div>
+            <div>Storage: Neon PostgreSQL / SQLite</div>
+            <div>Cost: $0.00 / Zero Third-Party APIs</div>
           </div>
         </div>
       </aside>
 
-      {/* Main Chat Area */}
-      <main className="main-chat-area">
+      {/* Main Grok Chat Area */}
+      <main className="grok-main-area">
         {/* Topbar */}
-        <header className="claude-topbar">
+        <header className="grok-topbar">
           <div className="topbar-left">
-            <div className="topbar-model-badge">
-              <Sparkles size={14} color="#d97757" />
-              <span>{activeModel.includes('qwen') ? 'Qwen-2.5-Coder-7B' : 'NanoGPT-3.2'}</span>
+            <div className="grok-model-pill">
+              <Sparkles size={14} color="#38bdf8" />
+              <span>{activeModel.includes('qwen') ? 'Grok-Coder (Qwen 7B)' : 'NanoGPT Local'}</span>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.74rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+
+            {/* Grok Fun Mode & Think Mode Toggles */}
+            <button 
+              className={`grok-mode-toggle ${grokMode === 'fun' ? 'active-fun' : ''}`}
+              onClick={() => setGrokMode(prev => prev === 'fun' ? 'normal' : 'fun')}
+              title="Toggle Grok Fun / Witty Mode"
+            >
+              <Flame size={13} />
+              <span>Fun Mode</span>
+            </button>
+
+            <button 
+              className={`grok-mode-toggle ${grokMode === 'think' ? 'active-think' : ''}`}
+              onClick={() => setGrokMode(prev => prev === 'think' ? 'normal' : 'think')}
+              title="Toggle Deep Reasoning Mode"
+            >
+              <Brain size={13} />
+              <span>Think Mode</span>
+            </button>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.74rem', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: 6 }}>
               <input 
                 type="checkbox" 
                 checked={autoSpeak} 
@@ -565,7 +638,7 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
           <div className="topbar-right">
             {/* Clerk Authentication Controls */}
             {isGuestMode ? (
-              <button className="claude-pill-btn auth-btn" onClick={handleConfigureClerk}>
+              <button className="grok-btn-primary" onClick={handleConfigureClerk}>
                 <span>Sign In with Clerk</span>
               </button>
             ) : (
@@ -575,107 +648,104 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                 </SignedIn>
                 <SignedOut>
                   <SignInButton mode="modal">
-                    <button className="claude-pill-btn auth-btn">Sign In</button>
+                    <button className="grok-btn-primary">Sign In</button>
                   </SignInButton>
                 </SignedOut>
               </div>
             )}
 
-            {/* Split Screen Artifact Drawer Toggle */}
+            {/* Canvas Drawer Toggle */}
             <button 
-              className="claude-pill-btn" 
-              onClick={() => setArtifactDrawerOpen(prev => !prev)}
-              title="Toggle Claude Code Artifacts Drawer"
+              className="grok-btn-ghost" 
+              onClick={() => setCanvasDrawerOpen(prev => !prev)}
+              title="Toggle Grok Canvas / Artifacts Drawer"
             >
               <Layers size={14} />
-              <span>Artifacts</span>
+              <span>Canvas</span>
             </button>
           </div>
         </header>
 
-        {/* Workspace: Chat Messages Stream + Split-Screen Artifacts Drawer */}
-        <div className="chat-workspace">
-          <div className="messages-scroll-panel">
-            <div className="messages-inner">
+        {/* Workspace: Message Stream & Split Screen Canvas */}
+        <div className="grok-workspace">
+          <div className="grok-messages-panel">
+            <div className="grok-messages-inner">
               {messages.length === 0 && !isGenerating ? (
-                /* Claude Welcome Hero */
-                <div className="claude-welcome-hero">
-                  <div className="welcome-badge">CLAUDE SOVEREIGN AI • PREM GAIKWAD EDITION</div>
-                  <h2 className="claude-hero-title">How can I help you program, analyze, or create today?</h2>
-                  <p className="claude-hero-desc">
-                    Running <strong>Qwen-2.5-Coder-7B</strong> & <strong>NanoGPT</strong> locally on your CPU with Clerk multi-user authentication and zero third-party cloud API costs.
+                /* Grok Hero Screen */
+                <div className="grok-hero">
+                  <div className="grok-hero-logo">//</div>
+                  <h1 className="grok-hero-title">What do you want to build today?</h1>
+                  <p className="grok-hero-desc">
+                    Sovereign AI engine trained and deployed by <strong>Prem Gaikwad</strong>. Running <strong>Qwen-2.5-Coder-7B</strong> 100% privately on your machine with Clerk authentication and zero cloud token fees.
                   </p>
 
-                  <div className="quick-prompts-grid">
+                  <div className="grok-hero-cards">
                     <div 
-                      className="quick-prompt-card"
+                      className="grok-card"
                       onClick={() => handleSubmit(null, 'Write a complete, playable Snake Game in a single HTML, CSS, and JS file')}
                     >
-                      <div className="quick-prompt-icon">🎮</div>
+                      <div className="grok-card-icon">🎮</div>
                       <div>
-                        <div className="quick-prompt-title">Playable HTML5 Games</div>
-                        <div className="quick-prompt-sub">Build a complete Snake or Chess game in 1 file</div>
+                        <div className="grok-card-title">Playable HTML5 Games</div>
+                        <div className="grok-card-desc">Build playable Snake or Chess games with instant live canvas</div>
                       </div>
                     </div>
 
                     <div 
-                      className="quick-prompt-card"
-                      onClick={() => handleSubmit(null, 'Write a Python function to check if a string is a palindrome with docstring and unit tests')}
+                      className="grok-card"
+                      onClick={() => handleSubmit(null, 'Write an ultra-fast Python palindrome verification function with docstrings and doctests')}
                     >
-                      <div className="quick-prompt-icon">💻</div>
+                      <div className="grok-card-icon">💻</div>
                       <div>
-                        <div className="quick-prompt-title">Codex & Claude Coding</div>
-                        <div className="quick-prompt-sub">Write algorithms, optimize code, and debug</div>
+                        <div className="grok-card-title">Deep Code & Refactor</div>
+                        <div className="grok-card-desc">Frontier algorithms, system architecture, and debugging</div>
                       </div>
                     </div>
 
                     <div 
-                      className="quick-prompt-card"
-                      onClick={() => handleSubmit(null, '/imagine an ultra-detailed cyberpunk street in Tokyo at midnight, neon reflections, 8k')}
+                      className="grok-card"
+                      onClick={() => handleSubmit(null, '/imagine a futuristic cybernetic city at dusk with neon flying speeders, 8k cinematic')}
                     >
-                      <div className="quick-prompt-icon">🎨</div>
+                      <div className="grok-card-icon">🎨</div>
                       <div>
-                        <div className="quick-prompt-title">Midjourney Image Studio</div>
-                        <div className="quick-prompt-sub">Synthesize cinematic procedural neural artwork</div>
+                        <div className="grok-card-title">Generative Art Studio</div>
+                        <div className="grok-card-desc">Synthesize procedural neural artwork and wallpapers</div>
                       </div>
                     </div>
 
                     <div 
-                      className="quick-prompt-card"
+                      className="grok-card"
                       onClick={() => handleSubmit(null, '/video a cinematic drone flight over glowing neon skyscrapers in the rain')}
                     >
-                      <div className="quick-prompt-icon">🎬</div>
+                      <div className="grok-card-icon">🎬</div>
                       <div>
-                        <div className="quick-prompt-title">Runway Video Studio</div>
-                        <div className="quick-prompt-sub">Generate dynamic spatio-temporal MP4 video clips</div>
+                        <div className="grok-card-title">Video Motion Studio</div>
+                        <div className="grok-card-desc">Synthesize dynamic MP4 spatio-temporal video clips</div>
                       </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                /* Chat Messages */
+                /* Messages Stream */
                 messages.map((msg, i) => (
-                  <div key={i} className={`message-row ${msg.role}`}>
+                  <div key={i} className={`grok-msg-row ${msg.role}`}>
                     {msg.role === 'assistant' && (
-                      <div className="assistant-avatar">
-                        <Sparkles size={16} />
-                      </div>
+                      <div className="grok-avatar">//</div>
                     )}
-                    <div className="message-bubble">
+                    <div className={msg.role === 'user' ? 'grok-bubble-user' : 'grok-bubble-assistant'}>
                       {renderMessageContent(msg.content, i)}
                     </div>
                   </div>
                 ))
               )}
 
+              {/* Generating Spinner */}
               {isGenerating && (
-                <div className="message-row assistant">
-                  <div className="assistant-avatar">
-                    <Sparkles size={16} />
-                  </div>
-                  <div className="message-bubble" style={{ color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div className="grok-msg-row assistant">
+                  <div className="grok-avatar">//</div>
+                  <div className="grok-bubble-assistant" style={{ color: 'var(--color-grok-cyan)', display: 'flex', alignItems: 'center', gap: 10 }}>
                     <RefreshCw size={14} className="animate-spin" />
-                    <span>Qwen-2.5-Coder-7B is thinking... ({generationSeconds}s • CPU AVX2 Local Engine)</span>
+                    <span>Grok-Coder is thinking... ({generationSeconds}s • CPU AVX2 Local Engine)</span>
                   </div>
                 </div>
               )}
@@ -684,137 +754,150 @@ function ClaudeWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
             </div>
           </div>
 
-          {/* Split-Screen Claude Artifacts Drawer */}
-          {artifactDrawerOpen && (
-            <aside className="artifacts-drawer">
-              <div className="artifacts-drawer-header">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <span className="artifact-badge">ARTIFACT</span>
-                  <span className="artifact-title-text">{artifactData.title}</span>
+          {/* Grok Floating Pill Input Bar */}
+          <div className="grok-input-container">
+            <div className="grok-input-card">
+              <textarea
+                ref={textareaRef}
+                className="grok-textarea"
+                rows={2}
+                placeholder={
+                  grokMode === 'fun' 
+                    ? "Ask Grok anything (Fun Mode 🌶️ is active — expect wit & punch)..."
+                    : "Ask Grok to code, design a game, or /imagine an image..."
+                }
+                value={inputPrompt}
+                onChange={(e) => setInputPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
+                  }
+                }}
+              />
+
+              <div className="grok-toolbar">
+                <div className="toolbar-left">
+                  <button 
+                    className="toolbar-pill"
+                    onClick={() => {
+                      setInputPrompt('/code ');
+                      textareaRef.current?.focus();
+                    }}
+                  >
+                    <Code2 size={13} />
+                    <span>Code</span>
+                  </button>
+
+                  <button 
+                    className="toolbar-pill"
+                    onClick={() => {
+                      setInputPrompt('/imagine ');
+                      textareaRef.current?.focus();
+                    }}
+                  >
+                    <ImageIcon size={13} />
+                    <span>Image</span>
+                  </button>
+
+                  <button 
+                    className="toolbar-pill"
+                    onClick={() => {
+                      setInputPrompt('/video ');
+                      textareaRef.current?.focus();
+                    }}
+                  >
+                    <Video size={13} />
+                    <span>Video</span>
+                  </button>
+
+                  <button 
+                    className="toolbar-pill"
+                    onClick={toggleRecording}
+                    style={isRecording ? { borderColor: '#ef4444', color: '#ef4444' } : {}}
+                  >
+                    {isRecording ? <MicOff size={13} /> : <Mic size={13} />}
+                    <span>{isRecording ? 'Listening...' : 'Voice'}</span>
+                  </button>
                 </div>
+
+                <div className="toolbar-right">
+                  <button 
+                    className="grok-send-btn" 
+                    onClick={handleSubmit}
+                    disabled={!inputPrompt.trim() || isGenerating}
+                    title="Send to Grok (Enter)"
+                  >
+                    <Send size={15} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Split-Screen Grok Canvas / Artifacts Drawer */}
+          {canvasDrawerOpen && (
+            <aside className="grok-canvas-drawer">
+              <div className="canvas-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div className="artifact-tabs">
+                  <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', background: '#ffffff', color: '#000000', borderRadius: 4 }}>
+                    CANVAS
+                  </span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#ffffff' }}>{canvasData.title}</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className="canvas-tabs">
                     <button 
-                      className={`artifact-tab-btn ${artifactData.tab === 'code' ? 'active' : ''}`}
-                      onClick={() => setArtifactData(prev => ({ ...prev, tab: 'code' }))}
+                      className={`canvas-tab ${canvasData.tab === 'code' ? 'active' : ''}`}
+                      onClick={() => setCanvasData(prev => ({ ...prev, tab: 'code' }))}
                     >
                       Code
                     </button>
-                    {artifactData.lang === 'html' && (
+                    {canvasData.lang === 'html' && (
                       <button 
-                        className={`artifact-tab-btn ${artifactData.tab === 'preview' ? 'active' : ''}`}
-                        onClick={() => setArtifactData(prev => ({ ...prev, tab: 'preview' }))}
+                        className={`canvas-tab ${canvasData.tab === 'preview' ? 'active' : ''}`}
+                        onClick={() => setCanvasData(prev => ({ ...prev, tab: 'preview' }))}
                       >
-                        Live Preview 🎮
+                        Live Preview
                       </button>
                     )}
                   </div>
+
                   <button 
-                    className="claude-pill-btn" 
-                    style={{ padding: '4px 8px' }}
-                    onClick={() => setArtifactDrawerOpen(false)}
+                    className="grok-action-chip" 
+                    onClick={() => handleCopyCode(canvasData.code, 'drawer')}
+                    title="Copy code"
+                  >
+                    {codeCopiedIndex === 'drawer' ? <Check size={13} color="#22c55e" /> : <Copy size={13} />}
+                  </button>
+
+                  <button 
+                    className="grok-action-chip"
+                    onClick={() => setCanvasDrawerOpen(false)}
+                    title="Close Canvas"
                   >
                     <X size={14} />
                   </button>
                 </div>
               </div>
 
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                {artifactData.tab === 'code' ? (
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#141312' }}>
-                    <div style={{ padding: '8px 16px', background: 'var(--bg-tertiary)', display: 'flex', gap: 8, borderBottom: '1px solid var(--border-subtle)' }}>
-                      <button 
-                        className="claude-pill-btn"
-                        onClick={() => {
-                          navigator.clipboard.writeText(artifactData.code);
-                          alert('Code copied to clipboard!');
-                        }}
-                      >
-                        <Copy size={13} />
-                        <span>Copy Code</span>
-                      </button>
-                    </div>
-                    <pre style={{ flex: 1, margin: 0, padding: 16, overflow: 'auto', fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: '#e8e6df' }}>
-                      <code>{artifactData.code}</code>
-                    </pre>
-                  </div>
-                ) : (
+              <div className="canvas-body">
+                {canvasData.tab === 'preview' && canvasData.lang === 'html' ? (
                   <iframe 
-                    className="artifact-preview-iframe"
-                    srcDoc={artifactData.code}
-                    sandbox="allow-scripts allow-modals allow-same-origin"
-                    title="Live App Preview"
+                    className="canvas-iframe"
+                    title="Grok Live Preview"
+                    sandbox="allow-scripts allow-modals"
+                    srcDoc={canvasData.code}
                   />
+                ) : (
+                  <pre className="canvas-code-view">
+                    <code>{canvasData.code}</code>
+                  </pre>
                 )}
               </div>
             </aside>
           )}
-        </div>
-
-        {/* Floating Claude Input Card */}
-        <div className="claude-input-container">
-          <form className="claude-input-card" onSubmit={handleSubmit}>
-            <textarea
-              ref={textareaRef}
-              className="claude-textarea"
-              placeholder="Ask Claude / Qwen-2.5-Coder to code, design a game, or /imagine an image..."
-              rows={2}
-              value={inputPrompt}
-              onChange={(e) => setInputPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
-                }
-              }}
-            />
-            <div className="claude-input-toolbar">
-              <div className="toolbar-chips">
-                <button 
-                  type="button" 
-                  className="tool-chip"
-                  onClick={() => setInputPrompt('/code ')}
-                >
-                  <Code2 size={13} />
-                  <span>Code</span>
-                </button>
-                <button 
-                  type="button" 
-                  className="tool-chip"
-                  onClick={() => setInputPrompt('/imagine ')}
-                >
-                  <Image size={13} />
-                  <span>Image</span>
-                </button>
-                <button 
-                  type="button" 
-                  className="tool-chip"
-                  onClick={() => setInputPrompt('/video ')}
-                >
-                  <Video size={13} />
-                  <span>Video</span>
-                </button>
-                <button 
-                  type="button" 
-                  className={`tool-chip ${isRecording ? 'active' : ''}`}
-                  onClick={toggleRecording}
-                  title="Voice Input (Speech-to-Text)"
-                >
-                  {isRecording ? <MicOff size={13} /> : <Mic size={13} />}
-                  <span>{isRecording ? 'Listening...' : 'Mic'}</span>
-                </button>
-              </div>
-
-              <button 
-                type="submit" 
-                className="send-action-btn"
-                disabled={!inputPrompt.trim() || isGenerating}
-                title="Send Message"
-              >
-                <Send size={15} />
-              </button>
-            </div>
-          </form>
         </div>
       </main>
     </div>

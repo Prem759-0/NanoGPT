@@ -37,6 +37,8 @@ class ModelService:
         self.dataset_name: Optional[str] = None
         self.current_checkpoint_path: Optional[str] = None
         self.error_message: Optional[str] = None
+        import threading
+        self._load_lock = threading.Lock()
         
         # Check available GGUF models on disk; prioritize 7B Qwen Coder!
         if self.find_qwen_gguf():
@@ -198,158 +200,164 @@ class ModelService:
     def load_model(self, model_name: Optional[str] = None) -> bool:
         """
         Loads the target model into memory: 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', or 'scratch'.
+        Thread-safe: will not duplicate load or reload if already active.
         """
         target = model_name or self.active_model_name
         
-        # Add project root to sys.path
-        if self.base_dir not in sys.path:
-            sys.path.insert(0, self.base_dir)
-
-        # Clean up existing models from memory to prevent RAM exhaustion on 8GB systems
-        if self.llama_model is not None:
-            del self.llama_model
-            self.llama_model = None
-            self.model = None
-            import gc
-            gc.collect()
-        if self.model is not None:
-            del self.model
-            self.model = None
-            import gc
-            gc.collect()
-
-        # Option 0: Qwen-2.5-Coder-7B Instruct
-        if target in ["qwen-2.5-coder-7b", "qwen", "qwen-7b"]:
-            qwen_path = self.find_qwen_gguf()
-            if not qwen_path:
-                self.error_message = "Qwen2.5-Coder-7B GGUF model file not found on disk."
-                return False
-            try:
-                from llama_cpp import Llama
-                print(f"Loading Qwen-2.5-Coder-7B model: {qwen_path}...")
-                self.llama_model = Llama(
-                    model_path=qwen_path,
-                    n_ctx=2048,
-                    verbose=False,
-                    n_threads=4
-                )
-                self.model = self.llama_model
-                self.active_model_name = "qwen-2.5-coder-7b"
-                self.current_checkpoint_path = os.path.basename(qwen_path)
-                self.dataset_name = "CodeAlpaca 15K + Python Synthetic (Unsloth QLoRA)"
-                self.vocab_size = 152064
-                self.error_message = None
+        with self._load_lock:
+            # If target model is already loaded in memory, return immediately without redundant reload
+            if self.model is not None and self.active_model_name == target:
                 return True
-            except Exception as e:
-                self.error_message = f"Failed to load Qwen 7B model: {str(e)}"
-                return False
 
-        # Option 1: Fine-Tuned GGUF LLaMA-3.2
-        elif target in ["llama-3.2", "gguf", "llama"]:
-            llama_path = self.find_llama_gguf()
-            if not llama_path:
-                self.error_message = "LLaMA-3.2 GGUF model file not found on disk."
-                return False
-            try:
-                from llama_cpp import Llama
-                print(f"Loading LLaMA-3.2 model: {llama_path}...")
-                self.llama_model = Llama(
-                    model_path=llama_path,
-                    n_ctx=4096,
-                    verbose=False,
-                    n_threads=4
-                )
-                self.model = self.llama_model
-                self.active_model_name = "llama-3.2"
-                self.current_checkpoint_path = os.path.basename(llama_path)
-                self.dataset_name = "Fine-Tuned Instruction Dataset (Colab T4)"
-                self.vocab_size = 128256
-                self.error_message = None
-                return True
-            except Exception as e:
-                self.error_message = f"Failed to load LLaMA model: {str(e)}"
-                return False
+            # Add project root to sys.path
+            if self.base_dir not in sys.path:
+                sys.path.insert(0, self.base_dir)
 
-        # Option 2: Pretrained GPT-2 124M
-        elif target == "gpt2":
-            if not self.torch_available:
-                self.error_message = "PyTorch is not installed in the current environment."
-                return False
-            try:
-                from model import GPT
-                print("Loading GPT-2 124M weights into nanoGPT...")
-                model = GPT.from_pretrained("gpt2", dict(dropout=0.0))
-                model.eval()
-                model.to(self.device)
-                
-                self.model = model
+            # Clean up existing models from memory to prevent RAM exhaustion on 8GB systems
+            if self.llama_model is not None:
+                del self.llama_model
                 self.llama_model = None
-                self.model_config = model.config
-                self.active_model_name = "gpt2"
-                self.current_checkpoint_path = "huggingface: gpt2 (124M open weights)"
-                self.dataset_name = "OpenWebText (GPT-2 Pretrained)"
-                self.vocab_size = 50257
-                
-                import tiktoken
-                enc = tiktoken.get_encoding("gpt2")
-                self.encode_fn = lambda s: enc.encode(s, allowed_special={"<|endoftext|>"})
-                self.decode_fn = lambda tokens: enc.decode(tokens)
-                self.error_message = None
-                return True
-            except Exception as e:
-                self.error_message = f"Failed to load GPT-2: {str(e)}"
-                return False
-
-        # Option 3: Scratch NanoGPT
-        elif target == "scratch":
-            if not self.torch_available:
-                self.error_message = "PyTorch is not installed in the current environment."
-                return False
-            ckpt_path = self.find_checkpoint()
-            if not ckpt_path:
                 self.model = None
-                self.error_message = "No local trained checkpoint found on disk."
-                return False
-
-            try:
-                import torch
-                from model import GPTConfig, GPT
-
-                checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=False)
-                model_args = checkpoint.get("model_args", {})
-                self.model_args = model_args
-                gptconf = GPTConfig(**model_args)
-                self.model_config = gptconf
-                
-                model = GPT(gptconf)
-                state_dict = checkpoint["model"]
-                
-                unwanted_prefix = "_orig_mod."
-                for k in list(state_dict.keys()):
-                    if k.startswith(unwanted_prefix):
-                        state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
-                        
-                model.load_state_dict(state_dict)
-                model.eval()
-                model.to(self.device)
-                
-                self.model = model
-                self.llama_model = None
-                self.active_model_name = "scratch"
-                self.current_checkpoint_path = os.path.relpath(ckpt_path, self.base_dir)
-                self.checkpoint_meta = checkpoint.get("config", {})
-                self.dataset_name = self.checkpoint_meta.get("dataset", "assistant_chat")
-                
-                self._setup_scratch_tokenizer(self.dataset_name)
-                self.error_message = None
-                return True
-            except Exception as e:
+                import gc
+                gc.collect()
+            if self.model is not None:
+                del self.model
                 self.model = None
-                self.error_message = f"Failed to load scratch checkpoint: {str(e)}"
+                import gc
+                gc.collect()
+
+            # Option 0: Qwen-2.5-Coder-7B Instruct
+            if target in ["qwen-2.5-coder-7b", "qwen", "qwen-7b"]:
+                qwen_path = self.find_qwen_gguf()
+                if not qwen_path:
+                    self.error_message = "Qwen2.5-Coder-7B GGUF model file not found on disk."
+                    return False
+                try:
+                    from llama_cpp import Llama
+                    print(f"Loading Qwen-2.5-Coder-7B model: {qwen_path}...")
+                    self.llama_model = Llama(
+                        model_path=qwen_path,
+                        n_ctx=2048,
+                        verbose=False,
+                        n_threads=4
+                    )
+                    self.model = self.llama_model
+                    self.active_model_name = "qwen-2.5-coder-7b"
+                    self.current_checkpoint_path = os.path.basename(qwen_path)
+                    self.dataset_name = "CodeAlpaca 15K + Python Synthetic (Unsloth QLoRA)"
+                    self.vocab_size = 152064
+                    self.error_message = None
+                    return True
+                except Exception as e:
+                    self.error_message = f"Failed to load Qwen 7B model: {str(e)}"
+                    return False
+
+            # Option 1: Fine-Tuned GGUF LLaMA-3.2
+            elif target in ["llama-3.2", "gguf", "llama"]:
+                llama_path = self.find_llama_gguf()
+                if not llama_path:
+                    self.error_message = "LLaMA-3.2 GGUF model file not found on disk."
+                    return False
+                try:
+                    from llama_cpp import Llama
+                    print(f"Loading LLaMA-3.2 model: {llama_path}...")
+                    self.llama_model = Llama(
+                        model_path=llama_path,
+                        n_ctx=4096,
+                        verbose=False,
+                        n_threads=4
+                    )
+                    self.model = self.llama_model
+                    self.active_model_name = "llama-3.2"
+                    self.current_checkpoint_path = os.path.basename(llama_path)
+                    self.dataset_name = "Fine-Tuned Instruction Dataset (Colab T4)"
+                    self.vocab_size = 128256
+                    self.error_message = None
+                    return True
+                except Exception as e:
+                    self.error_message = f"Failed to load LLaMA model: {str(e)}"
+                    return False
+
+            # Option 2: Pretrained GPT-2 124M
+            elif target == "gpt2":
+                if not self.torch_available:
+                    self.error_message = "PyTorch is not installed in the current environment."
+                    return False
+                try:
+                    from model import GPT
+                    print("Loading GPT-2 124M weights into nanoGPT...")
+                    model = GPT.from_pretrained("gpt2", dict(dropout=0.0))
+                    model.eval()
+                    model.to(self.device)
+                    
+                    self.model = model
+                    self.llama_model = None
+                    self.model_config = model.config
+                    self.active_model_name = "gpt2"
+                    self.current_checkpoint_path = "huggingface: gpt2 (124M open weights)"
+                    self.dataset_name = "OpenWebText (GPT-2 Pretrained)"
+                    self.vocab_size = 50257
+                    
+                    import tiktoken
+                    enc = tiktoken.get_encoding("gpt2")
+                    self.encode_fn = lambda s: enc.encode(s, allowed_special={"<|endoftext|>"})
+                    self.decode_fn = lambda tokens: enc.decode(tokens)
+                    self.error_message = None
+                    return True
+                except Exception as e:
+                    self.error_message = f"Failed to load GPT-2: {str(e)}"
+                    return False
+
+            # Option 3: Scratch NanoGPT
+            elif target == "scratch":
+                if not self.torch_available:
+                    self.error_message = "PyTorch is not installed in the current environment."
+                    return False
+                ckpt_path = self.find_checkpoint()
+                if not ckpt_path:
+                    self.model = None
+                    self.error_message = "No local trained checkpoint found on disk."
+                    return False
+
+                try:
+                    import torch
+                    from model import GPTConfig, GPT
+
+                    checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=False)
+                    model_args = checkpoint.get("model_args", {})
+                    self.model_args = model_args
+                    gptconf = GPTConfig(**model_args)
+                    self.model_config = gptconf
+                    
+                    model = GPT(gptconf)
+                    state_dict = checkpoint["model"]
+                    
+                    unwanted_prefix = "_orig_mod."
+                    for k in list(state_dict.keys()):
+                        if k.startswith(unwanted_prefix):
+                            state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+                            
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    model.to(self.device)
+                    
+                    self.model = model
+                    self.llama_model = None
+                    self.active_model_name = "scratch"
+                    self.current_checkpoint_path = os.path.relpath(ckpt_path, self.base_dir)
+                    self.checkpoint_meta = checkpoint.get("config", {})
+                    self.dataset_name = self.checkpoint_meta.get("dataset", "assistant_chat")
+                    
+                    self._setup_scratch_tokenizer(self.dataset_name)
+                    self.error_message = None
+                    return True
+                except Exception as e:
+                    self.model = None
+                    self.error_message = f"Failed to load scratch checkpoint: {str(e)}"
+                    return False
+            else:
+                self.error_message = f"Unknown model name: {target}"
                 return False
-        else:
-            self.error_message = f"Unknown model name: {target}"
-            return False
 
     def _setup_scratch_tokenizer(self, dataset: str):
         """Loads dataset-specific character mapping (meta.pkl)."""
