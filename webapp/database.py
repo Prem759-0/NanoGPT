@@ -4,9 +4,23 @@ import json
 import uuid
 import logging
 from datetime import datetime
+from contextlib import contextmanager
 from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger("nanogpt-lab")
+
+# Auto-load .env from root if present
+_env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
+if os.path.exists(_env_path):
+    try:
+        with open(_env_path, "r", encoding="utf-8") as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and "=" in _line:
+                    _k, _v = _line.split("=", 1)
+                    os.environ.setdefault(_k.strip(), _v.strip())
+    except Exception as _e:
+        logger.warning(f"Failed to parse .env file: {_e}")
 
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "chats.db"))
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -23,30 +37,56 @@ class Database:
         self.db_path = db_path
         self.db_url = db_url or os.environ.get("DATABASE_URL")
         self.is_postgres = bool(self.db_url and (self.db_url.startswith("postgres://") or self.db_url.startswith("postgresql://")))
+        self._pg_conn = None
+        import threading
+        self._lock = threading.Lock()
         
         if not self.is_postgres:
             os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
             
         self._init_db()
 
+    @contextmanager
     def _get_connection(self):
         if self.is_postgres:
-            try:
+            with self._lock:
                 import psycopg
                 from psycopg.rows import dict_row
-                # Handle postgres:// vs postgresql:// compatibility
-                conn_str = self.db_url
-                if conn_str.startswith("postgres://"):
-                    conn_str = "postgresql://" + conn_str[len("postgres://"):]
-                conn = psycopg.connect(conn_str, row_factory=dict_row)
-                return conn
-            except Exception as e:
-                logger.warning(f"PostgreSQL connection to Neon failed ({e}). Falling back to local SQLite.")
-                self.is_postgres = False
-                os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-                return self._get_sqlite_connection()
+                # If connection exists, verify it's still alive (handles server idle timeout)
+                if self._pg_conn is not None and not getattr(self._pg_conn, "closed", True):
+                    try:
+                        self._pg_conn.execute("SELECT 1")
+                    except Exception:
+                        try:
+                            self._pg_conn.close()
+                        except Exception:
+                            pass
+                        self._pg_conn = None
+
+                if self._pg_conn is None or getattr(self._pg_conn, "closed", True):
+                    try:
+                        conn_str = self.db_url
+                        if conn_str.startswith("postgres://"):
+                            conn_str = "postgresql://" + conn_str[len("postgres://"):]
+                        self._pg_conn = psycopg.connect(conn_str, row_factory=dict_row, autocommit=True)
+                    except Exception as e:
+                        logger.warning(f"Failed to connect to Neon ({e}). Falling back to SQLite.")
+                        self.is_postgres = False
+
+            if self.is_postgres and self._pg_conn is not None:
+                yield self._pg_conn
+            else:
+                conn = self._get_sqlite_connection()
+                try:
+                    yield conn
+                finally:
+                    conn.close()
         else:
-            return self._get_sqlite_connection()
+            conn = self._get_sqlite_connection()
+            try:
+                yield conn
+            finally:
+                conn.close()
 
     def _get_sqlite_connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -229,6 +269,18 @@ class Database:
                 cursor = conn.execute("SELECT id, user_id, title, created_at, updated_at FROM sessions WHERE id = ?", (session_id,))
                 row = cursor.fetchone()
                 return dict(row) if row else None
+
+    def update_session_title(self, session_id: str, title: str):
+        """Updates a session title dynamically based on conversation content."""
+        now = datetime.utcnow().isoformat()
+        if self.is_postgres:
+            with self._get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE sessions SET title = %s, updated_at = %s WHERE id = %s", (title, now, session_id))
+                conn.commit()
+        else:
+            with self._get_connection() as conn:
+                conn.execute("UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?", (title, now, session_id))
 
     def get_session_messages(self, session_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         if self.is_postgres:
@@ -432,6 +484,57 @@ class Database:
                     "total_messages": m_count,
                     "total_memories": mem_count
                 }
+
+    def log_training_pair(self, instruction: str, response: str, source: str = "chat") -> Optional[int]:
+        now = datetime.utcnow().isoformat()
+        if self.is_postgres:
+            try:
+                with self._get_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "INSERT INTO training_pairs (instruction, response, source, created_at) VALUES (%s, %s, %s, %s) RETURNING id",
+                            (instruction, response, source, now)
+                        )
+                        res = cur.fetchone()
+                        return res["id"] if res else None
+            except Exception as e:
+                logger.warning(f"Error logging training pair to Neon: {e}")
+                return None
+        else:
+            with self._get_connection() as conn:
+                cur = conn.execute(
+                    "INSERT INTO training_pairs (instruction, response, source, created_at) VALUES (?, ?, ?, ?)",
+                    (instruction, response, source, now)
+                )
+                return cur.lastrowid
+
+    def count_training_pairs(self) -> int:
+        if self.is_postgres:
+            try:
+                with self._get_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT COUNT(*) as cnt FROM training_pairs")
+                        row = cur.fetchone()
+                        return row["cnt"] if row else 0
+            except Exception:
+                return 0
+        else:
+            with self._get_connection() as conn:
+                return conn.execute("SELECT COUNT(*) FROM training_pairs").fetchone()[0]
+
+    def list_training_pairs(self, limit: int = 200) -> List[Dict[str, Any]]:
+        if self.is_postgres:
+            try:
+                with self._get_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id, instruction, response, source, created_at FROM training_pairs ORDER BY id DESC LIMIT %s", (limit,))
+                        return [dict(r) for r in cur.fetchall()]
+            except Exception:
+                return []
+        else:
+            with self._get_connection() as conn:
+                cur = conn.execute("SELECT id, instruction, response, source, created_at FROM training_pairs ORDER BY id DESC LIMIT ?", (limit,))
+                return [dict(r) for r in cur.fetchall()]
 
 # Global singleton database instance
 db = Database()

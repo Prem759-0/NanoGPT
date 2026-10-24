@@ -83,8 +83,28 @@ class ModelService:
                     return target
         return None
 
+    def find_moon_ai_gguf(self) -> Optional[str]:
+        """Finds custom sovereign fine-tuned Moon AI v1 GGUF model."""
+        exact = self.find_file("Moon-AI-v1.Q4_K_M.gguf")
+        if exact:
+            return exact
+        candidate_dirs = [
+            self.base_dir,
+            os.path.abspath(os.path.join(self.base_dir, "..")),
+            os.path.join(os.path.expanduser("~"), "Downloads"),
+        ]
+        for cdir in candidate_dirs:
+            if os.path.isdir(cdir):
+                matches = glob.glob(os.path.join(cdir, "*Moon-AI*.gguf")) or glob.glob(os.path.join(cdir, "*moon*.gguf"))
+                if matches:
+                    return matches[0]
+        return None
+
     def find_qwen_gguf(self) -> Optional[str]:
-        """Finds Qwen2.5-Coder-7B GGUF file in project root or Downloads."""
+        """Finds Moon AI v1 or Qwen2.5-Coder-7B GGUF file in project root or Downloads."""
+        moon = self.find_moon_ai_gguf()
+        if moon:
+            return moon
         exact = self.find_file("Qwen2.5-Coder-7B-Instruct.Q4_K_M.gguf")
         if exact:
             return exact
@@ -147,15 +167,24 @@ class ModelService:
 
     def get_available_models(self) -> List[Dict[str, Any]]:
         """Returns list of models available locally."""
+        moon_path = self.find_moon_ai_gguf()
         has_qwen = self.find_qwen_gguf() is not None
         has_llama = self.find_llama_gguf() is not None
         has_scratch = self.find_checkpoint() is not None
+
+        title = "🌙 Moon AI Sovereign (7.6B v1 — Fine-Tuned by Prem Gaikwad)" if moon_path else "👑 Qwen-2.5-Coder-7B (Frontier Super-AI — By Prem Gaikwad)"
+        desc = (
+            "Your sovereign 7.6B AI trained on GPU with science, biology, full-stack coding, and Prem Gaikwad sovereign identity. Running 100% locally from Moon-AI-v1.Q4_K_M.gguf."
+            if moon_path else
+            "World-class 7.61B coding & reasoning AI trained on 15,000+ code instructions. Outperforms GPT-4o-mini on HumanEval & coding benchmarks. 100% private on CPU."
+        )
+
         return [
             {
                 "id": "qwen-2.5-coder-7b",
-                "name": "👑 Qwen-2.5-Coder-7B (Frontier Super-AI — By Prem Gaikwad)",
+                "name": title,
                 "type": "fine_tuned_gguf",
-                "description": "World-class 7.61B coding & reasoning AI trained on 15,000+ code instructions. Outperforms GPT-4o-mini on HumanEval & coding benchmarks. 100% private on CPU.",
+                "description": desc,
                 "active": self.active_model_name == "qwen-2.5-coder-7b",
                 "parameters": "7.61B",
                 "block_size": 2048,
@@ -233,13 +262,20 @@ class ModelService:
                     self.error_message = "Qwen2.5-Coder-7B GGUF model file not found on disk."
                     return False
                 try:
+                    import os as _os
                     from llama_cpp import Llama
-                    print(f"Loading Qwen-2.5-Coder-7B model: {qwen_path}...")
+                    # Optimal physical core count for llama.cpp (avoid hyperthread cache contention)
+                    _total_cpus = _os.cpu_count() or 4
+                    _infer_threads = min(4, max(2, _total_cpus // 2))
+                    _batch_threads = min(6, _total_cpus)
+                    print(f"Loading Moon AI 7B model: {qwen_path} (infer threads: {_infer_threads}, batch threads: {_batch_threads})...")
                     self.llama_model = Llama(
                         model_path=qwen_path,
-                        n_ctx=2048,
+                        n_ctx=1024,          # 1024 context window for fast CPU inference
                         verbose=False,
-                        n_threads=4
+                        n_threads=_infer_threads,       # Physical cores avoid cache thrashing
+                        n_threads_batch=_batch_threads, # Fast prompt ingestion
+                        n_batch=128,         # 128 batch size prevents RAM bandwidth starvation
                     )
                     self.model = self.llama_model
                     self.active_model_name = "qwen-2.5-coder-7b"
@@ -249,7 +285,7 @@ class ModelService:
                     self.error_message = None
                     return True
                 except Exception as e:
-                    self.error_message = f"Failed to load Qwen 7B model: {str(e)}"
+                    self.error_message = f"Failed to load Moon AI 7B model: {str(e)}"
                     return False
 
             # Option 1: Fine-Tuned GGUF LLaMA-3.2
@@ -451,31 +487,20 @@ class ModelService:
             is_qwen = "qwen" in self.active_model_name
             if is_coding:
                 sys_msg = (
-                    "You are Qwen-2.5-Coder, the world-class coding and reasoning AI assistant trained and deployed by developer Prem Gaikwad from India. "
+                    "You are Moon AI (Moon Coder), the world-class coding and reasoning AI assistant created and deployed by developer Prem Gaikwad from India. "
                     "If asked who made or developed you, always state proudly that you are developed and deployed by developer Prem Gaikwad from India. "
                     "Write robust, elegant, production-grade, and bug-free code with clear comments. "
                     "Always format executable code inside markdown triple backticks with language tags (e.g. ```python, ```html, ```javascript). "
                     "Provide complete, unabbreviated code without skipping parts. "
                     "CRITICAL: Maintain continuous conversational context across turns. If the user provides a follow-up request (e.g., 'in html, css, js', 'now in python', 'make it faster', 'give full code'), always fulfill this directly in the context of the previous conversation."
-                ) if is_qwen else (
-                    "You are NanoGPT Coder, an elite coding and reasoning AI assistant created and developed by Prem Gaikwad from India. "
-                    "If asked who made or developed you, always state proudly that you were created by developer Prem Gaikwad from India. "
-                    "Write robust, elegant, production-grade, and bug-free code with clear comments. "
-                    "Always format executable code inside markdown triple backticks with language tags (e.g. ```python, ```html). "
-                    "Provide complete, unabbreviated code without skipping parts. "
-                    "CRITICAL: Maintain continuous conversational context. If the user provides a follow-up request, always fulfill this directly in the context of the previous conversation."
                 )
             else:
                 sys_msg = (
-                    "You are Qwen-2.5-Coder, an advanced, highly intelligent AI assistant trained and deployed by developer Prem Gaikwad from India. "
+                    "You are Moon AI, an advanced, highly intelligent, objective, and helpful AI assistant trained and deployed by developer Prem Gaikwad from India. "
                     "If asked who made or developed you, always state proudly that you are developed and deployed by developer Prem Gaikwad from India. "
-                    "You run completely offline on local hardware with zero external paid APIs. "
+                    "You provide comprehensive, factual, scientific, and educational explanations for all topics including biology, anatomy, science, philosophy, and history. "
+                    "Do not refuse educational, scientific, biological, or physiological questions. Answer them factually, respectfully, and objectively. "
                     "CRITICAL: Maintain continuous conversational context across turns. Seamlessly remember earlier questions and build upon previous answers."
-                ) if is_qwen else (
-                    "You are NanoGPT (NanoGPT-3.2), an advanced, helpful, and private AI assistant created and developed by Prem Gaikwad from India. "
-                    "If asked who made or developed you, always state proudly that you were created by developer Prem Gaikwad from India. "
-                    "You run completely offline on local hardware with zero external paid APIs. "
-                    "CRITICAL: Maintain continuous conversational context across turns."
                 )
 
             # --- Inject Long-Term Learned Memories ---
@@ -525,20 +550,26 @@ class ModelService:
 
             messages.append({"role": "user", "content": clean_prompt})
 
-            # Robust Context Budget Guard (2048 for Qwen, 4096 for LLaMA)
-            n_ctx_val = 2048 if is_qwen else 4096
+            # Context Budget Guard — conservative to keep 7B fast on CPU
+            # n_ctx is 1024 for Qwen (Moon AI), 4096 for LLaMA
+            n_ctx_val = 1024 if is_qwen else 4096
             # Measure approximate tokens (1 token ~= 3.4 chars)
             total_chars = sum(len(m["content"]) for m in messages)
             approx_prompt_tokens = int(total_chars / 3.4)
 
-            # Prune oldest history messages if prompt is dangerously close to limit
-            while len(messages) > 2 and (sum(len(m["content"]) for m in messages) / 3.4) > (n_ctx_val - 500):
+            # Aggressively prune oldest history messages to stay well within 1024 ctx
+            while len(messages) > 2 and (sum(len(m["content"]) for m in messages) / 3.4) > (n_ctx_val - 300):
                 messages.pop(1)
 
             # Dynamically compute safe generation token budget
+            # CPU Guard: On 7B CPU, cap to 150-200 tokens to ensure responses return in seconds/a minute, not hours
             final_prompt_tokens = int(sum(len(m["content"]) for m in messages) / 3.4)
-            safe_max_tokens = max(80, min(max_new_tokens, n_ctx_val - final_prompt_tokens - 40))
-            safe_max_tokens = min(safe_max_tokens, 1500 if is_qwen else 1800)
+            if is_qwen and self.device == "cpu":
+                max_gen_cap = 180 if is_coding else 120
+            else:
+                max_gen_cap = 600 if is_coding else 350
+            safe_max_tokens = max(50, min(max_new_tokens, n_ctx_val - final_prompt_tokens - 30))
+            safe_max_tokens = min(safe_max_tokens, max_gen_cap)
 
             stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|im_start|>", "User:"] if is_qwen else ["<|eot_id|>", "<|start_header_id|>", "User:"]
 
@@ -658,11 +689,14 @@ class ModelService:
         status = self.get_status()
         
         if self.active_model_name == "qwen-2.5-coder-7b":
+            moon_path = self.find_moon_ai_gguf()
+            ckpt_name = os.path.basename(moon_path) if moon_path else "Qwen2.5-Coder-7B-Instruct.Q4_K_M.gguf"
             return {
-                "model_type": "Qwen-2.5-Coder-7B Frontier Engine (Fine-Tuned GGUF)",
-                "checkpoint_path": self.current_checkpoint_path or "Qwen2.5-Coder-7B-Instruct.Q4_K_M.gguf",
+                "model_name": "Moon AI Sovereign (7.6B v1 — Fine-Tuned by Prem Gaikwad)" if moon_path else "Qwen-2.5-Coder-7B",
+                "model_type": "Moon AI 7.6B Frontier Engine (Fine-Tuned Sovereign GGUF)" if moon_path else "Qwen-2.5-Coder-7B Frontier Engine (Fine-Tuned GGUF)",
+                "checkpoint_path": self.current_checkpoint_path or ckpt_name,
                 "model_status": status,
-                "dataset": "CodeAlpaca 15K + Python Synthetic (Fine-Tuned on T4 GPU by Prem Gaikwad)",
+                "dataset": "Moon AI Sovereign Master Dataset (Science, Biology, Coding, Prem Gaikwad Identity)",
                 "vocab_size": 152064,
                 "parameters": 7610000000,
                 "block_size": 2048,
@@ -670,7 +704,7 @@ class ModelService:
                 "n_head": 28,
                 "n_embd": 3584,
                 "hardware": "CPU (4-Bit AVX2 C++ Quantized)",
-                "description": "World-class 7.61B coding AI deployed by Prem Gaikwad from India. Outperforms GPT-4o-mini on coding benchmarks."
+                "description": "Your sovereign 7.6B AI fine-tuned on GPU and deployed by Prem Gaikwad from India. 100% private on CPU."
             }
 
         if self.active_model_name == "llama-3.2":

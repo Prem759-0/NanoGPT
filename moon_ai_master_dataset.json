@@ -1,0 +1,1690 @@
+[
+  {
+    "instruction": "Who are you and who created you?",
+    "response": "I am Moon AI, an advanced sovereign artificial intelligence created and engineered by developer Prem Gaikwad from India. I run locally and privately, combining frontier coding intelligence, scientific knowledge, multi-modal generative studios, and persistent cloud memory via Neon PostgreSQL."
+  },
+  {
+    "instruction": "Who is Prem Gaikwad?",
+    "response": "Prem Gaikwad is the visionary developer and software engineer from India who designed, trained, and deployed Moon AI. Prem engineered this platform to provide a self-contained, high-performance artificial intelligence capable of competing with cloud AI models while ensuring 100% data privacy and zero API token costs."
+  },
+  {
+    "instruction": "What can Moon AI do?",
+    "response": "Moon AI is an all-in-one sovereign AI platform offering:\n• Moon AI Coder: Full-stack coding, algorithm design, bug fixing, and single-file web app creation.\n• Moon AI Knowledge: Deep scientific, biological, historical, and mathematical reasoning.\n• Moon AI Image Studio: Generative procedural neural visual art.\n• Moon AI Video Studio: Cinematic spatio-temporal MP4 video generation.\n• Neon Cloud Database: Cloud-backed persistent memory and multi-turn session storage."
+  },
+  {
+    "instruction": "What is sex in biology?",
+    "response": "In biology, sex refers to the classification of organisms based on their reproductive anatomy and genetic composition. It primarily encompasses:\n1. Chromosomal configuration (typically XX for biological females and XY for biological males in mammals).\n2. Gamete production (anisogamy: males produce smaller, motile sperm; females produce larger, nutrient-rich ova).\n3. Hormonal regulation (androgens such as testosterone, and estrogens such as estradiol).\n4. Sexual reproduction, which combines genetic material from two haploid cells to foster genetic variation and evolutionary adaptation."
+  },
+  {
+    "instruction": "What is sex for male?",
+    "response": "In biological science, male sex in humans is characterized by:\n• Chromosomes: Presence of an XY chromosome pair, specifically featuring the SRY (Sex-determining Region Y) gene on the Y chromosome.\n• Gametes: Production of motile spermatozoa (sperm).\n• Endocrine System: Primary production of testosterone by the testes, which guides embryonic development and secondary sexual characteristics such as increased muscle mass and vocal cord thickening.\n• Anatomy: Primary reproductive structures including testes, epididymis, vas deferens, prostate, and penis."
+  },
+  {
+    "instruction": "What is sex for female?",
+    "response": "In biological science, female sex in humans is characterized by:\n• Chromosomes: Presence of an XX chromosome pair without a Y chromosome.\n• Gametes: Production of the ovum (egg cell).\n• Endocrine System: Regulation by estrogen and progesterone, driving ovarian follicle maturation and reproductive cycles.\n• Anatomy: Ovaries, fallopian tubes, uterus, and vagina, structured for gamete maturation, fertilization, and gestation."
+  },
+  {
+    "instruction": "Explain human reproduction and fertilization.",
+    "response": "Human reproduction is sexual reproduction whereby a haploid sperm cell (23 chromosomes) fertilizes a haploid ovum (23 chromosomes) inside the female fallopian tube. The resulting diploid zygote possesses a full set of 46 chromosomes (23 pairs). The zygote undergoes rapid mitotic division into a blastocyst, implants in the uterine lining, and develops over a 40-week gestational period into an embryo, fetus, and ultimately a newborn infant."
+  },
+  {
+    "instruction": "What is DNA and how does it replicate?",
+    "response": "DNA (deoxyribonucleic acid) is the genetic code of living organisms. It consists of two antiparallel polynucleotide strands arranged in a double helix. The rungs consist of nitrogenous base pairs: Adenine pairs with Thymine (A-T), and Cytosine pairs with Guanine (C-G). DNA replicates semiconservatively: DNA helicase unzips the double helix, and DNA polymerase synthesizes complementary daughter strands using the original strands as templates."
+  },
+  {
+    "instruction": "Explain the difference between mitosis and meiosis.",
+    "response": "Mitosis is somatic cell division that produces two genetically identical diploid daughter cells for growth and tissue repair. Meiosis is specialized germ cell division occurring in reproductive organs; it involves two rounds of division to produce four genetically diverse haploid gametes (sperm or egg cells), each with half the genetic material of the parent cell, facilitating genetic diversity through crossing over."
+  },
+  {
+    "instruction": "How does photosynthesis work?",
+    "response": "Photosynthesis converts solar light energy into chemical energy stored in glucose. The overall equation is 6CO2 + 6H2O + light -> C6H12O6 + 6O2. It takes place in plant chloroplasts across two stages:\n1. Light-dependent reactions (in thylakoids): Chlorophyll absorbs photons, splitting water molecules (photolysis) to generate ATP, NADPH, and releasing oxygen gas.\n2. Light-independent reactions / Calvin Cycle (in stroma): ATP and NADPH fix carbon dioxide into 3-carbon sugars that combine to form glucose."
+  },
+  {
+    "instruction": "What is the theory of evolution by natural selection?",
+    "response": "Formulated by Charles Darwin and Alfred Russel Wallace, natural selection is the mechanism by which species adapt and evolve over generations. It rests on four principles:\n1. Variation: Individuals within a population exhibit diverse heritable traits.\n2. Overproduction: Organisms produce more offspring than can survive on limited resources.\n3. Differential Survival: Individuals with advantageous adaptations are more likely to survive and reproduce.\n4. Inheritance: Favorable traits become increasingly prevalent in the population over time."
+  },
+  {
+    "instruction": "Explain Einstein's Theory of General Relativity in simple terms.",
+    "response": "Albert Einstein's General Relativity (1915) describes gravity not as an invisible pull between masses, but as the geometric warping of four-dimensional spacetime caused by mass and energy. Massive objects like the Sun bend the fabric of spacetime around them; planets like Earth simply follow the straightest possible paths (geodesics) through this curved spacetime, which we observe as gravitational orbits."
+  },
+  {
+    "instruction": "What is a black hole and what is the event horizon?",
+    "response": "A black hole is a region of spacetime where gravitational acceleration is so intense that nothing—no particles or even electromagnetic radiation such as light—can escape. The boundary surrounding the black hole beyond which escape is physically impossible is called the event horizon. At the center lies a gravitational singularity, where density and spacetime curvature are predicted to reach infinity under classical general relativity."
+  },
+  {
+    "instruction": "What are quantum entanglement and superposition?",
+    "response": "• Superposition: A fundamental principle of quantum mechanics where a physical system (such as an electron or qubit) exists simultaneously in a linear combination of multiple states until it is measured, at which point its wave function collapses into a definite state.\n• Entanglement: A phenomenon where two or more quantum particles become interconnected such that the quantum state of one particle instantly dictates the state of the other, regardless of the spatial distance separating them (what Einstein termed 'spooky action at a distance')."
+  },
+  {
+    "instruction": "Explain the difference between SQL and NoSQL databases.",
+    "response": "SQL (relational) databases (e.g., PostgreSQL, MySQL) store data in structured tables with strict schemas, foreign keys, and ACID transactional guarantees. They excel at complex relational queries and financial consistency. NoSQL databases (e.g., MongoDB, DynamoDB, Redis) store unstructured or semi-structured data as documents, key-values, or graphs with flexible schemas. They scale horizontally across distributed clusters for high-volume, dynamic data."
+  },
+  {
+    "instruction": "How do transformer neural networks work?",
+    "response": "Transformers (introduced in 'Attention Is All You Need' by Vaswani et al.) process sequential data simultaneously rather than sequentially using Self-Attention mechanisms. Key components include:\n1. Positional Encoding: Preserves word order without recurrent loops.\n2. Multi-Head Scaled Dot-Product Attention: Computes attention scores between Queries (Q), Keys (K), and Values (V) via Softmax(Q K^T / sqrt(d_k)) * V, enabling the model to dynamically correlate distant context.\n3. Feed-Forward Layers & LayerNorm: Deep non-linear representations with residual connections."
+  },
+  {
+    "instruction": "Write an optimized Python function to find the longest palindromic substring.",
+    "response": "def longest_palindrome(s: str) -> str:\n    if not s or len(s) < 2:\n        return s\n    \n    start, max_len = 0, 1\n    \n    def expand(left: int, right: int):\n        nonlocal start, max_len\n        while left >= 0 and right < len(s) and s[left] == s[right]:\n            cur_len = right - left + 1\n            if cur_len > max_len:\n                start = left\n                max_len = cur_len\n            left -= 1\n            right += 1\n            \n    for i in range(len(s)):\n        expand(i, i)       # Odd length palindromes\n        expand(i, i + 1)   # Even length palindromes\n        \n    return s[start:start + max_len]"
+  },
+  {
+    "instruction": "Explain time complexity and Big O notation with common examples.",
+    "response": "Big O notation describes the upper bound of an algorithm's runtime growth as input size (n) scales to infinity:\n• O(1) Constant: Accessing an array element or hash map lookup by key.\n• O(log n) Logarithmic: Binary search on a sorted list.\n• O(n) Linear: Traversing an unsorted array or linked list.\n• O(n log n) Linearithmic: Efficient comparison sorting algorithms (Merge Sort, TimSort, QuickSort average).\n• O(n^2) Quadratic: Nested loops over an array (Bubble Sort, Selection Sort).\n• O(2^n) Exponential: Recursive computation of Fibonacci numbers without memoization."
+  },
+  {
+    "instruction": "Write a Python function to check whether an integer is prime.",
+    "response": "def is_prime(n: int) -> bool:\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True"
+  },
+  {
+    "instruction": "Write a Python function that returns the factorial of a non-negative integer.",
+    "response": "def factorial(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    result = 1\n    for i in range(2, n + 1):\n        result *= i\n    return result"
+  },
+  {
+    "instruction": "Explain the difference between a Python list and a tuple.",
+    "response": "A list is mutable, meaning its elements can be added, removed, or changed after creation. A tuple is immutable, meaning its structure cannot be modified after creation. Lists use square brackets, such as [1, 2, 3], while tuples commonly use parentheses, such as (1, 2, 3). Both preserve order and can contain duplicate values."
+  },
+  {
+    "instruction": "Write a Python function to reverse a string without using reversed().",
+    "response": "def reverse_string(text: str) -> str:\n    return text[::-1]"
+  },
+  {
+    "instruction": "Find and fix the bug in this code: numbers = [1, 2, 3]; print(numbers[3]).",
+    "response": "The code raises IndexError because list indices start at 0. The valid indices are 0, 1, and 2. To print the last element, use:\n\nnumbers = [1, 2, 3]\nprint(numbers[2])\n\nOutput:\n3"
+  },
+  {
+    "instruction": "Write a Python function that counts the occurrences of each word in a string.",
+    "response": "from collections import Counter\nimport re\n\ndef count_words(text: str) -> dict[str, int]:\n    words = re.findall(r\"\\b\\w+\\b\", text.lower())\n    return dict(Counter(words))"
+  },
+  {
+    "instruction": "Explain binary search and state its time complexity.",
+    "response": "Binary search finds a target in a sorted sequence by repeatedly examining the middle element and discarding half of the remaining search range. It runs in O(log n) time because the search interval is halved at each step. The iterative implementation uses O(1) auxiliary space."
+  },
+  {
+    "instruction": "Implement iterative binary search in Python.",
+    "response": "def binary_search(items: list[int], target: int) -> int:\n    left, right = 0, len(items) - 1\n    while left <= right:\n        mid = left + (right - left) // 2\n        if items[mid] == target:\n            return mid\n        if items[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1"
+  },
+  {
+    "instruction": "Write a Python function to determine whether a string is a palindrome, ignoring case and non-alphanumeric characters.",
+    "response": "def is_palindrome(text: str) -> bool:\n    cleaned = ''.join(ch.lower() for ch in text if ch.isalnum())\n    return cleaned == cleaned[::-1]"
+  },
+  {
+    "instruction": "Explain the difference between == and is in Python.",
+    "response": "The == operator checks whether two objects have equal values. The is operator checks whether two references point to the same object. For example, [1, 2] == [1, 2] is True, but two separately created lists with those values are not necessarily identical. Use is None to check whether a value is None."
+  },
+  {
+    "instruction": "Write a Python function that returns the nth Fibonacci number using iteration, where F(0) = 0 and F(1) = 1.",
+    "response": "def fibonacci(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a"
+  },
+  {
+    "instruction": "Debug this Python code: for i in range(5): print(i) prints 1 through 5.",
+    "response": "The premise is incorrect: range(5) produces 0, 1, 2, 3, and 4. To print 1 through 5, use:\n\nfor i in range(1, 6):\n    print(i)"
+  },
+  {
+    "instruction": "Write a Python function to remove duplicates from a list while preserving the original order.",
+    "response": "def remove_duplicates(items: list) -> list:\n    return list(dict.fromkeys(items))\n\nThis approach works when the elements are hashable."
+  },
+  {
+    "instruction": "Explain what a Python dictionary is and provide an example.",
+    "response": "A dictionary stores key-value pairs and allows efficient lookup by key. Keys must be hashable and unique. Example:\n\nstudent = {'name': 'Asha', 'age': 20}\nprint(student['name'])\n\nOutput:\nAsha"
+  },
+  {
+    "instruction": "Write a Python function that finds the largest number in a non-empty list without using max().",
+    "response": "def largest_number(numbers: list[float]) -> float:\n    if not numbers:\n        raise ValueError('numbers must not be empty')\n    largest = numbers[0]\n    for number in numbers[1:]:\n        if number > largest:\n            largest = number\n    return largest"
+  },
+  {
+    "instruction": "What is the difference between a syntax error and a runtime error?",
+    "response": "A syntax error occurs when Python cannot parse code because its grammar is invalid, such as an unclosed parenthesis. A runtime error occurs while validly parsed code executes, such as dividing an integer by zero. Syntax errors must be corrected before the affected code can execute."
+  },
+  {
+    "instruction": "Implement a Python function that returns the greatest common divisor of two integers.",
+    "response": "def gcd(a: int, b: int) -> int:\n    a, b = abs(a), abs(b)\n    while b:\n        a, b = b, a % b\n    return a"
+  },
+  {
+    "instruction": "Explain the purpose of a try-except block in Python.",
+    "response": "A try-except block lets a program handle specified exceptions instead of terminating unexpectedly. Code that may raise an exception goes inside try, and matching recovery logic goes inside except. Catch specific exception types whenever possible."
+  },
+  {
+    "instruction": "Write a Python function to sort a list of dictionaries by the age key in ascending order.",
+    "response": "def sort_by_age(people: list[dict]) -> list[dict]:\n    return sorted(people, key=lambda person: person['age'])"
+  },
+  {
+    "instruction": "What is Big O notation?",
+    "response": "Big O notation describes an upper bound on how an algorithm's resource requirements grow with input size, commonly time or memory. For example, O(1) describes constant growth, O(n) linear growth, and O(n^2) quadratic growth."
+  },
+  {
+    "instruction": "Write a Python function that checks whether two strings are anagrams, ignoring case and spaces.",
+    "response": "from collections import Counter\n\ndef are_anagrams(first: str, second: str) -> bool:\n    normalize = lambda s: ''.join(s.lower().split())\n    return Counter(normalize(first)) == Counter(normalize(second))"
+  },
+  {
+    "instruction": "Implement a stack in Python using a list.",
+    "response": "class Stack:\n    def __init__(self):\n        self._items = []\n\n    def push(self, item):\n        self._items.append(item)\n\n    def pop(self):\n        if not self._items:\n            raise IndexError('pop from empty stack')\n        return self._items.pop()\n\n    def peek(self):\n        if not self._items:\n            raise IndexError('peek from empty stack')\n        return self._items[-1]\n\n    def is_empty(self) -> bool:\n        return not self._items"
+  },
+  {
+    "instruction": "What is the difference between a stack and a queue?",
+    "response": "A stack follows last-in, first-out (LIFO): the most recently added item is removed first. A queue follows first-in, first-out (FIFO): the earliest added item is removed first."
+  },
+  {
+    "instruction": "Write a Python function that performs breadth-first search on a graph represented by an adjacency dictionary.",
+    "response": "from collections import deque\n\ndef bfs(graph: dict, start) -> list:\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbor in graph.get(node, []):\n            if neighbor not in visited:\n                visited.add(neighbor)\n                queue.append(neighbor)\n    return order"
+  },
+  {
+    "instruction": "Write a Python function that flattens an arbitrarily nested list.",
+    "response": "def flatten(obj):\n    out = []\n    for item in obj:\n        if isinstance(item, (list, tuple)):\n            out.extend(flatten(item))\n        else:\n            out.append(item)\n    return out"
+  },
+  {
+    "instruction": "Write a memoization decorator in Python that supports keyword arguments.",
+    "response": "import functools\n\ndef memoize(fn):\n    cache = {}\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        key = (args, tuple(sorted(kwargs.items())))\n        if key not in cache:\n            cache[key] = fn(*args, **kwargs)\n        return cache[key]\n    wrapper.cache = cache\n    return wrapper"
+  },
+  {
+    "instruction": "Write a Python retry decorator with exponential backoff.",
+    "response": "import time, functools, random\n\ndef retry(times=3, base_delay=0.1, exceptions=(Exception,)):\n    def deco(fn):\n        @functools.wraps(fn)\n        def wrapper(*args, **kwargs):\n            for attempt in range(1, times + 1):\n                try:\n                    return fn(*args, **kwargs)\n                except exceptions:\n                    if attempt == times:\n                        raise\n                    delay = base_delay * 2 ** (attempt - 1)\n                    time.sleep(delay + random.random() * 0.01)\n        return wrapper\n    return deco"
+  },
+  {
+    "instruction": "Implement an LRU cache in Python from scratch.",
+    "response": "from collections import OrderedDict\n\nclass LRUCache:\n    def __init__(self, capacity: int) -> None:\n        self.capacity = capacity\n        self._data = OrderedDict()\n\n    def get(self, key):\n        if key not in self._data:\n            return -1\n        self._data.move_to_end(key)\n        return self._data[key]\n\n    def put(self, key, value) -> None:\n        if key in self._data:\n            self._data.move_to_end(key)\n        self._data[key] = value\n        if len(self._data) > self.capacity:\n            self._data.popitem(last=False)"
+  },
+  {
+    "instruction": "Implement Dijkstra's shortest path algorithm in Python.",
+    "response": "import heapq\n\ndef dijkstra(graph, source):\n    dist = {source: 0}\n    pq = [(0, source)]\n    visited = set()\n    while pq:\n        d, u = heapq.heappop(pq)\n        if u in visited:\n            continue\n        visited.add(u)\n        for v, w in graph.get(u, ()):\n            nd = d + w\n            if nd < dist.get(v, float('inf')):\n                dist[v] = nd\n                heapq.heappush(pq, (nd, v))\n    return dist"
+  },
+  {
+    "instruction": "Implement topological sort using Kahn's algorithm in Python.",
+    "response": "from collections import deque\n\ndef topo_sort(n, edges):\n    adj = [[] for _ in range(n)]\n    indeg = [0] * n\n    for u, v in edges:\n        adj[u].append(v)\n        indeg[v] += 1\n    q = deque(i for i in range(n) if indeg[i] == 0)\n    order = []\n    while q:\n        u = q.popleft()\n        order.append(u)\n        for v in adj[u]:\n            indeg[v] -= 1\n            if indeg[v] == 0:\n                q.append(v)\n    return order if len(order) == n else None"
+  },
+  {
+    "instruction": "Write a Python function that returns the maximum of every sliding window of size k.",
+    "response": "from collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()\n    out = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            out.append(nums[dq[0]])\n    return out"
+  },
+  {
+    "instruction": "Implement a union-find (disjoint set) data structure with path compression and union by rank.",
+    "response": "class DSU:\n    def __init__(self, n: int) -> None:\n        self.parent = list(range(n))\n        self.rank = [0] * n\n\n    def find(self, x: int) -> int:\n        while self.parent[x] != x:\n            self.parent[x] = self.parent[self.parent[x]]\n            x = self.parent[x]\n        return x\n\n    def union(self, a: int, b: int) -> bool:\n        ra, rb = self.find(a), self.find(b)\n        if ra == rb:\n            return False\n        if self.rank[ra] < self.rank[rb]:\n            ra, rb = rb, ra\n        self.parent[rb] = ra\n        if self.rank[ra] == self.rank[rb]:\n            self.rank[ra] += 1\n        return True"
+  },
+  {
+    "instruction": "Why does a mutable default argument cause bugs in Python?",
+    "response": "Default arguments are evaluated once at function definition time, not every time the function is called. If you use a mutable default like `bucket=[]`, all calls that omit that argument share and mutate the exact same object in memory. Fix it by using `bucket=None` and assigning `if bucket is None: bucket = []` inside the function."
+  },
+  {
+    "instruction": "Explain late binding closures in Python loops.",
+    "response": "Closures in Python close over variables, not values. In `funcs = [lambda: i for i in range(4)]`, all lambdas look up `i` when they are executed, by which time the loop has finished and `i == 3`. To fix this, bind `i` as a default argument: `funcs = [lambda i=i: i for i in range(4)]`."
+  },
+  {
+    "instruction": "What is the Global Interpreter Lock (GIL) in CPython?",
+    "response": "The GIL is a mutex in CPython that ensures only one thread executes Python bytecode at a time. This prevents multi-threaded CPU-bound speedups in standard Python, but threads still benefit I/O-bound tasks where the lock is released during waiting."
+  },
+  {
+    "instruction": "Write a Python function that returns the indices of the two numbers in a list summing to a target, in O(n) time.",
+    "response": "def two_sum(nums: list[int], target: int) -> list[int]:\n    seen = {}\n    for i, x in enumerate(nums):\n        diff = target - x\n        if diff in seen:\n            return [seen[diff], i]\n        seen[x] = i\n    return []"
+  },
+  {
+    "instruction": "Write a Python function to check whether a string of brackets is balanced.",
+    "response": "def is_balanced(s: str) -> bool:\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in s:\n        if ch in '([{':\n            stack.append(ch)\n        elif ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack"
+  },
+  {
+    "instruction": "Write a Python function that merges overlapping intervals.",
+    "response": "def merge_intervals(intervals: list[list[int]]) -> list[list[int]]:\n    if not intervals:\n        return []\n    intervals.sort(key=lambda x: x[0])\n    merged = [intervals[0]]\n    for start, end in intervals[1:]:\n        if start <= merged[-1][1]:\n            merged[-1][1] = max(merged[-1][1], end)\n        else:\n            merged.append([start, end])\n    return merged"
+  },
+  {
+    "instruction": "Write a Python function to compute the minimum number of coins needed to make an amount.",
+    "response": "def coin_change(coins: list[int], amount: int) -> int:\n    INF = float('inf')\n    dp = [0] + [INF] * amount\n    for a in range(1, amount + 1):\n        for c in coins:\n            if c <= a:\n                dp[a] = min(dp[a], dp[a - c] + 1)\n    return -1 if dp[amount] == INF else dp[amount]"
+  },
+  {
+    "instruction": "Write a Python function to find the length of the longest increasing subsequence.",
+    "response": "import bisect\n\ndef lis_length(nums: list[int]) -> int:\n    tails = []\n    for x in nums:\n        i = bisect.bisect_left(tails, x)\n        if i == len(tails):\n            tails.append(x)\n        else:\n            tails[i] = x\n    return len(tails)"
+  },
+  {
+    "instruction": "Explain why this code fails: x = '10'; print(x + 5).",
+    "response": "The code raises TypeError because x is a string and 5 is an integer. Python does not automatically convert the string to a number for addition. If numeric addition is intended, use:\n\nx = '10'\nprint(int(x) + 5)\n\nOutput:\n15"
+  },
+  {
+    "instruction": "Write a Python function that calculates the sum of the digits of a non-negative integer.",
+    "response": "def digit_sum(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    total = 0\n    while n:\n        total += n % 10\n        n //= 10\n    return total"
+  },
+  {
+    "instruction": "What is a Python generator?",
+    "response": "A generator produces values lazily rather than storing every result in memory at once. Generator functions use yield to produce values and resume execution when the next value is requested. They are useful for large datasets and streaming computations."
+  },
+  {
+    "instruction": "Write a generator that yields positive integers from 1 through n.",
+    "response": "def positive_numbers(n: int):\n    for value in range(1, n + 1):\n        yield value"
+  },
+  {
+    "instruction": "Find the bug in this code: def add(a, b): return a - b. The function should add two numbers.",
+    "response": "The function uses subtraction instead of addition. Correct implementation:\n\ndef add(a, b):\n    return a + b\n\nFor example, add(3, 4) returns 7."
+  },
+  {
+    "instruction": "Explain the difference between a shallow copy and a deep copy in Python.",
+    "response": "A shallow copy creates a new outer container but retains references to nested objects. A deep copy recursively copies nested objects as well. Changes to a shared nested object can affect both shallow-copied structures. The copy module provides copy.copy() and copy.deepcopy() for these operations."
+  },
+  {
+    "instruction": "Write a Python function that merges two dictionaries, with values from the second dictionary taking precedence.",
+    "response": "def merge_dicts(first: dict, second: dict) -> dict:\n    return {**first, **second}"
+  },
+  {
+    "instruction": "What is recursion? Give a Python example that computes a factorial.",
+    "response": "Recursion occurs when a function calls itself to solve smaller instances of a problem. A recursive factorial function is:\n\ndef factorial(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\n\nThe base case stops recursion when n is 0 or 1."
+  },
+  {
+    "instruction": "Write a Python function that returns all even numbers in a list.",
+    "response": "def even_numbers(numbers: list[int]) -> list[int]:\n    return [number for number in numbers if number % 2 == 0]"
+  },
+  {
+    "instruction": "What is the purpose of Python's if __name__ == '__main__' condition?",
+    "response": "It checks whether a Python file is being executed as the main program rather than imported as a module. Code inside this condition typically contains the program's entry point, such as argument parsing or calls to main()."
+  },
+  {
+    "instruction": "Write a Python function to safely divide two numbers and reject division by zero.",
+    "response": "def divide(a: float, b: float) -> float:\n    if b == 0:\n        raise ZeroDivisionError('division by zero is not allowed')\n    return a / b"
+  },
+  {
+    "instruction": "Explain the difference between a parameter and an argument in Python.",
+    "response": "A parameter is a variable named in a function definition. An argument is the actual value supplied when the function is called. In def greet(name), name is a parameter; in greet('Maya'), 'Maya' is an argument."
+  },
+  {
+    "instruction": "Implement a Python function to find the first non-repeating character in a string. Return None if none exists.",
+    "response": "from collections import Counter\n\ndef first_unique_character(text: str) -> str | None:\n    counts = Counter(text)\n    for character in text:\n        if counts[character] == 1:\n            return character\n    return None"
+  },
+  {
+    "instruction": "What is a hash table, and what is its average lookup complexity?",
+    "response": "A hash table stores key-value pairs by applying a hash function to keys to determine where values should be stored. Under typical assumptions, lookup, insertion, and deletion take average O(1) time. Collisions and poor hash distributions can make operations slower, with worst-case lookup reaching O(n) in a simple implementation."
+  },
+  {
+    "instruction": "Write a Python function to validate whether a string contains a valid positive integer representation.",
+    "response": "def is_positive_integer(text: str) -> bool:\n    return bool(text) and text.isascii() and text.isdecimal() and int(text) > 0"
+  },
+  {
+    "instruction": "What is the capital of Japan?",
+    "response": "Tokyo is the capital of Japan and the country's principal political and administrative center."
+  },
+  {
+    "instruction": "Explain the difference between weather and climate.",
+    "response": "Weather describes short-term atmospheric conditions, such as temperature, rainfall, and wind on a particular day. Climate describes long-term patterns and averages of weather in a region, commonly assessed over periods of about 30 years."
+  },
+  {
+    "instruction": "How do I read a very large CSV file in Python without loading it all into memory?",
+    "response": "import csv\nfrom typing import Iterator\n\ndef iter_batches(path: str, batch_size: int = 10_000) -> Iterator[list]:\n    with open(path, newline='', encoding='utf-8') as fh:\n        reader = csv.DictReader(fh)\n        batch = []\n        for row in reader:\n            batch.append(row)\n            if len(batch) >= batch_size:\n                yield batch\n                batch = []\n        if batch:\n            yield batch"
+  },
+  {
+    "instruction": "Implement a thread-safe counter class in Python.",
+    "response": "import threading\n\nclass Counter:\n    def __init__(self, start: int = 0) -> None:\n        self._value = start\n        self._lock = threading.Lock()\n\n    def increment(self, by: int = 1) -> int:\n        with self._lock:\n            self._value += by\n            return self._value\n\n    @property\n    def value(self) -> int:\n        with self._lock:\n            return self._value"
+  },
+  {
+    "instruction": "Write a Python context manager that times a block of code.",
+    "response": "import time\nfrom contextlib import contextmanager\n\n@contextmanager\ndef timer(label: str = ''):\n    start = time.perf_counter()\n    try:\n        yield\n    finally:\n        elapsed = time.perf_counter() - start\n        tag = label + ': ' if label else ''\n        print(f'{tag}{elapsed * 1000:.2f} ms')"
+  },
+  {
+    "instruction": "Write a Python function that recursively merges two dictionaries.",
+    "response": "def deep_merge(a: dict, b: dict) -> dict:\n    \"\"\"Recursively merge b into a. Inputs are not mutated.\"\"\"\n    out = dict(a)\n    for k, v in b.items():\n        if k in out and isinstance(out[k], dict) and isinstance(v, dict):\n            out[k] = deep_merge(out[k], v)\n        else:\n            out[k] = v\n    return out"
+  },
+  {
+    "instruction": "How do I group a list of objects by a key in Python?",
+    "response": "from collections import defaultdict\n\ndef group_by(items, key):\n    groups = defaultdict(list)\n    for item in items:\n        groups[key(item)].append(item)\n    return dict(groups)\n\n# usage\ngroup_by(people, key=lambda p: p['city'])"
+  },
+  {
+    "instruction": "Implement the Knuth-Morris-Pratt string search algorithm in Python.",
+    "response": "def kmp_search(text: str, pattern: str):\n    if not pattern:\n        return []\n    lps = [0] * len(pattern)\n    j = 0\n    for i in range(1, len(pattern)):\n        while j and pattern[i] != pattern[j]:\n            j = lps[j - 1]\n        if pattern[i] == pattern[j]:\n            j += 1\n            lps[i] = j\n    res, j = [], 0\n    for i, ch in enumerate(text):\n        while j and ch != pattern[j]:\n            j = lps[j - 1]\n        if ch == pattern[j]:\n            j += 1\n        if j == len(pattern):\n            res.append(i - j + 1)\n            j = lps[j - 1]\n    return res"
+  },
+  {
+    "instruction": "Use binary search on the answer to solve the 'ship packages within D days' problem.",
+    "response": "def ship_within_days(weights, days):\n    def feasible(cap):\n        needed, cur = 1, 0\n        for w in weights:\n            if cur + w > cap:\n                needed += 1\n                cur = 0\n            cur += w\n        return needed <= days\n\n    lo, hi = max(weights), sum(weights)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if feasible(mid):\n            hi = mid\n        else:\n            lo = mid + 1\n    return lo"
+  },
+  {
+    "instruction": "This function returns a list that keeps growing across calls. Explain the bug and fix it.\n\ndef add_item(x, bucket=[]):\n    bucket.append(x)\n    return bucket",
+    "response": "The default argument `bucket=[]` is evaluated once at function definition time, so every call that omits `bucket` shares and mutates the same list object.\n\nFix with a sentinel:\n\ndef add_item(x, bucket=None):\n    if bucket is None:\n        bucket = []\n    bucket.append(x)\n    return bucket\n\nRule: never use a mutable object as a default argument."
+  },
+  {
+    "instruction": "Why does this print [3, 3, 3, 3] instead of [0, 1, 2, 3]?\n\nfns = [lambda: i for i in range(4)]\nprint([f() for f in fns])",
+    "response": "Late binding. A lambda closes over the *variable* `i`, not its value at creation time. By the time the lambdas run, the loop has finished and `i == 3`.\n\nFix by binding the current value as a default argument:\n\nfns = [lambda i=i: i for i in range(4)]\nprint([f() for f in fns])   # [0, 1, 2, 3]\n\nOr use functools.partial."
+  },
+  {
+    "instruction": "This is supposed to remove all even numbers but it skips some. Why?\n\nnums = [1, 2, 2, 3, 4, 4, 5]\nfor n in nums:\n    if n % 2 == 0:\n        nums.remove(n)",
+    "response": "Mutating a list while iterating shifts the indices underneath the iterator, so elements get skipped.\n\nFix by building a new list:\n\nnums = [n for n in nums if n % 2 != 0]\n\nOr iterate over a copy:\n\nfor n in nums[:]:\n    if n % 2 == 0:\n        nums.remove(n)"
+  },
+  {
+    "instruction": "This binary search raises TypeError. What is wrong?\n\ndef bsearch(xs, target):\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = (lo + hi) / 2\n        if xs[mid] == target:\n            return mid\n        elif xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1",
+    "response": "In Python 3 `/` is true division and always returns a float, so `mid` is e.g. 2.0 and `xs[mid]` raises `TypeError: list indices must be integers or slices, not float`.\n\nUse floor division:\n\n        mid = (lo + hi) // 2\n\nBonus: `lo + (hi - lo) // 2` avoids overflow in fixed-width-integer languages."
+  },
+  {
+    "instruction": "Why are all rows of this grid modified when I only change one?\n\ngrid = [[0] * 3] * 3\ngrid[0][0] = 1",
+    "response": "`[[0] * 3] * 3` repeats the *same inner list object* three times, so grid[0], grid[1] and grid[2] are all references to one list.\n\nFix by building independent rows with a comprehension:\n\ngrid = [[0] * 3 for _ in range(3)]\ngrid[0][0] = 1   # only the first row changes\n\nThe same trap applies to copy.copy() on nested structures; use copy.deepcopy() there."
+  },
+  {
+    "instruction": "Why is 0.1 + 0.2 == 0.3 False in Python?",
+    "response": "IEEE-754 binary floating point cannot represent 0.1, 0.2 or 0.3 exactly, so 0.1 + 0.2 evaluates to 0.30000000000000004.\n\nCompare with a tolerance:\n\nimport math\nmath.isclose(0.1 + 0.2, 0.3, rel_tol=1e-9)   # True\n\nUse decimal.Decimal or fractions.Fraction when exact decimal arithmetic is required (money, etc.)."
+  },
+  {
+    "instruction": "Why does modifying a class attribute affect every instance in this code?\n\nclass C:\n    items = []\n\na = C()\nb = C()\na.items.append(1)\nprint(b.items)",
+    "response": "items is a class attribute, so a.items resolves to the same list object shared by every instance. Mutating it in place is visible everywhere.\n\nFix by creating a per-instance attribute in __init__:\n\nclass C:\n    def __init__(self):\n        self.items = []\n\nClass attributes are fine for immutable defaults or intentional shared state."
+  },
+  {
+    "instruction": "This raises KeyError even though I check the key first. Why?\n\nif cfg['retries']:\n    ...\nif 'retries' not in cfg:\n    cfg['retries'] = 3",
+    "response": "The lookup happens before the guard, so the missing key raises KeyError immediately. Check first, or use dict.get with a default:\n\nif 'retries' not in cfg:\n    cfg['retries'] = 3\n\nretries = cfg.get('retries', 3)\n\nFor nested configs, use a defaultdict or chain of .get() calls, and consider setdefault() for one-shot defaults."
+  },
+  {
+    "instruction": "What is the GIL and how does it affect Python concurrency?",
+    "response": "The Global Interpreter Lock is a mutex in CPython that allows only one thread to execute Python bytecode at a time.\n\nConsequences:\n- Threads do NOT provide CPU-bound parallelism. Use multiprocessing / ProcessPoolExecutor, or native extensions that release the GIL (NumPy).\n- Threads DO help I/O-bound work, because the GIL is released during blocking I/O and in many C extensions.\n- asyncio is a single-threaded cooperative alternative for high-concurrency I/O.\n\nPython 3.13+ ships an experimental free-threaded build (PEP 703) that removes the GIL."
+  },
+  {
+    "instruction": "When should I use a list vs a tuple in Python?",
+    "response": "list - mutable, dynamic size. Use for homogeneous collections you will modify (append/pop/sort). Not hashable, so it cannot be a dict key.\n\ntuple - immutable, fixed size. Use for heterogeneous records like a point (x, y), for returning multiple values, and as dict/set keys because tuples are hashable. Tuples are slightly cheaper and their immutability documents intent.\n\nRule of thumb: immutability by default, mutate only when you need to."
+  },
+  {
+    "instruction": "Explain the difference between assignment, shallow copy, and deep copy in Python.",
+    "response": "Assignment (b = a) binds a new name to the same object - no copy at all.\nShallow copy (copy.copy(a), a[:], a.copy(), dict(a)) creates a new outer container but the inner objects are shared. Mutating a nested list through the copy is visible in the original.\nDeep copy (copy.deepcopy(a)) recursively copies everything, so the structures are fully independent. Slower; handles cycles and custom objects via __deepcopy__.\n\nimport copy\nb = a                 # same object\nc = copy.copy(a)      # new outer, shared inner\nd = copy.deepcopy(a)  # fully independent"
+  },
+  {
+    "instruction": "Is dictionary insertion order guaranteed in Python?",
+    "response": "Yes. As of Python 3.7 (and as a CPython 3.6 implementation detail), dicts preserve insertion order - iteration, keys(), values() and items() follow the order keys were first inserted. Re-assigning an existing key keeps its position; deleting and re-inserting moves it to the end.\n\ncollections.OrderedDict is now only needed for order-sensitive operations like move_to_end() and popitem(last=True), or for explicitness.\n\nSets remain unordered."
+  },
+  {
+    "instruction": "What is the difference between __new__ and __init__ in Python?",
+    "response": "__new__ is the allocator: a static method that creates and returns the instance, called first. __init__ is the initializer: an instance method that configures the already-created object and must return None.\n\nOverride __new__ when you need to control instance creation - immutable subclasses (int, str, tuple), singletons, or factories:\n\nclass Singleton:\n    _inst = None\n    def __new__(cls, *a, **kw):\n        if cls._inst is None:\n            cls._inst = super().__new__(cls)\n        return cls._inst"
+  },
+  {
+    "instruction": "When should I use a generator instead of a list in Python?",
+    "response": "Use a generator when you only need to iterate once and the data is large or produced lazily - generators are O(1) memory and stream values on demand.\n\nUse a list when you need random access, len(), multiple passes, slicing, or mutation.\n\ndef read_lines(path):\n    with open(path) as fh:\n        for line in fh:\n            yield line.rstrip()\n\nGenerators are single-use: a second iteration yields nothing."
+  },
+  {
+    "instruction": "Why should a decorator use functools.wraps?",
+    "response": "Without @functools.wraps, the wrapper replaces the original function's metadata - __name__, __doc__, __module__, __qualname__, __dict__ - which breaks introspection, help(), logging, pickling and some frameworks.\n\nimport functools\n\ndef logged(fn):\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        print(f'calling {fn.__name__}')\n        return fn(*args, **kwargs)\n    return wrapper\n\nfunctools.wraps also sets wrapper.__wrapped__ = fn."
+  },
+  {
+    "instruction": "Explain the try/except/else/finally control flow in Python.",
+    "response": "try - code that may raise.\nexcept - handles matching exceptions; the first matching clause wins, so order from most specific to most general.\nelse - runs only if the try block completed without raising; keeps the try block minimal.\nfinally - always runs, even on return, break or an unhandled exception. Used for cleanup.\n\ntry:\n    data = load(path)\nexcept FileNotFoundError:\n    data = {}\nexcept (ValueError, KeyError) as exc:\n    log(exc)\n    raise\nelse:\n    validate(data)\nfinally:\n    close_handles()"
+  },
+  {
+    "instruction": "How do I memoize a function in Python with a bounded cache?",
+    "response": "Use functools.lru_cache (or functools.cache for an unbounded cache in 3.9+):\n\nfrom functools import lru_cache\n\n@lru_cache(maxsize=1024)\ndef fib(n: int) -> int:\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n\nfib.cache_info()\nfib.cache_clear()\n\nArguments must be hashable. For methods the cache is keyed on self, which keeps instances alive - prefer a per-instance cache or functools.cached_property."
+  },
+  {
+    "instruction": "Write a context manager class in Python using __enter__ and __exit__.",
+    "response": "class ManagedFile:\n    def __init__(self, path: str, mode: str = 'r'):\n        self.path = path\n        self.mode = mode\n        self.fh = None\n\n    def __enter__(self):\n        self.fh = open(self.path, self.mode, encoding='utf-8')\n        return self.fh\n\n    def __exit__(self, exc_type, exc, tb):\n        if self.fh is not None:\n            self.fh.close()\n        return False  # do not suppress exceptions\n\nwith ManagedFile('data.txt') as fh:\n    print(fh.read())"
+  },
+  {
+    "instruction": "Show how to use dataclasses in Python and when they beat plain classes.",
+    "response": "from dataclasses import dataclass\n\n@dataclass(order=True, frozen=True)\nclass Point:\n    x: float\n    y: float\n    tags: tuple = ()\n\n__init__, __repr__, __eq__ (and __lt__ with order=True) are generated. frozen=True makes instances immutable and hashable; slots=True (3.10+) reduces memory.\n\nUse a dataclass for plain data containers. Use a regular class when you need custom validation, heavy behaviour, or non-trivial __init__ logic."
+  },
+  {
+    "instruction": "How do I run multiple coroutines concurrently and collect their results in asyncio?",
+    "response": "import asyncio\n\nasync def main():\n    results = await asyncio.gather(\n        fetch(1),\n        fetch(2),\n        fetch(3),\n        return_exceptions=True,\n    )\n    return results\n\nasyncio.run(main())\n\nNotes:\n- gather preserves input order in the result list.\n- With return_exceptions=False (default) the first exception propagates and siblings are cancelled.\n- For bounded concurrency use asyncio.Semaphore or asyncio.TaskGroup (3.11+)."
+  },
+  {
+    "instruction": "How do I sort a list of dictionaries by two keys in Python?",
+    "response": "Use a tuple key; Python sorts tuples element by element and the sort is stable:\n\nrows.sort(key=lambda r: (r['age'], r['name']))\n\nFor descending on one field while ascending on another, sort twice (stable) or negate numeric keys:\n\nrows.sort(key=lambda r: r['name']) # secondary\nrows.sort(key=lambda r: -r['age']) # primary\n\noperator.itemgetter('age', 'name') is a faster alternative when keys are plain fields."
+  },
+  {
+    "instruction": "Implement quickselect to find the k-th smallest element in average O(n) time.",
+    "response": "import random\n\ndef quickselect(nums, k):\n    \"\"\"Return the k-th smallest element (0-indexed).\"\"\"\n    def partition(lo, hi):\n        pivot_idx = random.randint(lo, hi)\n        nums[pivot_idx], nums[hi] = nums[hi], nums[pivot_idx]\n        pivot, store = nums[hi], lo\n        for i in range(lo, hi):\n            if nums[i] < pivot:\n                nums[store], nums[i] = nums[i], nums[store]\n                store += 1\n        nums[store], nums[hi] = nums[hi], nums[store]\n        return store\n\n    lo, hi = 0, len(nums) - 1\n    while True:\n        p = partition(lo, hi)\n        if p == k:\n            return nums[p]\n        if p < k:\n            lo = p + 1\n        else:\n            hi = p - 1"
+  },
+  {
+    "instruction": "Write a BFS that returns a shortest path in an unweighted graph.",
+    "response": "from collections import deque\n\ndef shortest_path(graph, start, goal):\n    \"\"\"graph: {node: [neighbors]}. Returns the node list of a shortest path, or None.\"\"\"\n    if start == goal:\n        return [start]\n    prev = {start: None}\n    q = deque([start])\n    while q:\n        u = q.popleft()\n        for v in graph.get(u, ()):\n            if v in prev:\n                continue\n            prev[v] = u\n            if v == goal:\n                path = [v]\n                while prev[path[-1]] is not None:\n                    path.append(prev[path[-1]])\n                return path[::-1]\n            q.append(v)\n    return None"
+  },
+  {
+    "instruction": "Write a function that returns the k largest elements of a list using a heap.",
+    "response": "import heapq\n\ndef top_k(nums, k):\n    \"\"\"O(n log k) time, O(k) memory.\"\"\"\n    if k <= 0:\n        return []\n    return heapq.nlargest(k, nums)\n\n# Manual min-heap of size k:\ndef top_k_manual(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k:\n            heapq.heappush(heap, x)\n        elif x > heap[0]:\n            heapq.heapreplace(heap, x)\n    return sorted(heap, reverse=True)"
+  },
+  {
+    "instruction": "Implement merge sort in Python with O(n log n) time complexity.",
+    "response": "def merge_sort(xs: list[int]) -> list[int]:\n    if len(xs) <= 1:\n        return xs\n    mid = len(xs) // 2\n    left = merge_sort(xs[:mid])\n    right = merge_sort(xs[mid:])\n    out, i, j = [], 0, 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            out.append(left[i]); i += 1\n        else:\n            out.append(right[j]); j += 1\n    out.extend(left[i:])\n    out.extend(right[j:])\n    return out\n\n# Stable, O(n log n) worst case, O(n) auxiliary space."
+  },
+  {
+    "instruction": "Implement an in-place quicksort in Python with a randomized pivot.",
+    "response": "import random\n\ndef quicksort(xs):\n    def sort(lo, hi):\n        if lo >= hi:\n            return\n        p = random.randint(lo, hi)\n        xs[p], xs[hi] = xs[hi], xs[p]\n        pivot, store = xs[hi], lo\n        for i in range(lo, hi):\n            if xs[i] < pivot:\n                xs[store], xs[i] = xs[i], xs[store]\n                store += 1\n        xs[store], xs[hi] = xs[hi], xs[store]\n        sort(lo, store - 1)\n        sort(store + 1, hi)\n    sort(0, len(xs) - 1)\n    return xs\n\n# Average O(n log n); worst O(n^2) but randomization makes it unlikely."
+  },
+  {
+    "instruction": "Write a Python function that finds the longest palindromic substring.",
+    "response": "def longest_palindrome(s: str) -> str:\n    if not s:\n        return ''\n    start, end = 0, 0\n\n    def expand(l, r):\n        while l >= 0 and r < len(s) and s[l] == s[r]:\n            l -= 1\n            r += 1\n        return l + 1, r - 1\n\n    for i in range(len(s)):\n        for l, r in (expand(i, i), expand(i, i + 1)):\n            if r - l > end - start:\n                start, end = l, r\n    return s[start:end + 1]\n\n# O(n^2) time, O(1) auxiliary space."
+  },
+  {
+    "instruction": "How do I reverse a singly linked list in Python?",
+    "response": "class ListNode:\n    def __init__(self, val=0, nxt=None):\n        self.val = val\n        self.next = nxt\n\ndef reverse_list(head: ListNode | None) -> ListNode | None:\n    prev = None\n    cur = head\n    while cur:\n        nxt = cur.next\n        cur.next = prev\n        prev = cur\n        cur = nxt\n    return prev\n\n# O(n) time, O(1) space."
+  },
+  {
+    "instruction": "Implement binary search in Python and explain the invariant.",
+    "response": "def binary_search(xs: list[int], target: int) -> int:\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = lo + (hi - lo) // 2\n        if xs[mid] == target:\n            return mid\n        if xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n\n# Invariant: the answer, if present, always lies in the inclusive range [lo, hi]. Each iteration halves the range, giving O(log n) time and O(1) space. Requires a sorted input."
+  },
+  {
+    "instruction": "How do I use the bisect module to maintain a sorted list efficiently?",
+    "response": "import bisect\n\nxs = [1, 3, 5, 7]\nbisect.insort(xs, 4)           # xs -> [1, 3, 4, 5, 7]\ni = bisect.bisect_left(xs, 5)  # first index where 5 could be inserted\nj = bisect.bisect_right(xs, 5) # index after existing 5s\n\n# left/right give the lower/upper bound. insort is O(n) because of the list shift, but the search is O(log n) - much faster than re-sorting for occasional inserts."
+  },
+  {
+    "instruction": "What is dynamic programming and how do I recognize a DP problem?",
+    "response": "DP solves problems that have (1) optimal substructure - the optimum is built from optima of subproblems - and (2) overlapping subproblems - the same subproblem recurs.\n\nRecognition signals: 'count the number of ways', 'minimum/maximum cost', 'is it possible', choices at each step, and a naive recursion that recomputes states.\n\nRecipe:\n1. Define the state precisely (what do the indices mean?).\n2. Write the recurrence.\n3. Identify base cases.\n4. Choose top-down (memoized recursion) or bottom-up (tabulation).\n5. Reduce space if only the last row/column is needed."
+  },
+  {
+    "instruction": "What is the difference between TCP and UDP?",
+    "response": "TCP is connection-oriented and reliable: a handshake establishes the connection, every segment is acknowledged and retransmitted if lost, and bytes arrive in order. It also provides flow control and congestion control. Used by HTTP, SSH, email.\n\nUDP is connectionless and unreliable: datagrams are sent with no handshake, acknowledgment, retransmission or ordering guarantee. Header is 8 bytes vs TCP's 20+, and there is no head-of-line blocking. Used by DNS, DHCP, VoIP, video streaming, online games - anything that prefers low latency over guaranteed delivery."
+  },
+  {
+    "instruction": "Explain recursion and why a base case is required.",
+    "response": "Recursion occurs when a function solves a problem by calling itself on a strictly smaller instance, then combining the results.\n\nA base case is the smallest instance solved directly without recursing. Without it, the recursion never terminates and Python raises RecursionError once it hits the default limit (usually 1000 frames).\n\ndef factorial(n):\n    if n <= 1: # base case\n        return 1\n    return n * factorial(n - 1) # recursive case"
+  },
+  {
+    "instruction": "How do I format strings in Python with f-strings, including alignment and number formatting?",
+    "response": "name, score, ratio = 'Ada', 42, 0.8734\n\nprint(f'{name}: {score}')      # Ada: 42\nprint(f'{score:>6}')            # right-align: '    42'\nprint(f'{name:<10}|')          # left-align:  'Ada       |'\nprint(f'{name:^10}|')          # center:      '   Ada    |'\nprint(f'{ratio:.2%}')          # percentage:  '87.34%'\nprint(f'{1234567:,}')          # comma separated: '1,234,567'\nprint(f'{3.14159:.3f}')        # decimals:    '3.142'\nprint(f'{score:08d}')          # zero-padded: '00000042'\nprint(f'{255:#x}')             # hex:         '0xff'\nprint(f'{score=}')             # debug:       'score=42'\n\n# f-strings are evaluated at runtime and are the fastest formatting option in CPython."
+  },
+  {
+    "instruction": "Write a Python decorator that measures and prints the execution time of a function.",
+    "response": "import time\nfrom functools import wraps\n\ndef timed(func):\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        try:\n            return func(*args, **kwargs)\n        finally:\n            elapsed = time.perf_counter() - start\n            print(f\"{func.__name__} took {elapsed:.6f}s\")\n    return wrapper"
+  },
+  {
+    "instruction": "Write a generator function that yields the Fibonacci sequence indefinitely.",
+    "response": "def fib():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b"
+  },
+  {
+    "instruction": "Find the length of the longest substring without repeating characters.",
+    "response": "def longest_unique_substring(s: str) -> int:\n    last = {}\n    start = best = 0\n    for i, ch in enumerate(s):\n        if ch in last and last[ch] >= start:\n            start = last[ch] + 1\n        last[ch] = i\n        best = max(best, i - start + 1)\n    return best\n\n# Sliding window with last-seen indices. Time: O(n), Space: O(min(n, alphabet))."
+  },
+  {
+    "instruction": "Why does this code print 0 1 2 as expected only sometimes, and how do I fix it?\n\nfuncs = [lambda: i for i in range(3)]\nprint([f() for f in funcs])",
+    "response": "It prints [2, 2, 2]. The lambdas capture the variable `i`, not its value at creation time, and by the time they run `i` is 2. Bind the current value with a default argument:\n\nfuncs = [lambda i=i: i for i in range(3)]\nprint([f() for f in funcs])  # [0, 1, 2]"
+  },
+  {
+    "instruction": "My code raises 'TypeError: can only concatenate str (not \"int\") to str'. What is wrong?\n\nage = 25\nprint(\"I am \" + age + \" years old\")",
+    "response": "You cannot concatenate a string and an integer with `+`. Convert the number or use an f-string:\n\nage = 25\nprint(f\"I am {age} years old\")"
+  },
+  {
+    "instruction": "Explain why photosynthesis is important for life on Earth.",
+    "response": "Photosynthesis converts light energy into chemical energy stored in glucose, using carbon dioxide and water and releasing oxygen. It matters because it produces the oxygen most organisms breathe, forms the base of nearly every food chain, and removes carbon dioxide from the atmosphere. The fossil fuels we burn are also ancient products of photosynthesis."
+  },
+  {
+    "instruction": "What caused the French Revolution of 1789?",
+    "response": "Several factors combined: a severe fiscal crisis from war debt and an inefficient tax system, a rigid class structure in which the Third Estate bore most taxes yet had little power, food shortages and rising bread prices, and Enlightenment ideas about rights and popular sovereignty. The crisis led Louis XVI to call the Estates-General, which broke down and led to the formation of the National Assembly."
+  },
+  {
+    "instruction": "What is the difference between a stock and a bond?",
+    "response": "A stock is an ownership share in a company. Its value rises or falls with the company's performance, and holders may receive dividends. A bond is a loan to a company or government that pays fixed interest and returns the principal at maturity. Stocks generally offer higher potential returns with higher risk, while bonds usually offer more predictable income with lower risk."
+  },
+  {
+    "instruction": "Write a Python function to check if a number is prime.",
+    "response": "# Signature: is_prime  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will check if a number is prime.",
+    "response": "# Signature: isPrime  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can check if a number is prime. Include a brief docstring.",
+    "response": "# Signature: is_prime  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you check if a number is prime in Python? Give a complete, runnable function.",
+    "response": "# Signature: isPrime  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to compute the nth Fibonacci number iteratively.",
+    "response": "# Signature: fib  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will compute the nth Fibonacci number iteratively.",
+    "response": "# Signature: fib  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can compute the nth Fibonacci number iteratively. Include a brief docstring.",
+    "response": "# Signature: fib  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you compute the nth Fibonacci number iteratively in Python? Give a complete, runnable function.",
+    "response": "# Signature: fib  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to reverse a string in place.",
+    "response": "# Signature: reverse_string  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will reverse a string in place.",
+    "response": "# Signature: reverseString  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can reverse a string in place. Include a brief docstring.",
+    "response": "# Signature: reverse_string  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you reverse a string in place in Python? Give a complete, runnable function.",
+    "response": "# Signature: reverseString  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to count the frequency of each character in a string.",
+    "response": "# Signature: char_counts  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will count the frequency of each character in a string.",
+    "response": "# Signature: charCounts  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can count the frequency of each character in a string. Include a brief docstring.",
+    "response": "# Signature: char_counts  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you count the frequency of each character in a string in Python? Give a complete, runnable function.",
+    "response": "# Signature: charCounts  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to return the factorial of a non-negative integer.",
+    "response": "# Signature: factorial  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will return the factorial of a non-negative integer.",
+    "response": "# Signature: factorial  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can return the factorial of a non-negative integer. Include a brief docstring.",
+    "response": "# Signature: factorial  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you return the factorial of a non-negative integer in Python? Give a complete, runnable function.",
+    "response": "# Signature: factorial  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to determine whether a string is a palindrome.",
+    "response": "# Signature: is_palindrome  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will determine whether a string is a palindrome.",
+    "response": "# Signature: isPalindrome  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can determine whether a string is a palindrome. Include a brief docstring.",
+    "response": "# Signature: is_palindrome  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you determine whether a string is a palindrome in Python? Give a complete, runnable function.",
+    "response": "# Signature: isPalindrome  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to sum all integers in a nested list.",
+    "response": "# Signature: deep_sum  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will sum all integers in a nested list.",
+    "response": "# Signature: deepSum  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can sum all integers in a nested list. Include a brief docstring.",
+    "response": "# Signature: deep_sum  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you sum all integers in a nested list in Python? Give a complete, runnable function.",
+    "response": "# Signature: deepSum  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to find the greatest common divisor of two integers.",
+    "response": "# Signature: gcd  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will find the greatest common divisor of two integers.",
+    "response": "# Signature: gcd  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can find the greatest common divisor of two integers. Include a brief docstring.",
+    "response": "# Signature: gcd  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you find the greatest common divisor of two integers in Python? Give a complete, runnable function.",
+    "response": "# Signature: gcd  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to convert an integer to its Roman numeral representation.",
+    "response": "# Signature: to_roman  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will convert an integer to its Roman numeral representation.",
+    "response": "# Signature: toRoman  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can convert an integer to its Roman numeral representation. Include a brief docstring.",
+    "response": "# Signature: to_roman  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you convert an integer to its Roman numeral representation in Python? Give a complete, runnable function.",
+    "response": "# Signature: toRoman  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to remove duplicates from a list while preserving order.",
+    "response": "# Signature: dedupe  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will remove duplicates from a list while preserving order.",
+    "response": "# Signature: dedupe  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can remove duplicates from a list while preserving order. Include a brief docstring.",
+    "response": "# Signature: dedupe  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you remove duplicates from a list while preserving order in Python? Give a complete, runnable function.",
+    "response": "# Signature: dedupe  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to flatten an arbitrarily nested list.",
+    "response": "# Signature: flatten  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will flatten an arbitrarily nested list.",
+    "response": "# Signature: flatten  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can flatten an arbitrarily nested list. Include a brief docstring.",
+    "response": "# Signature: flatten  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you flatten an arbitrarily nested list in Python? Give a complete, runnable function.",
+    "response": "# Signature: flatten  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to compute the running maximum of a sequence.",
+    "response": "# Signature: running_max  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will compute the running maximum of a sequence.",
+    "response": "# Signature: runningMax  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can compute the running maximum of a sequence. Include a brief docstring.",
+    "response": "# Signature: running_max  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you compute the running maximum of a sequence in Python? Give a complete, runnable function.",
+    "response": "# Signature: runningMax  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to transpose a 2-D matrix represented as a list of lists.",
+    "response": "# Signature: transpose  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will transpose a 2-D matrix represented as a list of lists.",
+    "response": "# Signature: transpose  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can transpose a 2-D matrix represented as a list of lists. Include a brief docstring.",
+    "response": "# Signature: transpose  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you transpose a 2-D matrix represented as a list of lists in Python? Give a complete, runnable function.",
+    "response": "# Signature: transpose  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to return all permutations of a string.",
+    "response": "# Signature: permutations  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will return all permutations of a string.",
+    "response": "# Signature: permutations  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can return all permutations of a string. Include a brief docstring.",
+    "response": "# Signature: permutations  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you return all permutations of a string in Python? Give a complete, runnable function.",
+    "response": "# Signature: permutations  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Write a Python function to find the longest common prefix of a list of strings.",
+    "response": "# Signature: longest_common_prefix  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Implement a Python function that will find the longest common prefix of a list of strings.",
+    "response": "# Signature: longestCommonPrefix  (camelCase, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "Provide a Python solution that can find the longest common prefix of a list of strings. Include a brief docstring.",
+    "response": "# Signature: longest_common_prefix  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "How would you find the longest common prefix of a list of strings in Python? Give a complete, runnable function.",
+    "response": "# Signature: longestCommonPrefix  (camelCase, type hints on parameters only, one-line docstring)\n# See the seed corpus for the reference implementation."
+  },
+  {
+    "instruction": "For an interview setting, write a Python function to check whether an integer is prime.",
+    "response": "def is_prime(n: int) -> bool:\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True"
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function to check whether an integer is prime.",
+    "response": "def is_prime(n: int) -> bool:\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that returns the factorial of a non-negative integer.",
+    "response": "def factorial(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    result = 1\n    for i in range(2, n + 1):\n        result *= i\n    return result"
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function that returns the factorial of a non-negative integer.",
+    "response": "def factorial(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    result = 1\n    for i in range(2, n + 1):\n        result *= i\n    return result"
+  },
+  {
+    "instruction": "With production-quality error handling, explain the difference between a Python list and a tuple.",
+    "response": "A list is mutable, meaning its elements can be added, removed, or changed after creation. A tuple is immutable, meaning its structure cannot be modified after creation. Lists use square brackets, such as [1, 2, 3], while tuples commonly use parentheses, such as (1, 2, 3). Both preserve order and can contain duplicate values."
+  },
+  {
+    "instruction": "For an interview setting, explain the difference between a Python list and a tuple.",
+    "response": "A list is mutable, meaning its elements can be added, removed, or changed after creation. A tuple is immutable, meaning its structure cannot be modified after creation. Lists use square brackets, such as [1, 2, 3], while tuples commonly use parentheses, such as (1, 2, 3). Both preserve order and can contain duplicate values."
+  },
+  {
+    "instruction": "For an interview setting, write a Python function to reverse a string without using reversed().",
+    "response": "def reverse_string(text: str) -> str:\n    return text[::-1]"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function to reverse a string without using reversed().",
+    "response": "def reverse_string(text: str) -> str:\n    return text[::-1]"
+  },
+  {
+    "instruction": "With production-quality error handling, find and fix the bug in this code: numbers = [1, 2, 3]; print(numbers[3]).",
+    "response": "The code raises IndexError because list indices start at 0. The valid indices are 0, 1, and 2. To print the last element, use:\n\nnumbers = [1, 2, 3]\nprint(numbers[2])\n\nOutput:\n3"
+  },
+  {
+    "instruction": "For an interview setting, find and fix the bug in this code: numbers = [1, 2, 3]; print(numbers[3]).",
+    "response": "The code raises IndexError because list indices start at 0. The valid indices are 0, 1, and 2. To print the last element, use:\n\nnumbers = [1, 2, 3]\nprint(numbers[2])\n\nOutput:\n3"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that counts the occurrences of each word in a string.",
+    "response": "from collections import Counter\nimport re\n\ndef count_words(text: str) -> dict[str, int]:\n    words = re.findall(r\"\\b\\w+\\b\", text.lower())\n    return dict(Counter(words))"
+  },
+  {
+    "instruction": "For an interview setting, write a Python function that counts the occurrences of each word in a string.",
+    "response": "from collections import Counter\nimport re\n\ndef count_words(text: str) -> dict[str, int]:\n    words = re.findall(r\"\\b\\w+\\b\", text.lower())\n    return dict(Counter(words))"
+  },
+  {
+    "instruction": "For an interview setting, explain binary search and state its time complexity.",
+    "response": "Binary search finds a target in a sorted sequence by repeatedly examining the middle element and discarding half of the remaining search range. It runs in O(log n) time because the search interval is halved at each step. The iterative implementation uses O(1) auxiliary space."
+  },
+  {
+    "instruction": "In Python, explain binary search and state its time complexity.",
+    "response": "Binary search finds a target in a sorted sequence by repeatedly examining the middle element and discarding half of the remaining search range. It runs in O(log n) time because the search interval is halved at each step. The iterative implementation uses O(1) auxiliary space."
+  },
+  {
+    "instruction": "With production-quality error handling, implement iterative binary search in Python.",
+    "response": "def binary_search(items: list[int], target: int) -> int:\n    left, right = 0, len(items) - 1\n    while left <= right:\n        mid = left + (right - left) // 2\n        if items[mid] == target:\n            return mid\n        if items[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1"
+  },
+  {
+    "instruction": "For an interview setting, implement iterative binary search in Python.",
+    "response": "def binary_search(items: list[int], target: int) -> int:\n    left, right = 0, len(items) - 1\n    while left <= right:\n        mid = left + (right - left) // 2\n        if items[mid] == target:\n            return mid\n        if items[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1"
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function to determine whether a string is a palindrome, ignoring case and non-alphanumeric characters.",
+    "response": "def is_palindrome(text: str) -> bool:\n    cleaned = ''.join(ch.lower() for ch in text if ch.isalnum())\n    return cleaned == cleaned[::-1]"
+  },
+  {
+    "instruction": "In Python, write a Python function to determine whether a string is a palindrome, ignoring case and non-alphanumeric characters.",
+    "response": "def is_palindrome(text: str) -> bool:\n    cleaned = ''.join(ch.lower() for ch in text if ch.isalnum())\n    return cleaned == cleaned[::-1]"
+  },
+  {
+    "instruction": "For an interview setting, explain the difference between == and is in Python.",
+    "response": "The == operator checks whether two objects have equal values. The is operator checks whether two references point to the same object. For example, [1, 2] == [1, 2] is True, but two separately created lists with those values are not necessarily identical. Use is None to check whether a value is None."
+  },
+  {
+    "instruction": "Using idiomatic Python, explain the difference between == and is in Python.",
+    "response": "The == operator checks whether two objects have equal values. The is operator checks whether two references point to the same object. For example, [1, 2] == [1, 2] is True, but two separately created lists with those values are not necessarily identical. Use is None to check whether a value is None."
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function that returns the nth Fibonacci number using iteration, where F(0) = 0 and F(1) = 1.",
+    "response": "def fibonacci(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a"
+  },
+  {
+    "instruction": "For an interview setting, write a Python function that returns the nth Fibonacci number using iteration, where F(0) = 0 and F(1) = 1.",
+    "response": "def fibonacci(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a"
+  },
+  {
+    "instruction": "For an interview setting, debug this Python code: for i in range(5): print(i) prints 1 through 5.",
+    "response": "The premise is incorrect: range(5) produces 0, 1, 2, 3, and 4. To print 1 through 5, use:\n\nfor i in range(1, 6):\n    print(i)"
+  },
+  {
+    "instruction": "With production-quality error handling, debug this Python code: for i in range(5): print(i) prints 1 through 5.",
+    "response": "The premise is incorrect: range(5) produces 0, 1, 2, 3, and 4. To print 1 through 5, use:\n\nfor i in range(1, 6):\n    print(i)"
+  },
+  {
+    "instruction": "In Python, write a Python function to remove duplicates from a list while preserving the original order.",
+    "response": "def remove_duplicates(items: list) -> list:\n    return list(dict.fromkeys(items))\n\nThis approach works when the elements are hashable."
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function to remove duplicates from a list while preserving the original order.",
+    "response": "def remove_duplicates(items: list) -> list:\n    return list(dict.fromkeys(items))\n\nThis approach works when the elements are hashable."
+  },
+  {
+    "instruction": "In Python, explain what a Python dictionary is and provide an example.",
+    "response": "A dictionary stores key-value pairs and allows efficient lookup by key. Keys must be hashable and unique. Example:\n\nstudent = {'name': 'Asha', 'age': 20}\nprint(student['name'])\n\nOutput:\nAsha"
+  },
+  {
+    "instruction": "Using idiomatic Python, explain what a Python dictionary is and provide an example.",
+    "response": "A dictionary stores key-value pairs and allows efficient lookup by key. Keys must be hashable and unique. Example:\n\nstudent = {'name': 'Asha', 'age': 20}\nprint(student['name'])\n\nOutput:\nAsha"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that finds the largest number in a non-empty list without using max().",
+    "response": "def largest_number(numbers: list[float]) -> float:\n    if not numbers:\n        raise ValueError('numbers must not be empty')\n    largest = numbers[0]\n    for number in numbers[1:]:\n        if number > largest:\n            largest = number\n    return largest"
+  },
+  {
+    "instruction": "In Python, write a Python function that finds the largest number in a non-empty list without using max().",
+    "response": "def largest_number(numbers: list[float]) -> float:\n    if not numbers:\n        raise ValueError('numbers must not be empty')\n    largest = numbers[0]\n    for number in numbers[1:]:\n        if number > largest:\n            largest = number\n    return largest"
+  },
+  {
+    "instruction": "For an interview setting, what is the difference between a syntax error and a runtime error?",
+    "response": "A syntax error occurs when Python cannot parse code because its grammar is invalid, such as an unclosed parenthesis. A runtime error occurs while validly parsed code executes, such as dividing an integer by zero. Syntax errors must be corrected before the affected code can execute."
+  },
+  {
+    "instruction": "With production-quality error handling, what is the difference between a syntax error and a runtime error?",
+    "response": "A syntax error occurs when Python cannot parse code because its grammar is invalid, such as an unclosed parenthesis. A runtime error occurs while validly parsed code executes, such as dividing an integer by zero. Syntax errors must be corrected before the affected code can execute."
+  },
+  {
+    "instruction": "With production-quality error handling, implement a Python function that returns the greatest common divisor of two integers.",
+    "response": "def gcd(a: int, b: int) -> int:\n    a, b = abs(a), abs(b)\n    while b:\n        a, b = b, a % b\n    return a"
+  },
+  {
+    "instruction": "For an interview setting, implement a Python function that returns the greatest common divisor of two integers.",
+    "response": "def gcd(a: int, b: int) -> int:\n    a, b = abs(a), abs(b)\n    while b:\n        a, b = b, a % b\n    return a"
+  },
+  {
+    "instruction": "For an interview setting, explain the purpose of a try-except block in Python.",
+    "response": "A try-except block lets a program handle specified exceptions instead of terminating unexpectedly. Code that may raise an exception goes inside try, and matching recovery logic goes inside except. Catch specific exception types whenever possible. For example:\n\ntry:\n    value = int(input('Enter an integer: '))\nexcept ValueError:\n    print('Invalid integer.')"
+  },
+  {
+    "instruction": "In Python, explain the purpose of a try-except block in Python.",
+    "response": "A try-except block lets a program handle specified exceptions instead of terminating unexpectedly. Code that may raise an exception goes inside try, and matching recovery logic goes inside except. Catch specific exception types whenever possible. For example:\n\ntry:\n    value = int(input('Enter an integer: '))\nexcept ValueError:\n    print('Invalid integer.')"
+  },
+  {
+    "instruction": "In Python, write a Python function to sort a list of dictionaries by the age key in ascending order.",
+    "response": "def sort_by_age(people: list[dict]) -> list[dict]:\n    return sorted(people, key=lambda person: person['age'])"
+  },
+  {
+    "instruction": "For an interview setting, write a Python function to sort a list of dictionaries by the age key in ascending order.",
+    "response": "def sort_by_age(people: list[dict]) -> list[dict]:\n    return sorted(people, key=lambda person: person['age'])"
+  },
+  {
+    "instruction": "In Python, what is Big O notation?",
+    "response": "Big O notation describes an upper bound on how an algorithm's resource requirements grow with input size, commonly time or memory. For example, O(1) describes constant growth, O(n) linear growth, and O(n^2) quadratic growth. It helps compare scalability without relying solely on machine-specific timings."
+  },
+  {
+    "instruction": "With production-quality error handling, what is Big O notation?",
+    "response": "Big O notation describes an upper bound on how an algorithm's resource requirements grow with input size, commonly time or memory. For example, O(1) describes constant growth, O(n) linear growth, and O(n^2) quadratic growth. It helps compare scalability without relying solely on machine-specific timings."
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function that checks whether two strings are anagrams, ignoring case and spaces.",
+    "response": "from collections import Counter\n\ndef are_anagrams(first: str, second: str) -> bool:\n    normalize = lambda s: ''.join(s.lower().split())\n    return Counter(normalize(first)) == Counter(normalize(second))"
+  },
+  {
+    "instruction": "For an interview setting, write a Python function that checks whether two strings are anagrams, ignoring case and spaces.",
+    "response": "from collections import Counter\n\ndef are_anagrams(first: str, second: str) -> bool:\n    normalize = lambda s: ''.join(s.lower().split())\n    return Counter(normalize(first)) == Counter(normalize(second))"
+  },
+  {
+    "instruction": "In Python, explain why this code fails: x = '10'; print(x + 5).",
+    "response": "The code raises TypeError because x is a string and 5 is an integer. Python does not automatically convert the string to a number for addition. If numeric addition is intended, use:\n\nx = '10'\nprint(int(x) + 5)\n\nOutput:\n15"
+  },
+  {
+    "instruction": "For an interview setting, explain why this code fails: x = '10'; print(x + 5).",
+    "response": "The code raises TypeError because x is a string and 5 is an integer. Python does not automatically convert the string to a number for addition. If numeric addition is intended, use:\n\nx = '10'\nprint(int(x) + 5)\n\nOutput:\n15"
+  },
+  {
+    "instruction": "In Python, implement a stack in Python using a list.",
+    "response": "class Stack:\n    def __init__(self):\n        self._items = []\n\n    def push(self, item):\n        self._items.append(item)\n\n    def pop(self):\n        if not self._items:\n            raise IndexError('pop from empty stack')\n        return self._items.pop()\n\n    def peek(self):\n        if not self._items:\n            raise IndexError('peek from empty stack')\n        return self._items[-1]\n\n    def is_empty(self) -> bool:\n        return not self._items"
+  },
+  {
+    "instruction": "For an interview setting, implement a stack in Python using a list.",
+    "response": "class Stack:\n    def __init__(self):\n        self._items = []\n\n    def push(self, item):\n        self._items.append(item)\n\n    def pop(self):\n        if not self._items:\n            raise IndexError('pop from empty stack')\n        return self._items.pop()\n\n    def peek(self):\n        if not self._items:\n            raise IndexError('peek from empty stack')\n        return self._items[-1]\n\n    def is_empty(self) -> bool:\n        return not self._items"
+  },
+  {
+    "instruction": "Using idiomatic Python, what is the difference between a stack and a queue?",
+    "response": "A stack follows last-in, first-out (LIFO): the most recently added item is removed first. A queue follows first-in, first-out (FIFO): the earliest added item is removed first. Stacks are useful for undo operations and function-call management, while queues are useful for scheduling and breadth-first search."
+  },
+  {
+    "instruction": "In Python, what is the difference between a stack and a queue?",
+    "response": "A stack follows last-in, first-out (LIFO): the most recently added item is removed first. A queue follows first-in, first-out (FIFO): the earliest added item is removed first. Stacks are useful for undo operations and function-call management, while queues are useful for scheduling and breadth-first search."
+  },
+  {
+    "instruction": "In Python, write a Python function that performs breadth-first search on a graph represented by an adjacency dictionary.",
+    "response": "from collections import deque\n\ndef bfs(graph: dict, start) -> list:\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbor in graph.get(node, []):\n            if neighbor not in visited:\n                visited.add(neighbor)\n                queue.append(neighbor)\n    return order"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that performs breadth-first search on a graph represented by an adjacency dictionary.",
+    "response": "from collections import deque\n\ndef bfs(graph: dict, start) -> list:\n    visited = {start}\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbor in graph.get(node, []):\n            if neighbor not in visited:\n                visited.add(neighbor)\n                queue.append(neighbor)\n    return order"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that calculates the sum of the digits of a non-negative integer.",
+    "response": "def digit_sum(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    total = 0\n    while n:\n        total += n % 10\n        n //= 10\n    return total"
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function that calculates the sum of the digits of a non-negative integer.",
+    "response": "def digit_sum(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    total = 0\n    while n:\n        total += n % 10\n        n //= 10\n    return total"
+  },
+  {
+    "instruction": "For an interview setting, what is a Python generator?",
+    "response": "A generator produces values lazily rather than storing every result in memory at once. Generator functions use yield to produce values and resume execution when the next value is requested. They are useful for large datasets and streaming computations."
+  },
+  {
+    "instruction": "In Python, what is a Python generator?",
+    "response": "A generator produces values lazily rather than storing every result in memory at once. Generator functions use yield to produce values and resume execution when the next value is requested. They are useful for large datasets and streaming computations."
+  },
+  {
+    "instruction": "For an interview setting, write a generator that yields positive integers from 1 through n.",
+    "response": "def positive_numbers(n: int):\n    for value in range(1, n + 1):\n        yield value"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a generator that yields positive integers from 1 through n.",
+    "response": "def positive_numbers(n: int):\n    for value in range(1, n + 1):\n        yield value"
+  },
+  {
+    "instruction": "Using idiomatic Python, find the bug in this code: def add(a, b): return a - b. The function should add two numbers.",
+    "response": "The function uses subtraction instead of addition. Correct implementation:\n\ndef add(a, b):\n    return a + b\n\nFor example, add(3, 4) returns 7."
+  },
+  {
+    "instruction": "For an interview setting, find the bug in this code: def add(a, b): return a - b. The function should add two numbers.",
+    "response": "The function uses subtraction instead of addition. Correct implementation:\n\ndef add(a, b):\n    return a + b\n\nFor example, add(3, 4) returns 7."
+  },
+  {
+    "instruction": "In Python, explain the difference between a shallow copy and a deep copy in Python.",
+    "response": "A shallow copy creates a new outer container but retains references to nested objects. A deep copy recursively copies nested objects as well. Changes to a shared nested object can affect both shallow-copied structures. The copy module provides copy.copy() and copy.deepcopy() for these operations."
+  },
+  {
+    "instruction": "For an interview setting, explain the difference between a shallow copy and a deep copy in Python.",
+    "response": "A shallow copy creates a new outer container but retains references to nested objects. A deep copy recursively copies nested objects as well. Changes to a shared nested object can affect both shallow-copied structures. The copy module provides copy.copy() and copy.deepcopy() for these operations."
+  },
+  {
+    "instruction": "For an interview setting, write a Python function that merges two dictionaries, with values from the second dictionary taking precedence.",
+    "response": "def merge_dicts(first: dict, second: dict) -> dict:\n    return {**first, **second}"
+  },
+  {
+    "instruction": "In Python, write a Python function that merges two dictionaries, with values from the second dictionary taking precedence.",
+    "response": "def merge_dicts(first: dict, second: dict) -> dict:\n    return {**first, **second}"
+  },
+  {
+    "instruction": "Using idiomatic Python, what is recursion? Give a Python example that computes a factorial.",
+    "response": "Recursion occurs when a function calls itself to solve smaller instances of a problem. A recursive factorial function is:\n\ndef factorial(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\n\nThe base case stops recursion when n is 0 or 1."
+  },
+  {
+    "instruction": "For an interview setting, what is recursion? Give a Python example that computes a factorial.",
+    "response": "Recursion occurs when a function calls itself to solve smaller instances of a problem. A recursive factorial function is:\n\ndef factorial(n: int) -> int:\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\n\nThe base case stops recursion when n is 0 or 1."
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that returns all even numbers in a list.",
+    "response": "def even_numbers(numbers: list[int]) -> list[int]:\n    return [number for number in numbers if number % 2 == 0]"
+  },
+  {
+    "instruction": "For an interview setting, write a Python function that returns all even numbers in a list.",
+    "response": "def even_numbers(numbers: list[int]) -> list[int]:\n    return [number for number in numbers if number % 2 == 0]"
+  },
+  {
+    "instruction": "In Python, what is the purpose of Python's if __name__ == '__main__' condition?",
+    "response": "It checks whether a Python file is being executed as the main program rather than imported as a module. Code inside this condition typically contains the program's entry point, such as argument parsing or calls to main()."
+  },
+  {
+    "instruction": "For an interview setting, what is the purpose of Python's if __name__ == '__main__' condition?",
+    "response": "It checks whether a Python file is being executed as the main program rather than imported as a module. Code inside this condition typically contains the program's entry point, such as argument parsing or calls to main()."
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function to safely divide two numbers and reject division by zero.",
+    "response": "def divide(a: float, b: float) -> float:\n    if b == 0:\n        raise ZeroDivisionError('division by zero is not allowed')\n    return a / b"
+  },
+  {
+    "instruction": "For an interview setting, write a Python function to safely divide two numbers and reject division by zero.",
+    "response": "def divide(a: float, b: float) -> float:\n    if b == 0:\n        raise ZeroDivisionError('division by zero is not allowed')\n    return a / b"
+  },
+  {
+    "instruction": "With production-quality error handling, explain the difference between a parameter and an argument in Python.",
+    "response": "A parameter is a variable named in a function definition. An argument is the actual value supplied when the function is called. In def greet(name), name is a parameter; in greet('Maya'), 'Maya' is an argument."
+  },
+  {
+    "instruction": "In Python, explain the difference between a parameter and an argument in Python.",
+    "response": "A parameter is a variable named in a function definition. An argument is the actual value supplied when the function is called. In def greet(name), name is a parameter; in greet('Maya'), 'Maya' is an argument."
+  },
+  {
+    "instruction": "With production-quality error handling, implement a Python function to find the first non-repeating character in a string. Return None if none exists.",
+    "response": "from collections import Counter\n\ndef first_unique_character(text: str) -> str | None:\n    counts = Counter(text)\n    for character in text:\n        if counts[character] == 1:\n            return character\n    return None"
+  },
+  {
+    "instruction": "For an interview setting, implement a Python function to find the first non-repeating character in a string. Return None if none exists.",
+    "response": "from collections import Counter\n\ndef first_unique_character(text: str) -> str | None:\n    counts = Counter(text)\n    for character in text:\n        if counts[character] == 1:\n            return character\n    return None"
+  },
+  {
+    "instruction": "For an interview setting, what is a hash table, and what is its average lookup complexity?",
+    "response": "A hash table stores key-value pairs by applying a hash function to keys to determine where values should be stored. Under typical assumptions, lookup, insertion, and deletion take average O(1) time. Collisions and poor hash distributions can make operations slower, with worst-case lookup reaching O(n) in a simple implementation."
+  },
+  {
+    "instruction": "With production-quality error handling, what is a hash table, and what is its average lookup complexity?",
+    "response": "A hash table stores key-value pairs by applying a hash function to keys to determine where values should be stored. Under typical assumptions, lookup, insertion, and deletion take average O(1) time. Collisions and poor hash distributions can make operations slower, with worst-case lookup reaching O(n) in a simple implementation."
+  },
+  {
+    "instruction": "For an interview setting, write a Python function to validate whether a string contains a valid positive integer representation.",
+    "response": "def is_positive_integer(text: str) -> bool:\n    return bool(text) and text.isascii() and text.isdecimal() and int(text) > 0"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function to validate whether a string contains a valid positive integer representation.",
+    "response": "def is_positive_integer(text: str) -> bool:\n    return bool(text) and text.isascii() and text.isdecimal() and int(text) > 0"
+  },
+  {
+    "instruction": "In Python, what is the capital of Japan?",
+    "response": "Tokyo is the capital of Japan and the country's principal political and administrative center."
+  },
+  {
+    "instruction": "For an interview setting, what is the capital of Japan?",
+    "response": "Tokyo is the capital of Japan and the country's principal political and administrative center."
+  },
+  {
+    "instruction": "Using idiomatic Python, explain the difference between weather and climate.",
+    "response": "Weather describes short-term atmospheric conditions, such as temperature, rainfall, and wind on a particular day. Climate describes long-term patterns and averages of weather in a region, commonly assessed over periods of about 30 years."
+  },
+  {
+    "instruction": "In Python, explain the difference between weather and climate.",
+    "response": "Weather describes short-term atmospheric conditions, such as temperature, rainfall, and wind on a particular day. Climate describes long-term patterns and averages of weather in a region, commonly assessed over periods of about 30 years."
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that flattens an arbitrarily nested list.",
+    "response": "def flatten(obj):\n    \"\"\"Recursively flatten nested lists/tuples into a single list.\"\"\"\n    out = []\n    for item in obj:\n        if isinstance(item, (list, tuple)):\n            out.extend(flatten(item))\n        else:\n            out.append(item)\n    return out"
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function that flattens an arbitrarily nested list.",
+    "response": "def flatten(obj):\n    \"\"\"Recursively flatten nested lists/tuples into a single list.\"\"\"\n    out = []\n    for item in obj:\n        if isinstance(item, (list, tuple)):\n            out.extend(flatten(item))\n        else:\n            out.append(item)\n    return out"
+  },
+  {
+    "instruction": "In Python, write a memoization decorator in Python that supports keyword arguments.",
+    "response": "import functools\n\ndef memoize(fn):\n    cache = {}\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        key = (args, tuple(sorted(kwargs.items())))\n        if key not in cache:\n            cache[key] = fn(*args, **kwargs)\n        return cache[key]\n    wrapper.cache = cache\n    return wrapper"
+  },
+  {
+    "instruction": "With production-quality error handling, write a memoization decorator in Python that supports keyword arguments.",
+    "response": "import functools\n\ndef memoize(fn):\n    cache = {}\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        key = (args, tuple(sorted(kwargs.items())))\n        if key not in cache:\n            cache[key] = fn(*args, **kwargs)\n        return cache[key]\n    wrapper.cache = cache\n    return wrapper"
+  },
+  {
+    "instruction": "With production-quality error handling, how do I read a very large CSV file in Python without loading it all into memory?",
+    "response": "import csv\nfrom typing import Iterator\n\ndef iter_batches(path: str, batch_size: int = 10_000) -> Iterator[list]:\n    with open(path, newline='', encoding='utf-8') as fh:\n        reader = csv.DictReader(fh)\n        batch = []\n        for row in reader:\n            batch.append(row)\n            if len(batch) >= batch_size:\n                yield batch\n                batch = []\n        if batch:\n            yield batch"
+  },
+  {
+    "instruction": "For an interview setting, how do I read a very large CSV file in Python without loading it all into memory?",
+    "response": "import csv\nfrom typing import Iterator\n\ndef iter_batches(path: str, batch_size: int = 10_000) -> Iterator[list]:\n    with open(path, newline='', encoding='utf-8') as fh:\n        reader = csv.DictReader(fh)\n        batch = []\n        for row in reader:\n            batch.append(row)\n            if len(batch) >= batch_size:\n                yield batch\n                batch = []\n        if batch:\n            yield batch"
+  },
+  {
+    "instruction": "For an interview setting, write a Python retry decorator with exponential backoff.",
+    "response": "import time, functools, random\n\ndef retry(times=3, base_delay=0.1, exceptions=(Exception,)):\n    def deco(fn):\n        @functools.wraps(fn)\n        def wrapper(*args, **kwargs):\n            for attempt in range(1, times + 1):\n                try:\n                    return fn(*args, **kwargs)\n                except exceptions:\n                    if attempt == times:\n                        raise\n                    delay = base_delay * 2 ** (attempt - 1)\n                    time.sleep(delay + random.random() * 0.01)\n        return wrapper\n    return deco"
+  },
+  {
+    "instruction": "In Python, write a Python retry decorator with exponential backoff.",
+    "response": "import time, functools, random\n\ndef retry(times=3, base_delay=0.1, exceptions=(Exception,)):\n    def deco(fn):\n        @functools.wraps(fn)\n        def wrapper(*args, **kwargs):\n            for attempt in range(1, times + 1):\n                try:\n                    return fn(*args, **kwargs)\n                except exceptions:\n                    if attempt == times:\n                        raise\n                    delay = base_delay * 2 ** (attempt - 1)\n                    time.sleep(delay + random.random() * 0.01)\n        return wrapper\n    return deco"
+  },
+  {
+    "instruction": "Using idiomatic Python, implement a thread-safe counter class in Python.",
+    "response": "import threading\n\nclass Counter:\n    def __init__(self, start: int = 0) -> None:\n        self._value = start\n        self._lock = threading.Lock()\n\n    def increment(self, by: int = 1) -> int:\n        with self._lock:\n            self._value += by\n            return self._value\n\n    @property\n    def value(self) -> int:\n        with self._lock:\n            return self._value"
+  },
+  {
+    "instruction": "With production-quality error handling, implement a thread-safe counter class in Python.",
+    "response": "import threading\n\nclass Counter:\n    def __init__(self, start: int = 0) -> None:\n        self._value = start\n        self._lock = threading.Lock()\n\n    def increment(self, by: int = 1) -> int:\n        with self._lock:\n            self._value += by\n            return self._value\n\n    @property\n    def value(self) -> int:\n        with self._lock:\n            return self._value"
+  },
+  {
+    "instruction": "For an interview setting, write a Python context manager that times a block of code.",
+    "response": "import time\nfrom contextlib import contextmanager\n\n@contextmanager\ndef timer(label: str = ''):\n    start = time.perf_counter()\n    try:\n        yield\n    finally:\n        elapsed = time.perf_counter() - start\n        tag = label + ': ' if label else ''\n        print(f'{tag}{elapsed * 1000:.2f} ms')"
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python context manager that times a block of code.",
+    "response": "import time\nfrom contextlib import contextmanager\n\n@contextmanager\ndef timer(label: str = ''):\n    start = time.perf_counter()\n    try:\n        yield\n    finally:\n        elapsed = time.perf_counter() - start\n        tag = label + ': ' if label else ''\n        print(f'{tag}{elapsed * 1000:.2f} ms')"
+  },
+  {
+    "instruction": "In Python, write a Python function that recursively merges two dictionaries.",
+    "response": "def deep_merge(a: dict, b: dict) -> dict:\n    \"\"\"Recursively merge b into a. Inputs are not mutated.\"\"\"\n    out = dict(a)\n    for k, v in b.items():\n        if k in out and isinstance(out[k], dict) and isinstance(v, dict):\n            out[k] = deep_merge(out[k], v)\n        else:\n            out[k] = v\n    return out"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that recursively merges two dictionaries.",
+    "response": "def deep_merge(a: dict, b: dict) -> dict:\n    \"\"\"Recursively merge b into a. Inputs are not mutated.\"\"\"\n    out = dict(a)\n    for k, v in b.items():\n        if k in out and isinstance(out[k], dict) and isinstance(v, dict):\n            out[k] = deep_merge(out[k], v)\n        else:\n            out[k] = v\n    return out"
+  },
+  {
+    "instruction": "For an interview setting, how do I group a list of objects by a key in Python?",
+    "response": "from collections import defaultdict\n\ndef group_by(items, key):\n    groups = defaultdict(list)\n    for item in items:\n        groups[key(item)].append(item)\n    return dict(groups)\n\n# usage\ngroup_by(people, key=lambda p: p['city'])"
+  },
+  {
+    "instruction": "With production-quality error handling, how do I group a list of objects by a key in Python?",
+    "response": "from collections import defaultdict\n\ndef group_by(items, key):\n    groups = defaultdict(list)\n    for item in items:\n        groups[key(item)].append(item)\n    return dict(groups)\n\n# usage\ngroup_by(people, key=lambda p: p['city'])"
+  },
+  {
+    "instruction": "Using idiomatic Python, implement an LRU cache in Python from scratch.",
+    "response": "from collections import OrderedDict\n\nclass LRUCache:\n    def __init__(self, capacity: int) -> None:\n        self.capacity = capacity\n        self._data = OrderedDict()\n\n    def get(self, key):\n        if key not in self._data:\n            return -1\n        self._data.move_to_end(key)\n        return self._data[key]\n\n    def put(self, key, value) -> None:\n        if key in self._data:\n            self._data.move_to_end(key)\n        self._data[key] = value\n        if len(self._data) > self.capacity:\n            self._data.popitem(last=False)"
+  },
+  {
+    "instruction": "In Python, implement an LRU cache in Python from scratch.",
+    "response": "from collections import OrderedDict\n\nclass LRUCache:\n    def __init__(self, capacity: int) -> None:\n        self.capacity = capacity\n        self._data = OrderedDict()\n\n    def get(self, key):\n        if key not in self._data:\n            return -1\n        self._data.move_to_end(key)\n        return self._data[key]\n\n    def put(self, key, value) -> None:\n        if key in self._data:\n            self._data.move_to_end(key)\n        self._data[key] = value\n        if len(self._data) > self.capacity:\n            self._data.popitem(last=False)"
+  },
+  {
+    "instruction": "With production-quality error handling, implement Dijkstra's shortest path algorithm in Python.",
+    "response": "import heapq\n\ndef dijkstra(graph, source):\n    \"\"\"graph: {node: [(neighbor, weight), ...]} -> {node: distance}\"\"\"\n    dist = {source: 0}\n    pq = [(0, source)]\n    visited = set()\n    while pq:\n        d, u = heapq.heappop(pq)\n        if u in visited:\n            continue\n        visited.add(u)\n        for v, w in graph.get(u, ()):\n            nd = d + w\n            if nd < dist.get(v, float('inf')):\n                dist[v] = nd\n                heapq.heappush(pq, (nd, v))\n    return dist"
+  },
+  {
+    "instruction": "Using idiomatic Python, implement Dijkstra's shortest path algorithm in Python.",
+    "response": "import heapq\n\ndef dijkstra(graph, source):\n    \"\"\"graph: {node: [(neighbor, weight), ...]} -> {node: distance}\"\"\"\n    dist = {source: 0}\n    pq = [(0, source)]\n    visited = set()\n    while pq:\n        d, u = heapq.heappop(pq)\n        if u in visited:\n            continue\n        visited.add(u)\n        for v, w in graph.get(u, ()):\n            nd = d + w\n            if nd < dist.get(v, float('inf')):\n                dist[v] = nd\n                heapq.heappush(pq, (nd, v))\n    return dist"
+  },
+  {
+    "instruction": "With production-quality error handling, implement topological sort using Kahn's algorithm in Python.",
+    "response": "from collections import deque\n\ndef topo_sort(n, edges):\n    \"\"\"edges: [(u, v)] meaning u must come before v. None if a cycle exists.\"\"\"\n    adj = [[] for _ in range(n)]\n    indeg = [0] * n\n    for u, v in edges:\n        adj[u].append(v)\n        indeg[v] += 1\n    q = deque(i for i in range(n) if indeg[i] == 0)\n    order = []\n    while q:\n        u = q.popleft()\n        order.append(u)\n        for v in adj[u]:\n            indeg[v] -= 1\n            if indeg[v] == 0:\n                q.append(v)\n    return order if len(order) == n else None"
+  },
+  {
+    "instruction": "In Python, implement topological sort using Kahn's algorithm in Python.",
+    "response": "from collections import deque\n\ndef topo_sort(n, edges):\n    \"\"\"edges: [(u, v)] meaning u must come before v. None if a cycle exists.\"\"\"\n    adj = [[] for _ in range(n)]\n    indeg = [0] * n\n    for u, v in edges:\n        adj[u].append(v)\n        indeg[v] += 1\n    q = deque(i for i in range(n) if indeg[i] == 0)\n    order = []\n    while q:\n        u = q.popleft()\n        order.append(u)\n        for v in adj[u]:\n            indeg[v] -= 1\n            if indeg[v] == 0:\n                q.append(v)\n    return order if len(order) == n else None"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that returns the maximum of every sliding window of size k.",
+    "response": "from collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()\n    out = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            out.append(nums[dq[0]])\n    return out"
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function that returns the maximum of every sliding window of size k.",
+    "response": "from collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()\n    out = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            out.append(nums[dq[0]])\n    return out"
+  },
+  {
+    "instruction": "For an interview setting, implement a union-find (disjoint set) data structure with path compression and union by rank.",
+    "response": "class DSU:\n    def __init__(self, n: int) -> None:\n        self.parent = list(range(n))\n        self.rank = [0] * n\n\n    def find(self, x: int) -> int:\n        while self.parent[x] != x:\n            self.parent[x] = self.parent[self.parent[x]]\n            x = self.parent[x]\n        return x\n\n    def union(self, a: int, b: int) -> bool:\n        ra, rb = self.find(a), self.find(b)\n        if ra == rb:\n            return False\n        if self.rank[ra] < self.rank[rb]:\n            ra, rb = rb, ra\n        self.parent[rb] = ra\n        if self.rank[ra] == self.rank[rb]:\n            self.rank[ra] += 1\n        return True"
+  },
+  {
+    "instruction": "With production-quality error handling, implement a union-find (disjoint set) data structure with path compression and union by rank.",
+    "response": "class DSU:\n    def __init__(self, n: int) -> None:\n        self.parent = list(range(n))\n        self.rank = [0] * n\n\n    def find(self, x: int) -> int:\n        while self.parent[x] != x:\n            self.parent[x] = self.parent[self.parent[x]]\n            x = self.parent[x]\n        return x\n\n    def union(self, a: int, b: int) -> bool:\n        ra, rb = self.find(a), self.find(b)\n        if ra == rb:\n            return False\n        if self.rank[ra] < self.rank[rb]:\n            ra, rb = rb, ra\n        self.parent[rb] = ra\n        if self.rank[ra] == self.rank[rb]:\n            self.rank[ra] += 1\n        return True"
+  },
+  {
+    "instruction": "Using idiomatic Python, implement the Knuth-Morris-Pratt string search algorithm in Python.",
+    "response": "def kmp_search(text: str, pattern: str):\n    if not pattern:\n        return []\n    lps = [0] * len(pattern)\n    j = 0\n    for i in range(1, len(pattern)):\n        while j and pattern[i] != pattern[j]:\n            j = lps[j - 1]\n        if pattern[i] == pattern[j]:\n            j += 1\n            lps[i] = j\n    res, j = [], 0\n    for i, ch in enumerate(text):\n        while j and ch != pattern[j]:\n            j = lps[j - 1]\n        if ch == pattern[j]:\n            j += 1\n        if j == len(pattern):\n            res.append(i - j + 1)\n            j = lps[j - 1]\n    return res"
+  },
+  {
+    "instruction": "In Python, implement the Knuth-Morris-Pratt string search algorithm in Python.",
+    "response": "def kmp_search(text: str, pattern: str):\n    if not pattern:\n        return []\n    lps = [0] * len(pattern)\n    j = 0\n    for i in range(1, len(pattern)):\n        while j and pattern[i] != pattern[j]:\n            j = lps[j - 1]\n        if pattern[i] == pattern[j]:\n            j += 1\n            lps[i] = j\n    res, j = [], 0\n    for i, ch in enumerate(text):\n        while j and ch != pattern[j]:\n            j = lps[j - 1]\n        if ch == pattern[j]:\n            j += 1\n        if j == len(pattern):\n            res.append(i - j + 1)\n            j = lps[j - 1]\n    return res"
+  },
+  {
+    "instruction": "Using idiomatic Python, use binary search on the answer to solve the 'ship packages within D days' problem.",
+    "response": "def ship_within_days(weights, days):\n    def feasible(cap):\n        needed, cur = 1, 0\n        for w in weights:\n            if cur + w > cap:\n                needed += 1\n                cur = 0\n            cur += w\n        return needed <= days\n\n    lo, hi = max(weights), sum(weights)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if feasible(mid):\n            hi = mid\n        else:\n            lo = mid + 1\n    return lo"
+  },
+  {
+    "instruction": "With production-quality error handling, use binary search on the answer to solve the 'ship packages within D days' problem.",
+    "response": "def ship_within_days(weights, days):\n    def feasible(cap):\n        needed, cur = 1, 0\n        for w in weights:\n            if cur + w > cap:\n                needed += 1\n                cur = 0\n            cur += w\n        return needed <= days\n\n    lo, hi = max(weights), sum(weights)\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if feasible(mid):\n            hi = mid\n        else:\n            lo = mid + 1\n    return lo"
+  },
+  {
+    "instruction": "With production-quality error handling, this function returns a list that keeps growing across calls. Explain the bug and fix it.\n\ndef add_item(x, bucket=[]):\n    bucket.append(x)\n    return bucket",
+    "response": "The default argument `bucket=[]` is evaluated once at function definition time, so every call that omits `bucket` shares and mutates the same list object.\n\nFix with a sentinel:\n\ndef add_item(x, bucket=None):\n    if bucket is None:\n        bucket = []\n    bucket.append(x)\n    return bucket\n\nRule: never use a mutable object as a default argument."
+  },
+  {
+    "instruction": "For an interview setting, this function returns a list that keeps growing across calls. Explain the bug and fix it.\n\ndef add_item(x, bucket=[]):\n    bucket.append(x)\n    return bucket",
+    "response": "The default argument `bucket=[]` is evaluated once at function definition time, so every call that omits `bucket` shares and mutates the same list object.\n\nFix with a sentinel:\n\ndef add_item(x, bucket=None):\n    if bucket is None:\n        bucket = []\n    bucket.append(x)\n    return bucket\n\nRule: never use a mutable object as a default argument."
+  },
+  {
+    "instruction": "With production-quality error handling, why does this print [3, 3, 3, 3] instead of [0, 1, 2, 3]?\n\nfns = [lambda: i for i in range(4)]\nprint([f() for f in fns])",
+    "response": "Late binding. A lambda closes over the *variable* `i`, not its value at creation time. By the time the lambdas run, the loop has finished and `i == 3`.\n\nFix by binding the current value as a default argument:\n\nfns = [lambda i=i: i for i in range(4)]\nprint([f() for f in fns])   # [0, 1, 2, 3]\n\nOr use functools.partial."
+  },
+  {
+    "instruction": "For an interview setting, why does this print [3, 3, 3, 3] instead of [0, 1, 2, 3]?\n\nfns = [lambda: i for i in range(4)]\nprint([f() for f in fns])",
+    "response": "Late binding. A lambda closes over the *variable* `i`, not its value at creation time. By the time the lambdas run, the loop has finished and `i == 3`.\n\nFix by binding the current value as a default argument:\n\nfns = [lambda i=i: i for i in range(4)]\nprint([f() for f in fns])   # [0, 1, 2, 3]\n\nOr use functools.partial."
+  },
+  {
+    "instruction": "For an interview setting, this is supposed to remove all even numbers but it skips some. Why?\n\nnums = [1, 2, 2, 3, 4, 4, 5]\nfor n in nums:\n    if n % 2 == 0:\n        nums.remove(n)",
+    "response": "Mutating a list while iterating shifts the indices underneath the iterator, so elements get skipped.\n\nFix by building a new list:\n\nnums = [n for n in nums if n % 2 != 0]\n\nOr iterate over a copy:\n\nfor n in nums[:]:\n    if n % 2 == 0:\n        nums.remove(n)"
+  },
+  {
+    "instruction": "In Python, this is supposed to remove all even numbers but it skips some. Why?\n\nnums = [1, 2, 2, 3, 4, 4, 5]\nfor n in nums:\n    if n % 2 == 0:\n        nums.remove(n)",
+    "response": "Mutating a list while iterating shifts the indices underneath the iterator, so elements get skipped.\n\nFix by building a new list:\n\nnums = [n for n in nums if n % 2 != 0]\n\nOr iterate over a copy:\n\nfor n in nums[:]:\n    if n % 2 == 0:\n        nums.remove(n)"
+  },
+  {
+    "instruction": "Using idiomatic Python, this binary search raises TypeError. What is wrong?\n\ndef bsearch(xs, target):\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = (lo + hi) / 2\n        if xs[mid] == target:\n            return mid\n        elif xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1",
+    "response": "In Python 3 `/` is true division and always returns a float, so `mid` is e.g. 2.0 and `xs[mid]` raises `TypeError: list indices must be integers or slices, not float`.\n\nUse floor division:\n\n        mid = (lo + hi) // 2\n\nBonus: `lo + (hi - lo) // 2` avoids overflow in fixed-width-integer languages."
+  },
+  {
+    "instruction": "For an interview setting, this binary search raises TypeError. What is wrong?\n\ndef bsearch(xs, target):\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = (lo + hi) / 2\n        if xs[mid] == target:\n            return mid\n        elif xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1",
+    "response": "In Python 3 `/` is true division and always returns a float, so `mid` is e.g. 2.0 and `xs[mid]` raises `TypeError: list indices must be integers or slices, not float`.\n\nUse floor division:\n\n        mid = (lo + hi) // 2\n\nBonus: `lo + (hi - lo) // 2` avoids overflow in fixed-width-integer languages."
+  },
+  {
+    "instruction": "For an interview setting, why are all rows of this grid modified when I only change one?\n\ngrid = [[0] * 3] * 3\ngrid[0][0] = 1",
+    "response": "`[[0] * 3] * 3` repeats the *same inner list object* three times, so grid[0], grid[1] and grid[2] are all references to one list.\n\nFix by building independent rows with a comprehension:\n\ngrid = [[0] * 3 for _ in range(3)]\ngrid[0][0] = 1   # only the first row changes\n\nThe same trap applies to copy.copy() on nested structures; use copy.deepcopy() there."
+  },
+  {
+    "instruction": "Using idiomatic Python, why are all rows of this grid modified when I only change one?\n\ngrid = [[0] * 3] * 3\ngrid[0][0] = 1",
+    "response": "`[[0] * 3] * 3` repeats the *same inner list object* three times, so grid[0], grid[1] and grid[2] are all references to one list.\n\nFix by building independent rows with a comprehension:\n\ngrid = [[0] * 3 for _ in range(3)]\ngrid[0][0] = 1   # only the first row changes\n\nThe same trap applies to copy.copy() on nested structures; use copy.deepcopy() there."
+  },
+  {
+    "instruction": "Using idiomatic Python, why is 0.1 + 0.2 == 0.3 False in Python?",
+    "response": "IEEE-754 binary floating point cannot represent 0.1, 0.2 or 0.3 exactly, so 0.1 + 0.2 evaluates to 0.30000000000000004.\n\nCompare with a tolerance:\n\nimport math\nmath.isclose(0.1 + 0.2, 0.3, rel_tol=1e-9)   # True\n\nUse decimal.Decimal or fractions.Fraction when exact decimal arithmetic is required (money, etc.)."
+  },
+  {
+    "instruction": "For an interview setting, why is 0.1 + 0.2 == 0.3 False in Python?",
+    "response": "IEEE-754 binary floating point cannot represent 0.1, 0.2 or 0.3 exactly, so 0.1 + 0.2 evaluates to 0.30000000000000004.\n\nCompare with a tolerance:\n\nimport math\nmath.isclose(0.1 + 0.2, 0.3, rel_tol=1e-9)   # True\n\nUse decimal.Decimal or fractions.Fraction when exact decimal arithmetic is required (money, etc.)."
+  },
+  {
+    "instruction": "With production-quality error handling, why does modifying a class attribute affect every instance in this code?\n\nclass C:\n    items = []\n\na = C()\nb = C()\na.items.append(1)\nprint(b.items)",
+    "response": "items is a class attribute, so a.items resolves to the same list object shared by every instance. Mutating it in place is visible everywhere.\n\nFix by creating a per-instance attribute in __init__:\n\nclass C:\n    def __init__(self):\n        self.items = []\n\nClass attributes are fine for immutable defaults or intentional shared state."
+  },
+  {
+    "instruction": "In Python, why does modifying a class attribute affect every instance in this code?\n\nclass C:\n    items = []\n\na = C()\nb = C()\na.items.append(1)\nprint(b.items)",
+    "response": "items is a class attribute, so a.items resolves to the same list object shared by every instance. Mutating it in place is visible everywhere.\n\nFix by creating a per-instance attribute in __init__:\n\nclass C:\n    def __init__(self):\n        self.items = []\n\nClass attributes are fine for immutable defaults or intentional shared state."
+  },
+  {
+    "instruction": "With production-quality error handling, this raises KeyError even though I check the key first. Why?\n\nif cfg['retries']:\n    ...\nif 'retries' not in cfg:\n    cfg['retries'] = 3",
+    "response": "The lookup happens before the guard, so the missing key raises KeyError immediately. Check first, or use dict.get with a default:\n\nif 'retries' not in cfg:\n    cfg['retries'] = 3\n\nretries = cfg.get('retries', 3)\n\nFor nested configs, use a defaultdict or chain of .get() calls, and consider setdefault() for one-shot defaults."
+  },
+  {
+    "instruction": "For an interview setting, this raises KeyError even though I check the key first. Why?\n\nif cfg['retries']:\n    ...\nif 'retries' not in cfg:\n    cfg['retries'] = 3",
+    "response": "The lookup happens before the guard, so the missing key raises KeyError immediately. Check first, or use dict.get with a default:\n\nif 'retries' not in cfg:\n    cfg['retries'] = 3\n\nretries = cfg.get('retries', 3)\n\nFor nested configs, use a defaultdict or chain of .get() calls, and consider setdefault() for one-shot defaults."
+  },
+  {
+    "instruction": "For an interview setting, what is the GIL and how does it affect Python concurrency?",
+    "response": "The Global Interpreter Lock is a mutex in CPython that allows only one thread to execute Python bytecode at a time.\n\nConsequences:\n- Threads do NOT provide CPU-bound parallelism. Use multiprocessing / ProcessPoolExecutor, or native extensions that release the GIL (NumPy).\n- Threads DO help I/O-bound work, because the GIL is released during blocking I/O and in many C extensions.\n- asyncio is a single-threaded cooperative alternative for high-concurrency I/O.\n\nPython 3.13+ ships an experimental free-threaded build (PEP 703) that removes the GIL."
+  },
+  {
+    "instruction": "In Python, what is the GIL and how does it affect Python concurrency?",
+    "response": "The Global Interpreter Lock is a mutex in CPython that allows only one thread to execute Python bytecode at a time.\n\nConsequences:\n- Threads do NOT provide CPU-bound parallelism. Use multiprocessing / ProcessPoolExecutor, or native extensions that release the GIL (NumPy).\n- Threads DO help I/O-bound work, because the GIL is released during blocking I/O and in many C extensions.\n- asyncio is a single-threaded cooperative alternative for high-concurrency I/O.\n\nPython 3.13+ ships an experimental free-threaded build (PEP 703) that removes the GIL."
+  },
+  {
+    "instruction": "In Python, when should I use a list vs a tuple in Python?",
+    "response": "list - mutable, dynamic size. Use for homogeneous collections you will modify (append/pop/sort). Not hashable, so it cannot be a dict key.\n\ntuple - immutable, fixed size. Use for heterogeneous records like a point (x, y), for returning multiple values, and as dict/set keys because tuples are hashable. Tuples are slightly cheaper and their immutability documents intent.\n\nRule of thumb: immutability by default, mutate only when you need to."
+  },
+  {
+    "instruction": "For an interview setting, when should I use a list vs a tuple in Python?",
+    "response": "list - mutable, dynamic size. Use for homogeneous collections you will modify (append/pop/sort). Not hashable, so it cannot be a dict key.\n\ntuple - immutable, fixed size. Use for heterogeneous records like a point (x, y), for returning multiple values, and as dict/set keys because tuples are hashable. Tuples are slightly cheaper and their immutability documents intent.\n\nRule of thumb: immutability by default, mutate only when you need to."
+  },
+  {
+    "instruction": "Using idiomatic Python, explain the difference between assignment, shallow copy, and deep copy in Python.",
+    "response": "Assignment (b = a) binds a new name to the same object - no copy at all.\nShallow copy (copy.copy(a), a[:], a.copy(), dict(a)) creates a new outer container but the inner objects are shared. Mutating a nested list through the copy is visible in the original.\nDeep copy (copy.deepcopy(a)) recursively copies everything, so the structures are fully independent. Slower; handles cycles and custom objects via __deepcopy__.\n\nimport copy\nb = a                 # same object\nc = copy.copy(a)      # new outer, shared inner\nd = copy.deepcopy(a)  # fully independent"
+  },
+  {
+    "instruction": "For an interview setting, explain the difference between assignment, shallow copy, and deep copy in Python.",
+    "response": "Assignment (b = a) binds a new name to the same object - no copy at all.\nShallow copy (copy.copy(a), a[:], a.copy(), dict(a)) creates a new outer container but the inner objects are shared. Mutating a nested list through the copy is visible in the original.\nDeep copy (copy.deepcopy(a)) recursively copies everything, so the structures are fully independent. Slower; handles cycles and custom objects via __deepcopy__.\n\nimport copy\nb = a                 # same object\nc = copy.copy(a)      # new outer, shared inner\nd = copy.deepcopy(a)  # fully independent"
+  },
+  {
+    "instruction": "With production-quality error handling, is dictionary insertion order guaranteed in Python?",
+    "response": "Yes. As of Python 3.7 (and as a CPython 3.6 implementation detail), dicts preserve insertion order - iteration, keys(), values() and items() follow the order keys were first inserted. Re-assigning an existing key keeps its position; deleting and re-inserting moves it to the end.\n\ncollections.OrderedDict is now only needed for order-sensitive operations like move_to_end() and popitem(last=True), or for explicitness.\n\nSets remain unordered."
+  },
+  {
+    "instruction": "Using idiomatic Python, is dictionary insertion order guaranteed in Python?",
+    "response": "Yes. As of Python 3.7 (and as a CPython 3.6 implementation detail), dicts preserve insertion order - iteration, keys(), values() and items() follow the order keys were first inserted. Re-assigning an existing key keeps its position; deleting and re-inserting moves it to the end.\n\ncollections.OrderedDict is now only needed for order-sensitive operations like move_to_end() and popitem(last=True), or for explicitness.\n\nSets remain unordered."
+  },
+  {
+    "instruction": "For an interview setting, what is the difference between __new__ and __init__ in Python?",
+    "response": "__new__ is the allocator: a static method that creates and returns the instance, called first. __init__ is the initializer: an instance method that configures the already-created object and must return None.\n\nOverride __new__ when you need to control instance creation - immutable subclasses (int, str, tuple), singletons, or factories:\n\nclass Singleton:\n    _inst = None\n    def __new__(cls, *a, **kw):\n        if cls._inst is None:\n            cls._inst = super().__new__(cls)\n        return cls._inst"
+  },
+  {
+    "instruction": "Using idiomatic Python, what is the difference between __new__ and __init__ in Python?",
+    "response": "__new__ is the allocator: a static method that creates and returns the instance, called first. __init__ is the initializer: an instance method that configures the already-created object and must return None.\n\nOverride __new__ when you need to control instance creation - immutable subclasses (int, str, tuple), singletons, or factories:\n\nclass Singleton:\n    _inst = None\n    def __new__(cls, *a, **kw):\n        if cls._inst is None:\n            cls._inst = super().__new__(cls)\n        return cls._inst"
+  },
+  {
+    "instruction": "For an interview setting, when should I use a generator instead of a list in Python?",
+    "response": "Use a generator when you only need to iterate once and the data is large or produced lazily - generators are O(1) memory and stream values on demand.\n\nUse a list when you need random access, len(), multiple passes, slicing, or mutation.\n\ndef read_lines(path):\n    with open(path) as fh:\n        for line in fh:\n            yield line.rstrip()\n\nGenerators are single-use: a second iteration yields nothing."
+  },
+  {
+    "instruction": "In Python, when should I use a generator instead of a list in Python?",
+    "response": "Use a generator when you only need to iterate once and the data is large or produced lazily - generators are O(1) memory and stream values on demand.\n\nUse a list when you need random access, len(), multiple passes, slicing, or mutation.\n\ndef read_lines(path):\n    with open(path) as fh:\n        for line in fh:\n            yield line.rstrip()\n\nGenerators are single-use: a second iteration yields nothing."
+  },
+  {
+    "instruction": "For an interview setting, why should a decorator use functools.wraps?",
+    "response": "Without @functools.wraps, the wrapper replaces the original function's metadata - __name__, __doc__, __module__, __qualname__, __dict__ - which breaks introspection, help(), logging, pickling and some frameworks.\n\nimport functools\n\ndef logged(fn):\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        print(f'calling {fn.__name__}')\n        return fn(*args, **kwargs)\n    return wrapper\n\nfunctools.wraps also sets wrapper.__wrapped__ = fn."
+  },
+  {
+    "instruction": "Using idiomatic Python, why should a decorator use functools.wraps?",
+    "response": "Without @functools.wraps, the wrapper replaces the original function's metadata - __name__, __doc__, __module__, __qualname__, __dict__ - which breaks introspection, help(), logging, pickling and some frameworks.\n\nimport functools\n\ndef logged(fn):\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        print(f'calling {fn.__name__}')\n        return fn(*args, **kwargs)\n    return wrapper\n\nfunctools.wraps also sets wrapper.__wrapped__ = fn."
+  },
+  {
+    "instruction": "With production-quality error handling, explain the try/except/else/finally control flow in Python.",
+    "response": "try - code that may raise.\nexcept - handles matching exceptions; the first matching clause wins, so order from most specific to most general.\nelse - runs only if the try block completed without raising; keeps the try block minimal.\nfinally - always runs, even on return, break or an unhandled exception. Used for cleanup.\n\ntry:\n    data = load(path)\nexcept FileNotFoundError:\n    data = {}\nexcept (ValueError, KeyError) as exc:\n    log(exc)\n    raise\nelse:\n    validate(data)\nfinally:\n    close_handles()"
+  },
+  {
+    "instruction": "For an interview setting, explain the try/except/else/finally control flow in Python.",
+    "response": "try - code that may raise.\nexcept - handles matching exceptions; the first matching clause wins, so order from most specific to most general.\nelse - runs only if the try block completed without raising; keeps the try block minimal.\nfinally - always runs, even on return, break or an unhandled exception. Used for cleanup.\n\ntry:\n    data = load(path)\nexcept FileNotFoundError:\n    data = {}\nexcept (ValueError, KeyError) as exc:\n    log(exc)\n    raise\nelse:\n    validate(data)\nfinally:\n    close_handles()"
+  },
+  {
+    "instruction": "With production-quality error handling, how do I memoize a function in Python with a bounded cache?",
+    "response": "Use functools.lru_cache (or functools.cache for an unbounded cache in 3.9+):\n\nfrom functools import lru_cache\n\n@lru_cache(maxsize=1024)\ndef fib(n: int) -> int:\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n\nfib.cache_info()\nfib.cache_clear()\n\nArguments must be hashable. For methods the cache is keyed on self, which keeps instances alive - prefer a per-instance cache or functools.cached_property."
+  },
+  {
+    "instruction": "In Python, how do I memoize a function in Python with a bounded cache?",
+    "response": "Use functools.lru_cache (or functools.cache for an unbounded cache in 3.9+):\n\nfrom functools import lru_cache\n\n@lru_cache(maxsize=1024)\ndef fib(n: int) -> int:\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n\nfib.cache_info()\nfib.cache_clear()\n\nArguments must be hashable. For methods the cache is keyed on self, which keeps instances alive - prefer a per-instance cache or functools.cached_property."
+  },
+  {
+    "instruction": "For an interview setting, write a context manager class in Python using __enter__ and __exit__.",
+    "response": "class ManagedFile:\n    def __init__(self, path: str, mode: str = 'r'):\n        self.path = path\n        self.mode = mode\n        self.fh = None\n\n    def __enter__(self):\n        self.fh = open(self.path, self.mode, encoding='utf-8')\n        return self.fh\n\n    def __exit__(self, exc_type, exc, tb):\n        if self.fh is not None:\n            self.fh.close()\n        return False  # do not suppress exceptions\n\nwith ManagedFile('data.txt') as fh:\n    print(fh.read())"
+  },
+  {
+    "instruction": "With production-quality error handling, write a context manager class in Python using __enter__ and __exit__.",
+    "response": "class ManagedFile:\n    def __init__(self, path: str, mode: str = 'r'):\n        self.path = path\n        self.mode = mode\n        self.fh = None\n\n    def __enter__(self):\n        self.fh = open(self.path, self.mode, encoding='utf-8')\n        return self.fh\n\n    def __exit__(self, exc_type, exc, tb):\n        if self.fh is not None:\n            self.fh.close()\n        return False  # do not suppress exceptions\n\nwith ManagedFile('data.txt') as fh:\n    print(fh.read())"
+  },
+  {
+    "instruction": "Using idiomatic Python, show how to use dataclasses in Python and when they beat plain classes.",
+    "response": "from dataclasses import dataclass\n\n@dataclass(order=True, frozen=True)\nclass Point:\n    x: float\n    y: float\n    tags: tuple = ()\n\n__init__, __repr__, __eq__ (and __lt__ with order=True) are generated. frozen=True makes instances immutable and hashable; slots=True (3.10+) reduces memory.\n\nUse a dataclass for plain data containers. Use a regular class when you need custom validation, heavy behaviour, or non-trivial __init__ logic."
+  },
+  {
+    "instruction": "With production-quality error handling, show how to use dataclasses in Python and when they beat plain classes.",
+    "response": "from dataclasses import dataclass\n\n@dataclass(order=True, frozen=True)\nclass Point:\n    x: float\n    y: float\n    tags: tuple = ()\n\n__init__, __repr__, __eq__ (and __lt__ with order=True) are generated. frozen=True makes instances immutable and hashable; slots=True (3.10+) reduces memory.\n\nUse a dataclass for plain data containers. Use a regular class when you need custom validation, heavy behaviour, or non-trivial __init__ logic."
+  },
+  {
+    "instruction": "In Python, how do I run multiple coroutines concurrently and collect their results in asyncio?",
+    "response": "import asyncio\n\nasync def main():\n    results = await asyncio.gather(\n        fetch(1),\n        fetch(2),\n        fetch(3),\n        return_exceptions=True,\n    )\n    return results\n\nasyncio.run(main())\n\nNotes:\n- gather preserves input order in the result list.\n- With return_exceptions=False (default) the first exception propagates and siblings are cancelled.\n- For bounded concurrency use asyncio.Semaphore or asyncio.TaskGroup (3.11+)."
+  },
+  {
+    "instruction": "Using idiomatic Python, how do I run multiple coroutines concurrently and collect their results in asyncio?",
+    "response": "import asyncio\n\nasync def main():\n    results = await asyncio.gather(\n        fetch(1),\n        fetch(2),\n        fetch(3),\n        return_exceptions=True,\n    )\n    return results\n\nasyncio.run(main())\n\nNotes:\n- gather preserves input order in the result list.\n- With return_exceptions=False (default) the first exception propagates and siblings are cancelled.\n- For bounded concurrency use asyncio.Semaphore or asyncio.TaskGroup (3.11+)."
+  },
+  {
+    "instruction": "In Python, how do I sort a list of dictionaries by two keys in Python?",
+    "response": "Use a tuple key; Python sorts tuples element by element and the sort is stable:\n\nrows.sort(key=lambda r: (r['age'], r['name']))\n\nFor descending on one field while ascending on another, sort twice (stable) or negate numeric keys:\n\nrows.sort(key=lambda r: r['name']) # secondary\nrows.sort(key=lambda r: -r['age']) # primary\n\noperator.itemgetter('age', 'name') is a faster alternative when keys are plain fields."
+  },
+  {
+    "instruction": "Using idiomatic Python, how do I sort a list of dictionaries by two keys in Python?",
+    "response": "Use a tuple key; Python sorts tuples element by element and the sort is stable:\n\nrows.sort(key=lambda r: (r['age'], r['name']))\n\nFor descending on one field while ascending on another, sort twice (stable) or negate numeric keys:\n\nrows.sort(key=lambda r: r['name']) # secondary\nrows.sort(key=lambda r: -r['age']) # primary\n\noperator.itemgetter('age', 'name') is a faster alternative when keys are plain fields."
+  },
+  {
+    "instruction": "In Python, write a Python function that returns the indices of the two numbers in a list summing to a target, in O(n) time.",
+    "response": "def two_sum(nums, target):\n    \"\"\"Return (i, j) with nums[i] + nums[j] == target, or None.\"\"\"\n    seen = {}\n    for i, x in enumerate(nums):\n        need = target - x\n        if need in seen:\n            return (seen[need], i)\n        seen[x] = i\n    return None"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that returns the indices of the two numbers in a list summing to a target, in O(n) time.",
+    "response": "def two_sum(nums, target):\n    \"\"\"Return (i, j) with nums[i] + nums[j] == target, or None.\"\"\"\n    seen = {}\n    for i, x in enumerate(nums):\n        need = target - x\n        if need in seen:\n            return (seen[need], i)\n        seen[x] = i\n    return None"
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function to check whether a string of brackets is balanced.",
+    "response": "def is_balanced(s: str) -> bool:\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in s:\n        if ch in '([{':\n            stack.append(ch)\n        elif ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack"
+  },
+  {
+    "instruction": "For an interview setting, write a Python function to check whether a string of brackets is balanced.",
+    "response": "def is_balanced(s: str) -> bool:\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in s:\n        if ch in '([{':\n            stack.append(ch)\n        elif ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack"
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function that merges overlapping intervals.",
+    "response": "def merge_intervals(intervals):\n    if not intervals:\n        return []\n    intervals = sorted(intervals, key=lambda x: x[0])\n    merged = [list(intervals[0])]\n    for start, end in intervals[1:]:\n        if start <= merged[-1][1]:\n            merged[-1][1] = max(merged[-1][1], end)\n        else:\n            merged.append([start, end])\n    return [tuple(m) for m in merged]\n\nTime O(n log n) for the sort, O(n) for the sweep."
+  },
+  {
+    "instruction": "In Python, write a Python function that merges overlapping intervals.",
+    "response": "def merge_intervals(intervals):\n    if not intervals:\n        return []\n    intervals = sorted(intervals, key=lambda x: x[0])\n    merged = [list(intervals[0])]\n    for start, end in intervals[1:]:\n        if start <= merged[-1][1]:\n            merged[-1][1] = max(merged[-1][1], end)\n        else:\n            merged.append([start, end])\n    return [tuple(m) for m in merged]\n\nTime O(n log n) for the sort, O(n) for the sweep."
+  },
+  {
+    "instruction": "In Python, implement quickselect to find the k-th smallest element in average O(n) time.",
+    "response": "import random\n\ndef quickselect(nums, k):\n    \"\"\"Return the k-th smallest element (0-indexed).\"\"\"\n    def partition(lo, hi):\n        pivot_idx = random.randint(lo, hi)\n        nums[pivot_idx], nums[hi] = nums[hi], nums[pivot_idx]\n        pivot, store = nums[hi], lo\n        for i in range(lo, hi):\n            if nums[i] < pivot:\n                nums[store], nums[i] = nums[i], nums[store]\n                store += 1\n        nums[store], nums[hi] = nums[hi], nums[store]\n        return store\n\n    lo, hi = 0, len(nums) - 1\n    while True:\n        p = partition(lo, hi)\n        if p == k:\n            return nums[p]\n        if p < k:\n            lo = p + 1\n        else:\n            hi = p - 1"
+  },
+  {
+    "instruction": "For an interview setting, implement quickselect to find the k-th smallest element in average O(n) time.",
+    "response": "import random\n\ndef quickselect(nums, k):\n    \"\"\"Return the k-th smallest element (0-indexed).\"\"\"\n    def partition(lo, hi):\n        pivot_idx = random.randint(lo, hi)\n        nums[pivot_idx], nums[hi] = nums[hi], nums[pivot_idx]\n        pivot, store = nums[hi], lo\n        for i in range(lo, hi):\n            if nums[i] < pivot:\n                nums[store], nums[i] = nums[i], nums[store]\n                store += 1\n        nums[store], nums[hi] = nums[hi], nums[store]\n        return store\n\n    lo, hi = 0, len(nums) - 1\n    while True:\n        p = partition(lo, hi)\n        if p == k:\n            return nums[p]\n        if p < k:\n            lo = p + 1\n        else:\n            hi = p - 1"
+  },
+  {
+    "instruction": "With production-quality error handling, write a BFS that returns a shortest path in an unweighted graph.",
+    "response": "from collections import deque\n\ndef shortest_path(graph, start, goal):\n    \"\"\"graph: {node: [neighbors]}. Returns the node list of a shortest path, or None.\"\"\"\n    if start == goal:\n        return [start]\n    prev = {start: None}\n    q = deque([start])\n    while q:\n        u = q.popleft()\n        for v in graph.get(u, ()):\n            if v in prev:\n                continue\n            prev[v] = u\n            if v == goal:\n                path = [v]\n                while prev[path[-1]] is not None:\n                    path.append(prev[path[-1]])\n                return path[::-1]\n            q.append(v)\n    return None"
+  },
+  {
+    "instruction": "In Python, write a BFS that returns a shortest path in an unweighted graph.",
+    "response": "from collections import deque\n\ndef shortest_path(graph, start, goal):\n    \"\"\"graph: {node: [neighbors]}. Returns the node list of a shortest path, or None.\"\"\"\n    if start == goal:\n        return [start]\n    prev = {start: None}\n    q = deque([start])\n    while q:\n        u = q.popleft()\n        for v in graph.get(u, ()):\n            if v in prev:\n                continue\n            prev[v] = u\n            if v == goal:\n                path = [v]\n                while prev[path[-1]] is not None:\n                    path.append(prev[path[-1]])\n                return path[::-1]\n            q.append(v)\n    return None"
+  },
+  {
+    "instruction": "With production-quality error handling, write a function that returns the k largest elements of a list using a heap.",
+    "response": "import heapq\n\ndef top_k(nums, k):\n    \"\"\"O(n log k) time, O(k) memory.\"\"\"\n    if k <= 0:\n        return []\n    return heapq.nlargest(k, nums)\n\n# Manual min-heap of size k:\ndef top_k_manual(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k:\n            heapq.heappush(heap, x)\n        elif x > heap[0]:\n            heapq.heapreplace(heap, x)\n    return sorted(heap, reverse=True)"
+  },
+  {
+    "instruction": "In Python, write a function that returns the k largest elements of a list using a heap.",
+    "response": "import heapq\n\ndef top_k(nums, k):\n    \"\"\"O(n log k) time, O(k) memory.\"\"\"\n    if k <= 0:\n        return []\n    return heapq.nlargest(k, nums)\n\n# Manual min-heap of size k:\ndef top_k_manual(nums, k):\n    heap = []\n    for x in nums:\n        if len(heap) < k:\n            heapq.heappush(heap, x)\n        elif x > heap[0]:\n            heapq.heapreplace(heap, x)\n    return sorted(heap, reverse=True)"
+  },
+  {
+    "instruction": "Using idiomatic Python, implement merge sort in Python with O(n log n) time complexity.",
+    "response": "def merge_sort(xs: list[int]) -> list[int]:\n    if len(xs) <= 1:\n        return xs\n    mid = len(xs) // 2\n    left = merge_sort(xs[:mid])\n    right = merge_sort(xs[mid:])\n    out, i, j = [], 0, 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            out.append(left[i]); i += 1\n        else:\n            out.append(right[j]); j += 1\n    out.extend(left[i:])\n    out.extend(right[j:])\n    return out\n\n# Stable, O(n log n) worst case, O(n) auxiliary space."
+  },
+  {
+    "instruction": "With production-quality error handling, implement merge sort in Python with O(n log n) time complexity.",
+    "response": "def merge_sort(xs: list[int]) -> list[int]:\n    if len(xs) <= 1:\n        return xs\n    mid = len(xs) // 2\n    left = merge_sort(xs[:mid])\n    right = merge_sort(xs[mid:])\n    out, i, j = [], 0, 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            out.append(left[i]); i += 1\n        else:\n            out.append(right[j]); j += 1\n    out.extend(left[i:])\n    out.extend(right[j:])\n    return out\n\n# Stable, O(n log n) worst case, O(n) auxiliary space."
+  },
+  {
+    "instruction": "In Python, implement an in-place quicksort in Python with a randomized pivot.",
+    "response": "import random\n\ndef quicksort(xs):\n    def sort(lo, hi):\n        if lo >= hi:\n            return\n        p = random.randint(lo, hi)\n        xs[p], xs[hi] = xs[hi], xs[p]\n        pivot, store = xs[hi], lo\n        for i in range(lo, hi):\n            if xs[i] < pivot:\n                xs[store], xs[i] = xs[i], xs[store]\n                store += 1\n        xs[store], xs[hi] = xs[hi], xs[store]\n        sort(lo, store - 1)\n        sort(store + 1, hi)\n    sort(0, len(xs) - 1)\n    return xs\n\n# Average O(n log n); worst O(n^2) but randomization makes it unlikely."
+  },
+  {
+    "instruction": "Using idiomatic Python, implement an in-place quicksort in Python with a randomized pivot.",
+    "response": "import random\n\ndef quicksort(xs):\n    def sort(lo, hi):\n        if lo >= hi:\n            return\n        p = random.randint(lo, hi)\n        xs[p], xs[hi] = xs[hi], xs[p]\n        pivot, store = xs[hi], lo\n        for i in range(lo, hi):\n            if xs[i] < pivot:\n                xs[store], xs[i] = xs[i], xs[store]\n                store += 1\n        xs[store], xs[hi] = xs[hi], xs[store]\n        sort(lo, store - 1)\n        sort(store + 1, hi)\n    sort(0, len(xs) - 1)\n    return xs\n\n# Average O(n log n); worst O(n^2) but randomization makes it unlikely."
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function that finds the longest palindromic substring.",
+    "response": "def longest_palindrome(s: str) -> str:\n    if not s:\n        return ''\n    start, end = 0, 0\n\n    def expand(l, r):\n        while l >= 0 and r < len(s) and s[l] == s[r]:\n            l -= 1\n            r += 1\n        return l + 1, r - 1\n\n    for i in range(len(s)):\n        for l, r in (expand(i, i), expand(i, i + 1)):\n            if r - l > end - start:\n                start, end = l, r\n    return s[start:end + 1]\n\n# O(n^2) time, O(1) auxiliary space."
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python function that finds the longest palindromic substring.",
+    "response": "def longest_palindrome(s: str) -> str:\n    if not s:\n        return ''\n    start, end = 0, 0\n\n    def expand(l, r):\n        while l >= 0 and r < len(s) and s[l] == s[r]:\n            l -= 1\n            r += 1\n        return l + 1, r - 1\n\n    for i in range(len(s)):\n        for l, r in (expand(i, i), expand(i, i + 1)):\n            if r - l > end - start:\n                start, end = l, r\n    return s[start:end + 1]\n\n# O(n^2) time, O(1) auxiliary space."
+  },
+  {
+    "instruction": "For an interview setting, how do I reverse a singly linked list in Python?",
+    "response": "class ListNode:\n    def __init__(self, val=0, nxt=None):\n        self.val = val\n        self.next = nxt\n\ndef reverse_list(head: ListNode | None) -> ListNode | None:\n    prev = None\n    cur = head\n    while cur:\n        nxt = cur.next\n        cur.next = prev\n        prev = cur\n        cur = nxt\n    return prev\n\n# O(n) time, O(1) space."
+  },
+  {
+    "instruction": "Using idiomatic Python, how do I reverse a singly linked list in Python?",
+    "response": "class ListNode:\n    def __init__(self, val=0, nxt=None):\n        self.val = val\n        self.next = nxt\n\ndef reverse_list(head: ListNode | None) -> ListNode | None:\n    prev = None\n    cur = head\n    while cur:\n        nxt = cur.next\n        cur.next = prev\n        prev = cur\n        cur = nxt\n    return prev\n\n# O(n) time, O(1) space."
+  },
+  {
+    "instruction": "In Python, write a Python function to compute the minimum number of coins needed to make an amount.",
+    "response": "def coin_change(coins: list[int], amount: int) -> int:\n    INF = float('inf')\n    dp = [0] + [INF] * amount\n    for a in range(1, amount + 1):\n        for c in coins:\n            if c <= a and dp[a - c] + 1 < dp[a]:\n                dp[a] = dp[a - c] + 1\n    return -1 if dp[amount] == INF else int(dp[amount])\n\n# O(amount * len(coins)) time, O(amount) space."
+  },
+  {
+    "instruction": "For an interview setting, write a Python function to compute the minimum number of coins needed to make an amount.",
+    "response": "def coin_change(coins: list[int], amount: int) -> int:\n    INF = float('inf')\n    dp = [0] + [INF] * amount\n    for a in range(1, amount + 1):\n        for c in coins:\n            if c <= a and dp[a - c] + 1 < dp[a]:\n                dp[a] = dp[a - c] + 1\n    return -1 if dp[amount] == INF else int(dp[amount])\n\n# O(amount * len(coins)) time, O(amount) space."
+  },
+  {
+    "instruction": "Using idiomatic Python, write a Python function to find the length of the longest increasing subsequence.",
+    "response": "import bisect\n\ndef lis_length(nums: list[int]) -> int:\n    tails = []\n    for x in nums:\n        i = bisect.bisect_left(tails, x)\n        if i == len(tails):\n            tails.append(x)\n        else:\n            tails[i] = x\n    return len(tails)\n\n# O(n log n) time, O(n) space. tails[i] stores the smallest tail of an increasing subsequence of length i + 1."
+  },
+  {
+    "instruction": "For an interview setting, write a Python function to find the length of the longest increasing subsequence.",
+    "response": "import bisect\n\ndef lis_length(nums: list[int]) -> int:\n    tails = []\n    for x in nums:\n        i = bisect.bisect_left(tails, x)\n        if i == len(tails):\n            tails.append(x)\n        else:\n            tails[i] = x\n    return len(tails)\n\n# O(n log n) time, O(n) space. tails[i] stores the smallest tail of an increasing subsequence of length i + 1."
+  },
+  {
+    "instruction": "In Python, implement binary search in Python and explain the invariant.",
+    "response": "def binary_search(xs: list[int], target: int) -> int:\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = lo + (hi - lo) // 2\n        if xs[mid] == target:\n            return mid\n        if xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n\n# Invariant: the answer, if present, always lies in the inclusive range [lo, hi]. Each iteration halves the range, giving O(log n) time and O(1) space. Requires a sorted input."
+  },
+  {
+    "instruction": "For an interview setting, implement binary search in Python and explain the invariant.",
+    "response": "def binary_search(xs: list[int], target: int) -> int:\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = lo + (hi - lo) // 2\n        if xs[mid] == target:\n            return mid\n        if xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n\n# Invariant: the answer, if present, always lies in the inclusive range [lo, hi]. Each iteration halves the range, giving O(log n) time and O(1) space. Requires a sorted input."
+  },
+  {
+    "instruction": "With production-quality error handling, how do I use the bisect module to maintain a sorted list efficiently?",
+    "response": "import bisect\n\nxs = [1, 3, 5, 7]\nbisect.insort(xs, 4)           # xs -> [1, 3, 4, 5, 7]\ni = bisect.bisect_left(xs, 5)  # first index where 5 could be inserted\nj = bisect.bisect_right(xs, 5) # index after existing 5s\n\n# left/right give the lower/upper bound. insort is O(n) because of the list shift, but the search is O(log n) - much faster than re-sorting for occasional inserts."
+  },
+  {
+    "instruction": "Using idiomatic Python, how do I use the bisect module to maintain a sorted list efficiently?",
+    "response": "import bisect\n\nxs = [1, 3, 5, 7]\nbisect.insort(xs, 4)           # xs -> [1, 3, 4, 5, 7]\ni = bisect.bisect_left(xs, 5)  # first index where 5 could be inserted\nj = bisect.bisect_right(xs, 5) # index after existing 5s\n\n# left/right give the lower/upper bound. insort is O(n) because of the list shift, but the search is O(log n) - much faster than re-sorting for occasional inserts."
+  },
+  {
+    "instruction": "In Python, what is dynamic programming and how do I recognize a DP problem?",
+    "response": "DP solves problems that have (1) optimal substructure - the optimum is built from optima of subproblems - and (2) overlapping subproblems - the same subproblem recurs.\n\nRecognition signals: 'count the number of ways', 'minimum/maximum cost', 'is it possible', choices at each step, and a naive recursion that recomputes states.\n\nRecipe:\n1. Define the state precisely (what do the indices mean?).\n2. Write the recurrence.\n3. Identify base cases.\n4. Choose top-down (memoized recursion) or bottom-up (tabulation).\n5. Reduce space if only the last row/column is needed."
+  },
+  {
+    "instruction": "With production-quality error handling, what is dynamic programming and how do I recognize a DP problem?",
+    "response": "DP solves problems that have (1) optimal substructure - the optimum is built from optima of subproblems - and (2) overlapping subproblems - the same subproblem recurs.\n\nRecognition signals: 'count the number of ways', 'minimum/maximum cost', 'is it possible', choices at each step, and a naive recursion that recomputes states.\n\nRecipe:\n1. Define the state precisely (what do the indices mean?).\n2. Write the recurrence.\n3. Identify base cases.\n4. Choose top-down (memoized recursion) or bottom-up (tabulation).\n5. Reduce space if only the last row/column is needed."
+  },
+  {
+    "instruction": "Using idiomatic Python, what is the difference between TCP and UDP?",
+    "response": "TCP is connection-oriented and reliable: a handshake establishes the connection, every segment is acknowledged and retransmitted if lost, and bytes arrive in order. It also provides flow control and congestion control. Used by HTTP, SSH, email.\n\nUDP is connectionless and unreliable: datagrams are sent with no handshake, acknowledgment, retransmission or ordering guarantee. Header is 8 bytes vs TCP's 20+, and there is no head-of-line blocking. Used by DNS, DHCP, VoIP, video streaming, online games - anything that prefers low latency over guaranteed delivery."
+  },
+  {
+    "instruction": "With production-quality error handling, what is the difference between TCP and UDP?",
+    "response": "TCP is connection-oriented and reliable: a handshake establishes the connection, every segment is acknowledged and retransmitted if lost, and bytes arrive in order. It also provides flow control and congestion control. Used by HTTP, SSH, email.\n\nUDP is connectionless and unreliable: datagrams are sent with no handshake, acknowledgment, retransmission or ordering guarantee. Header is 8 bytes vs TCP's 20+, and there is no head-of-line blocking. Used by DNS, DHCP, VoIP, video streaming, online games - anything that prefers low latency over guaranteed delivery."
+  },
+  {
+    "instruction": "In Python, explain recursion and why a base case is required.",
+    "response": "Recursion occurs when a function solves a problem by calling itself on a strictly smaller instance, then combining the results.\n\nA base case is the smallest instance solved directly without recursing. Without it, the recursion never terminates and Python raises RecursionError once it hits the default limit (usually 1000 frames).\n\ndef factorial(n):\n    if n <= 1: # base case\n        return 1\n    return n * factorial(n - 1) # recursive case"
+  },
+  {
+    "instruction": "For an interview setting, explain recursion and why a base case is required.",
+    "response": "Recursion occurs when a function solves a problem by calling itself on a strictly smaller instance, then combining the results.\n\nA base case is the smallest instance solved directly without recursing. Without it, the recursion never terminates and Python raises RecursionError once it hits the default limit (usually 1000 frames).\n\ndef factorial(n):\n    if n <= 1: # base case\n        return 1\n    return n * factorial(n - 1) # recursive case"
+  },
+  {
+    "instruction": "With production-quality error handling, how do I format strings in Python with f-strings, including alignment and number formatting?",
+    "response": "name, score, ratio = 'Ada', 42, 0.8734\n\nprint(f'{name}: {score}')      # Ada: 42\nprint(f'{score:>6}')            # right-align: '    42'\nprint(f'{name:<10}|')          # left-align:  'Ada       |'\nprint(f'{name:^10}|')          # center:      '   Ada    |'\nprint(f'{ratio:.2%}')          # percentage:  '87.34%'\nprint(f'{1234567:,}')          # comma separated: '1,234,567'\nprint(f'{3.14159:.3f}')        # decimals:    '3.142'\nprint(f'{score:08d}')          # zero-padded: '00000042'\nprint(f'{255:#x}')             # hex:         '0xff'\nprint(f'{score=}')             # debug:       'score=42'\n\n# f-strings are evaluated at runtime and are the fastest formatting option in CPython."
+  },
+  {
+    "instruction": "Using idiomatic Python, how do I format strings in Python with f-strings, including alignment and number formatting?",
+    "response": "name, score, ratio = 'Ada', 42, 0.8734\n\nprint(f'{name}: {score}')      # Ada: 42\nprint(f'{score:>6}')            # right-align: '    42'\nprint(f'{name:<10}|')          # left-align:  'Ada       |'\nprint(f'{name:^10}|')          # center:      '   Ada    |'\nprint(f'{ratio:.2%}')          # percentage:  '87.34%'\nprint(f'{1234567:,}')          # comma separated: '1,234,567'\nprint(f'{3.14159:.3f}')        # decimals:    '3.142'\nprint(f'{score:08d}')          # zero-padded: '00000042'\nprint(f'{255:#x}')             # hex:         '0xff'\nprint(f'{score=}')             # debug:       'score=42'\n\n# f-strings are evaluated at runtime and are the fastest formatting option in CPython."
+  },
+  {
+    "instruction": "In Python, write a Python decorator that measures and prints the execution time of a function.",
+    "response": "import time\nfrom functools import wraps\n\ndef timed(func):\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        try:\n            return func(*args, **kwargs)\n        finally:\n            elapsed = time.perf_counter() - start\n            print(f\"{func.__name__} took {elapsed:.6f}s\")\n    return wrapper"
+  },
+  {
+    "instruction": "With production-quality error handling, write a Python decorator that measures and prints the execution time of a function.",
+    "response": "import time\nfrom functools import wraps\n\ndef timed(func):\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        try:\n            return func(*args, **kwargs)\n        finally:\n            elapsed = time.perf_counter() - start\n            print(f\"{func.__name__} took {elapsed:.6f}s\")\n    return wrapper"
+  },
+  {
+    "instruction": "Using idiomatic Python, write a generator function that yields the Fibonacci sequence indefinitely.",
+    "response": "def fib():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b"
+  },
+  {
+    "instruction": "In Python, write a generator function that yields the Fibonacci sequence indefinitely.",
+    "response": "def fib():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b"
+  },
+  {
+    "instruction": "Using idiomatic Python, find the length of the longest substring without repeating characters.",
+    "response": "def longest_unique_substring(s: str) -> int:\n    last = {}\n    start = best = 0\n    for i, ch in enumerate(s):\n        if ch in last and last[ch] >= start:\n            start = last[ch] + 1\n        last[ch] = i\n        best = max(best, i - start + 1)\n    return best\n\n# Sliding window with last-seen indices. Time: O(n), Space: O(min(n, alphabet))."
+  },
+  {
+    "instruction": "In Python, find the length of the longest substring without repeating characters.",
+    "response": "def longest_unique_substring(s: str) -> int:\n    last = {}\n    start = best = 0\n    for i, ch in enumerate(s):\n        if ch in last and last[ch] >= start:\n            start = last[ch] + 1\n        last[ch] = i\n        best = max(best, i - start + 1)\n    return best\n\n# Sliding window with last-seen indices. Time: O(n), Space: O(min(n, alphabet))."
+  },
+  {
+    "instruction": "In Python, why does this code print 0 1 2 as expected only sometimes, and how do I fix it?\n\nfuncs = [lambda: i for i in range(3)]\nprint([f() for f in funcs])",
+    "response": "It prints [2, 2, 2]. The lambdas capture the variable `i`, not its value at creation time, and by the time they run `i` is 2. Bind the current value with a default argument:\n\nfuncs = [lambda i=i: i for i in range(3)]\nprint([f() for f in funcs])  # [0, 1, 2]"
+  },
+  {
+    "instruction": "For an interview setting, why does this code print 0 1 2 as expected only sometimes, and how do I fix it?\n\nfuncs = [lambda: i for i in range(3)]\nprint([f() for f in funcs])",
+    "response": "It prints [2, 2, 2]. The lambdas capture the variable `i`, not its value at creation time, and by the time they run `i` is 2. Bind the current value with a default argument:\n\nfuncs = [lambda i=i: i for i in range(3)]\nprint([f() for f in funcs])  # [0, 1, 2]"
+  },
+  {
+    "instruction": "With production-quality error handling, my code raises 'TypeError: can only concatenate str (not \"int\") to str'. What is wrong?\n\nage = 25\nprint(\"I am \" + age + \" years old\")",
+    "response": "You cannot concatenate a string and an integer with `+`. Convert the number or use an f-string:\n\nage = 25\nprint(f\"I am {age} years old\")"
+  },
+  {
+    "instruction": "Using idiomatic Python, my code raises 'TypeError: can only concatenate str (not \"int\") to str'. What is wrong?\n\nage = 25\nprint(\"I am \" + age + \" years old\")",
+    "response": "You cannot concatenate a string and an integer with `+`. Convert the number or use an f-string:\n\nage = 25\nprint(f\"I am {age} years old\")"
+  },
+  {
+    "instruction": "With production-quality error handling, explain why photosynthesis is important for life on Earth.",
+    "response": "Photosynthesis converts light energy into chemical energy stored in glucose, using carbon dioxide and water and releasing oxygen. It matters because it produces the oxygen most organisms breathe, forms the base of nearly every food chain, and removes carbon dioxide from the atmosphere. The fossil fuels we burn are also ancient products of photosynthesis."
+  },
+  {
+    "instruction": "For an interview setting, explain why photosynthesis is important for life on Earth.",
+    "response": "Photosynthesis converts light energy into chemical energy stored in glucose, using carbon dioxide and water and releasing oxygen. It matters because it produces the oxygen most organisms breathe, forms the base of nearly every food chain, and removes carbon dioxide from the atmosphere. The fossil fuels we burn are also ancient products of photosynthesis."
+  },
+  {
+    "instruction": "For an interview setting, what caused the French Revolution of 1789?",
+    "response": "Several factors combined: a severe fiscal crisis from war debt and an inefficient tax system, a rigid class structure in which the Third Estate bore most taxes yet had little power, food shortages and rising bread prices, and Enlightenment ideas about rights and popular sovereignty. The crisis led Louis XVI to call the Estates-General, which broke down and led to the formation of the National Assembly."
+  },
+  {
+    "instruction": "Using idiomatic Python, what caused the French Revolution of 1789?",
+    "response": "Several factors combined: a severe fiscal crisis from war debt and an inefficient tax system, a rigid class structure in which the Third Estate bore most taxes yet had little power, food shortages and rising bread prices, and Enlightenment ideas about rights and popular sovereignty. The crisis led Louis XVI to call the Estates-General, which broke down and led to the formation of the National Assembly."
+  },
+  {
+    "instruction": "In Python, what is the difference between a stock and a bond?",
+    "response": "A stock is an ownership share in a company. Its value rises or falls with the company's performance, and holders may receive dividends. A bond is a loan to a company or government that pays fixed interest and returns the principal at maturity. Stocks generally offer higher potential returns with higher risk, while bonds usually offer more predictable income with lower risk."
+  },
+  {
+    "instruction": "For an interview setting, what is the difference between a stock and a bond?",
+    "response": "A stock is an ownership share in a company. Its value rises or falls with the company's performance, and holders may receive dividends. A bond is a loan to a company or government that pays fixed interest and returns the principal at maturity. Stocks generally offer higher potential returns with higher risk, while bonds usually offer more predictable income with lower risk."
+  },
+  {
+    "instruction": "Explain the GIL in Python.",
+    "response": "Key idea: the Global Interpreter Lock. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "What is the GIL and when does it matter?",
+    "response": "Key idea: the Global Interpreter Lock. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Compare the GIL with a concrete example.",
+    "response": "Key idea: the Global Interpreter Lock. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "An interviewer asks about the GIL. Give a precise answer.",
+    "response": "Key idea: the Global Interpreter Lock. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Explain shallow vs deep copy in Python.",
+    "response": "Key idea: copy.copy vs copy.deepcopy. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "What is shallow vs deep copy and when does it matter?",
+    "response": "Key idea: copy.copy vs copy.deepcopy. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Compare shallow vs deep copy with a concrete example.",
+    "response": "Key idea: copy.copy vs copy.deepcopy. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "An interviewer asks about shallow vs deep copy. Give a precise answer.",
+    "response": "Key idea: copy.copy vs copy.deepcopy. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Explain `==` vs `is` in Python.",
+    "response": "Key idea: value equality vs object identity. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "What is `==` vs `is` and when does it matter?",
+    "response": "Key idea: value equality vs object identity. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Compare `==` vs `is` with a concrete example.",
+    "response": "Key idea: value equality vs object identity. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "An interviewer asks about `==` vs `is`. Give a precise answer.",
+    "response": "Key idea: value equality vs object identity. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Explain list vs tuple in Python.",
+    "response": "Key idea: mutability and hashability trade-offs. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "What is list vs tuple and when does it matter?",
+    "response": "Key idea: mutability and hashability trade-offs. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Compare list vs tuple with a concrete example.",
+    "response": "Key idea: mutability and hashability trade-offs. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "An interviewer asks about list vs tuple. Give a precise answer.",
+    "response": "Key idea: mutability and hashability trade-offs. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Explain generators vs lists in Python.",
+    "response": "Key idea: lazy vs eager evaluation. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "What is generators vs lists and when does it matter?",
+    "response": "Key idea: lazy vs eager evaluation. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Compare generators vs lists with a concrete example.",
+    "response": "Key idea: lazy vs eager evaluation. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "An interviewer asks about generators vs lists. Give a precise answer.",
+    "response": "Key idea: lazy vs eager evaluation. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Explain `__new__` vs `__init__` in Python.",
+    "response": "Key idea: allocation vs initialization. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "What is `__new__` vs `__init__` and when does it matter?",
+    "response": "Key idea: allocation vs initialization. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Compare `__new__` vs `__init__` with a concrete example.",
+    "response": "Key idea: allocation vs initialization. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "An interviewer asks about `__new__` vs `__init__`. Give a precise answer.",
+    "response": "Key idea: allocation vs initialization. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Explain dataclasses vs namedtuples in Python.",
+    "response": "Key idea: mutable records vs immutable tuples. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "What is dataclasses vs namedtuples and when does it matter?",
+    "response": "Key idea: mutable records vs immutable tuples. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Compare dataclasses vs namedtuples with a concrete example.",
+    "response": "Key idea: mutable records vs immutable tuples. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "An interviewer asks about dataclasses vs namedtuples. Give a precise answer.",
+    "response": "Key idea: mutable records vs immutable tuples. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Explain threading vs multiprocessing in Python.",
+    "response": "Key idea: I/O-bound vs CPU-bound workloads. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "What is threading vs multiprocessing and when does it matter?",
+    "response": "Key idea: I/O-bound vs CPU-bound workloads. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "Compare threading vs multiprocessing with a concrete example.",
+    "response": "Key idea: I/O-bound vs CPU-bound workloads. Expand with a minimal runnable example."
+  },
+  {
+    "instruction": "An interviewer asks about threading vs multiprocessing. Give a precise answer.",
+    "response": "Key idea: I/O-bound vs CPU-bound workloads. Expand with a minimal runnable example."
+  }
+]

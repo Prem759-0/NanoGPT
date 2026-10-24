@@ -790,3 +790,606 @@ def get_chess_game_html() -> str:
   </script>
 </body>
 </html>'''
+
+
+def get_racing_car_game_html() -> str:
+    return '''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cyber Nitro Racer 2026 - Moon AI Edition</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background: radial-gradient(circle at center, #0b0f19 0%, #020617 100%);
+      color: #38bdf8;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 10px;
+      overflow-x: hidden;
+    }
+    .arcade-container {
+      background: rgba(15, 23, 42, 0.95);
+      border: 2px solid #06b6d4;
+      border-radius: 16px;
+      box-shadow: 0 0 35px rgba(6, 182, 212, 0.35);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 440px;
+      width: 100%;
+    }
+    .header-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .hud-stat {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+    .score-val { color: #f59e0b; font-weight: 800; text-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+    .speed-val { color: #10b981; font-weight: 800; text-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+    .high-val { color: #ec4899; }
+    
+    canvas {
+      background: #0f172a;
+      border: 2px solid #334155;
+      border-radius: 12px;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.8), 0 0 20px rgba(6, 182, 212, 0.2);
+      display: block;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      margin-top: 12px;
+    }
+    .game-btn {
+      flex: 1;
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid #06b6d4;
+      color: #06b6d4;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .game-btn:hover {
+      background: #06b6d4;
+      color: #020617;
+      box-shadow: 0 0 14px #06b6d4;
+    }
+
+    .touch-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      grid-gap: 8px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .touch-btn {
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #38bdf8;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 12px 6px;
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      touch-action: manipulation;
+    }
+    .touch-btn:active, .touch-btn.active {
+      background: #06b6d4;
+      color: #0f172a;
+      transform: scale(0.96);
+    }
+    .turbo-btn {
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+    .turbo-btn:active, .turbo-btn.active {
+      background: #f59e0b;
+      color: #0f172a;
+    }
+    .instructions {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 8px;
+      text-align: center;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="arcade-container">
+    <div class="header-bar">
+      <div class="hud-stat">SCORE: <span id="scoreDisplay" class="score-val">0</span></div>
+      <div class="hud-stat">SPEED: <span id="speedDisplay" class="speed-val">0</span> km/h</div>
+      <div class="hud-stat">BEST: <span id="bestDisplay" class="high-val">0</span></div>
+    </div>
+
+    <canvas id="raceCanvas" width="360" height="480"></canvas>
+
+    <div class="btn-row">
+      <button class="game-btn" id="startBtn">START / RESTART</button>
+      <button class="game-btn" id="soundBtn">SOUND: ON</button>
+      <button class="game-btn" id="pauseBtn">PAUSE</button>
+    </div>
+
+    <div class="touch-controls">
+      <button class="touch-btn" id="leftBtn">◀ LEFT</button>
+      <button class="touch-btn" id="rightBtn">RIGHT ▶</button>
+      <button class="touch-btn turbo-btn" id="accelBtn">⚡ NITRO</button>
+      <button class="touch-btn" id="brakeBtn">🛑 BRAKE</button>
+    </div>
+
+    <div class="instructions">
+      ⌨️ Controls: <b>A / D</b> or <b>Left / Right</b> to Steer | <b>W / Up</b> for Nitro Boost | <b>S / Down</b> to Brake
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('raceCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const speedDisplay = document.getElementById('speedDisplay');
+    const bestDisplay = document.getElementById('bestDisplay');
+
+    // Web Audio Synthesizer (Zero External Assets)
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(freq, type = 'sawtooth', duration = 0.1, gainVal = 0.1) {
+      if (!soundEnabled || !audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playCrashSound() {
+      if (!soundEnabled || !audioCtx) return;
+      try {
+        const bufferSize = audioCtx.sampleRate * 0.4;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        noise.connect(gain);
+        gain.connect(audioCtx.destination);
+        noise.start();
+      } catch (e) {}
+    }
+
+    // Game Variables
+    const ROAD_X = 40;
+    const ROAD_WIDTH = 280;
+    const ROAD_LANES = 4;
+    const LANE_WIDTH = ROAD_WIDTH / ROAD_LANES;
+
+    let score = 0;
+    let highScore = parseInt(localStorage.getItem('cyber_race_high') || '0', 10);
+    bestDisplay.textContent = highScore;
+
+    let speed = 0;
+    let targetSpeed = 80;
+    let maxSpeed = 220;
+    let roadOffset = 0;
+    let isGameOver = false;
+    let isPaused = false;
+    let animId = null;
+
+    // Keys State
+    const keys = { left: false, right: false, up: false, down: false };
+
+    // Player Car
+    const player = {
+      x: ROAD_X + ROAD_WIDTH / 2 - 18,
+      y: 380,
+      width: 36,
+      height: 64,
+      color: '#06b6d4',
+      steerSpeed: 4.8
+    };
+
+    // Obstacle Cars
+    let traffic = [];
+    const TRAFFIC_COLORS = ['#ef4444', '#f59e0b', '#8b5cf6', '#10b981', '#ec4899'];
+
+    function spawnTraffic() {
+      const lane = Math.floor(Math.random() * ROAD_LANES);
+      const laneX = ROAD_X + lane * LANE_WIDTH + (LANE_WIDTH - 34) / 2;
+      const color = TRAFFIC_COLORS[Math.floor(Math.random() * TRAFFIC_COLORS.length)];
+      traffic.push({
+        x: laneX,
+        y: -80,
+        width: 34,
+        height: 60,
+        speed: 2 + Math.random() * 2.5,
+        color: color
+      });
+    }
+
+    let spawnTimer = 0;
+
+    // Drawing Functions
+    function drawCar(x, y, width, height, color, isPlayer = false) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath();
+      ctx.roundRect(-2, 4, width + 4, height, 6);
+      ctx.fill();
+
+      // Wheels
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-4, 8, 4, 14);
+      ctx.fillRect(width, 8, 4, 14);
+      ctx.fillRect(-4, height - 22, 4, 14);
+      ctx.fillRect(width, height - 22, 4, 14);
+
+      // Chassis
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, width, height, 8);
+      ctx.fill();
+
+      // Windshield & Roof
+      ctx.fillStyle = '#020617';
+      ctx.beginPath();
+      ctx.roundRect(4, 16, width - 8, height - 32, 4);
+      ctx.fill();
+
+      // Rear Spoiler / Accent
+      ctx.fillStyle = isPlayer ? '#38bdf8' : '#ffffff';
+      ctx.fillRect(4, height - 6, width - 8, 3);
+
+      // Headlights / Taillights
+      if (isPlayer) {
+        // Headlights shine forward
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(4, 2, 6, 4);
+        ctx.fillRect(width - 10, 2, 6, 4);
+        // Headlight beams
+        const beamGrad = ctx.createLinearGradient(0, -60, 0, 0);
+        beamGrad.addColorStop(0, 'rgba(254, 240, 138, 0)');
+        beamGrad.addColorStop(1, 'rgba(254, 240, 138, 0.25)');
+        ctx.fillStyle = beamGrad;
+        ctx.beginPath();
+        ctx.moveTo(2, 2);
+        ctx.lineTo(-12, -70);
+        ctx.lineTo(width + 12, -70);
+        ctx.lineTo(width - 2, 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Taillights
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(4, height - 3, 6, 2);
+        ctx.fillRect(width - 10, height - 3, 6, 2);
+      } else {
+        // Taillights for traffic ahead
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(4, height - 4, 6, 3);
+        ctx.fillRect(width - 10, height - 4, 6, 3);
+      }
+
+      ctx.restore();
+    }
+
+    function drawRoad() {
+      // Grass / Verge
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Curbs / Neon edges
+      const curbWidth = 10;
+      const curbStep = 24;
+      const curbOffset = roadOffset % (curbStep * 2);
+
+      // Left Curb
+      for (let y = -curbStep * 2; y < canvas.height + curbStep; y += curbStep) {
+        const isRed = Math.floor((y + roadOffset) / curbStep) % 2 === 0;
+        ctx.fillStyle = isRed ? '#ef4444' : '#f8fafc';
+        ctx.fillRect(ROAD_X - curbWidth, y, curbWidth, curbStep);
+        ctx.fillRect(ROAD_X + ROAD_WIDTH, y, curbWidth, curbStep);
+      }
+
+      // Asphalt Road
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(ROAD_X, 0, ROAD_WIDTH, canvas.height);
+
+      // Lane Markings
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([20, 25]);
+      ctx.lineDashOffset = -roadOffset;
+
+      for (let i = 1; i < ROAD_LANES; i++) {
+        const lx = ROAD_X + i * LANE_WIDTH;
+        ctx.beginPath();
+        ctx.moveTo(lx, 0);
+        ctx.lineTo(lx, canvas.height);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+
+    // Collision Detection
+    function checkCollision(r1, r2) {
+      return !(
+        r1.x + r1.width - 4 < r2.x + 4 ||
+        r1.x + 4 > r2.x + r2.width - 4 ||
+        r1.y + r1.height - 4 < r2.y + 4 ||
+        r1.y + 4 > r2.y + r2.height - 4
+      );
+    }
+
+    function update() {
+      if (isGameOver || isPaused) return;
+
+      // Handle Acceleration & Braking
+      if (keys.up) {
+        targetSpeed = 190;
+        if (Math.random() < 0.2) playTone(120 + speed * 1.5, 'triangle', 0.05, 0.04);
+      } else if (keys.down) {
+        targetSpeed = 40;
+      } else {
+        targetSpeed = 100;
+      }
+
+      speed += (targetSpeed - speed) * 0.05;
+      speedDisplay.textContent = Math.round(speed);
+
+      // Move Road
+      const roadSpeed = speed * 0.1;
+      roadOffset += roadSpeed;
+
+      // Handle Steering
+      if (keys.left) {
+        player.x -= player.steerSpeed;
+      }
+      if (keys.right) {
+        player.x += player.steerSpeed;
+      }
+
+      // Keep Player within Road boundaries
+      if (player.x < ROAD_X + 2) player.x = ROAD_X + 2;
+      if (player.x + player.width > ROAD_X + ROAD_WIDTH - 2) {
+        player.x = ROAD_X + ROAD_WIDTH - player.width - 2;
+      }
+
+      // Score increases with speed
+      score += Math.round(speed * 0.05);
+      scoreDisplay.textContent = score;
+
+      if (score > highScore) {
+        highScore = score;
+        bestDisplay.textContent = highScore;
+        localStorage.setItem('cyber_race_high', highScore.toString());
+      }
+
+      // Spawn traffic
+      spawnTimer++;
+      const spawnInterval = Math.max(45, 110 - Math.floor(score / 300));
+      if (spawnTimer > spawnInterval) {
+        spawnTraffic();
+        spawnTimer = 0;
+      }
+
+      // Update traffic
+      for (let i = traffic.length - 1; i >= 0; i--) {
+        const car = traffic[i];
+        car.y += roadSpeed - car.speed;
+
+        // Collision Check
+        if (checkCollision(player, car)) {
+          triggerGameOver();
+          return;
+        }
+
+        // Passed car bonus
+        if (car.y > canvas.height + 80) {
+          traffic.splice(i, 1);
+          score += 50; // Overtake bonus
+          playTone(520, 'sine', 0.08, 0.06);
+        }
+      }
+    }
+
+    function render() {
+      drawRoad();
+
+      // Draw Traffic
+      for (const car of traffic) {
+        drawCar(car.x, car.y, car.width, car.height, car.color, false);
+      }
+
+      // Draw Player Car
+      drawCar(player.x, player.y, player.width, player.height, player.color, true);
+
+      // Game Over Screen Overlay
+      if (isGameOver) {
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#ef4444';
+        ctx.font = 'bold 28px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 15;
+        ctx.fillText('CRASHED!', canvas.width / 2, canvas.height / 2 - 30);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '16px sans-serif';
+        ctx.shadowBlur = 0;
+        ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 10);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = '14px sans-serif';
+        ctx.fillText('Press START or Spacebar to Play Again', canvas.width / 2, canvas.height / 2 + 40);
+      }
+
+      // Pause Overlay
+      if (isPaused && !isGameOver) {
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.6)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 26px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function gameLoop() {
+      update();
+      render();
+      animId = requestAnimationFrame(gameLoop);
+    }
+
+    function resetGame() {
+      score = 0;
+      speed = 0;
+      targetSpeed = 80;
+      traffic = [];
+      spawnTimer = 0;
+      isGameOver = false;
+      isPaused = false;
+      player.x = ROAD_X + ROAD_WIDTH / 2 - 18;
+      scoreDisplay.textContent = '0';
+      speedDisplay.textContent = '0';
+      document.getElementById('pauseBtn').textContent = 'PAUSE';
+      initAudio();
+      playTone(440, 'triangle', 0.2, 0.1);
+    }
+
+    function triggerGameOver() {
+      isGameOver = true;
+      playCrashSound();
+    }
+
+    // Keyboard Listeners
+    window.addEventListener('keydown', (e) => {
+      initAudio();
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = true;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = true;
+
+      if (e.key === ' ' || e.key === 'Spacebar') {
+        if (isGameOver) {
+          resetGame();
+        } else {
+          togglePause();
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = false;
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = false;
+    });
+
+    // Touch & Button Controls
+    function setupTouch(btnId, keyName) {
+      const btn = document.getElementById(btnId);
+      const startHandler = (e) => {
+        e.preventDefault();
+        initAudio();
+        keys[keyName] = true;
+        btn.classList.add('active');
+      };
+      const endHandler = (e) => {
+        e.preventDefault();
+        keys[keyName] = false;
+        btn.classList.remove('active');
+      };
+      btn.addEventListener('touchstart', startHandler, { passive: false });
+      btn.addEventListener('touchend', endHandler, { passive: false });
+      btn.addEventListener('mousedown', startHandler);
+      btn.addEventListener('mouseup', endHandler);
+      btn.addEventListener('mouseleave', endHandler);
+    }
+
+    setupTouch('leftBtn', 'left');
+    setupTouch('rightBtn', 'right');
+    setupTouch('accelBtn', 'up');
+    setupTouch('brakeBtn', 'down');
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      resetGame();
+    });
+
+    function togglePause() {
+      if (isGameOver) return;
+      isPaused = !isPaused;
+      document.getElementById('pauseBtn').textContent = isPaused ? 'RESUME' : 'PAUSE';
+    }
+
+    document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+    document.getElementById('soundBtn').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundBtn').textContent = soundEnabled ? 'SOUND: ON' : 'SOUND: OFF';
+      if (soundEnabled) initAudio();
+    });
+
+    // Start loop
+    resetGame();
+    gameLoop();
+  </script>
+</body>
+</html>'''
+

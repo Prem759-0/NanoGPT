@@ -20,3 +20,5 @@ generated_art/
 generated_videos/
 *.mp4
 *.gif
+node_modules/
+.env
