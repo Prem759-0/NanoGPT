@@ -268,14 +268,16 @@ class ModelService:
                     _total_cpus = _os.cpu_count() or 4
                     _infer_threads = min(4, max(2, _total_cpus // 2))
                     _batch_threads = min(6, _total_cpus)
-                    print(f"Loading Moon AI 7B model: {qwen_path} (infer threads: {_infer_threads}, batch threads: {_batch_threads})...")
+                    _n_gpu = -1 if (self.device == "cuda" or _os.environ.get("USE_GPU") == "1") else 0
+                    print(f"Loading Moon AI 7B model: {qwen_path} (GPU layers: {_n_gpu}, infer threads: {_infer_threads}, batch threads: {_batch_threads})...")
                     self.llama_model = Llama(
                         model_path=qwen_path,
-                        n_ctx=1024,          # 1024 context window for fast CPU inference
+                        n_ctx=2048 if _n_gpu != 0 else 1024,
+                        n_gpu_layers=_n_gpu,            # -1 offloads all layers to NVIDIA GPU VRAM
                         verbose=False,
-                        n_threads=_infer_threads,       # Physical cores avoid cache thrashing
-                        n_threads_batch=_batch_threads, # Fast prompt ingestion
-                        n_batch=128,         # 128 batch size prevents RAM bandwidth starvation
+                        n_threads=_infer_threads,
+                        n_threads_batch=_batch_threads,
+                        n_batch=256 if _n_gpu != 0 else 128,
                     )
                     self.model = self.llama_model
                     self.active_model_name = "qwen-2.5-coder-7b"
@@ -296,10 +298,12 @@ class ModelService:
                     return False
                 try:
                     from llama_cpp import Llama
-                    print(f"Loading LLaMA-3.2 model: {llama_path}...")
+                    _n_gpu = -1 if (self.device == "cuda" or os.environ.get("USE_GPU") == "1") else 0
+                    print(f"Loading LLaMA-3.2 model: {llama_path} (GPU layers: {_n_gpu})...")
                     self.llama_model = Llama(
                         model_path=llama_path,
                         n_ctx=4096,
+                        n_gpu_layers=_n_gpu,
                         verbose=False,
                         n_threads=4
                     )
@@ -605,13 +609,14 @@ class ModelService:
             else:
                 display_model_name = "NanoGPT-3.2 Coder Engine" if is_coding else "NanoGPT-3.2 (Frontier Engine — By Prem Gaikwad)"
 
+            dev_label = "NVIDIA GPU (CUDA 4-Bit Acceleration)" if (self.device == "cuda" or os.environ.get("USE_GPU") == "1") else "CPU (AVX2 4-Bit Quantized)"
             return {
                 "reply": reply,
                 "full_text": reply,
                 "model_name": display_model_name,
                 "prompt_length": usage.get("prompt_tokens", len(clean_prompt)),
                 "tokens_generated": usage.get("completion_tokens", len(reply.split())),
-                "device": "CPU (AVX2 4-Bit Quantized)"
+                "device": dev_label
             }
 
         # --- 2. NanoGPT Light / Core Generation ---
