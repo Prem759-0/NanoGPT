@@ -8,3 +8,4 @@ imageio>=2.30.0
 imageio-ffmpeg>=0.4.9
 torch>=2.2.0
 transformers>=4.40.0
+psycopg[binary]>=3.1.0

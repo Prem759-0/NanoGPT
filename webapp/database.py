@@ -50,10 +50,15 @@ class Database:
     def _get_connection(self):
         if self.is_postgres:
             with self._lock:
-                import psycopg
-                from psycopg.rows import dict_row
-                # If connection exists, verify it's still alive (handles server idle timeout)
-                if self._pg_conn is not None and not getattr(self._pg_conn, "closed", True):
+                try:
+                    import psycopg
+                    from psycopg.rows import dict_row
+                except ImportError:
+                    logger.warning("psycopg library is not installed. Falling back to SQLite.")
+                    self.is_postgres = False
+                    psycopg = None
+
+                if self.is_postgres and (self._pg_conn is not None and not getattr(self._pg_conn, "closed", True)):
                     try:
                         self._pg_conn.execute("SELECT 1")
                     except Exception:
@@ -63,7 +68,7 @@ class Database:
                             pass
                         self._pg_conn = None
 
-                if self._pg_conn is None or getattr(self._pg_conn, "closed", True):
+                if self.is_postgres and (self._pg_conn is None or getattr(self._pg_conn, "closed", True)):
                     try:
                         conn_str = self.db_url
                         if conn_str.startswith("postgres://"):
