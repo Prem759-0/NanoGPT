@@ -36,8 +36,11 @@ import {
 } from 'lucide-react';
 import './App.css';
 
-// Read Clerk key from Vite env or localStorage
-const DEFAULT_CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || localStorage.getItem('clerk_publishable_key') || '';
+// Read Clerk key from Vite env or fallback to pre-configured publishable key
+const DEFAULT_CLERK_KEY = 
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 
+  localStorage.getItem('clerk_publishable_key') || 
+  'pk_test_cG9ldGljLXJhcHRvci00MjM0LmNsZXJrLmFjY291bnRzLmRldiQ';
 
 // Read API base URL for deployment (defaults to '' in local dev for Vite proxy, or full cloud URL on Vercel)
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
