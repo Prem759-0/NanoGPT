@@ -47,6 +47,18 @@ const resolveMediaUrl = (url) => {
   return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
+// Safe API fetch helper that automatically bypasses ngrok browser warnings
+const apiFetch = (path, options = {}) => {
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    ...(options.headers || {})
+  };
+  return fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers
+  });
+};
+
 export default function App() {
   const [clerkKey, setClerkKey] = useState(DEFAULT_CLERK_KEY);
 
@@ -165,7 +177,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   // Fetch Available Models
   const fetchModels = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/models`);
+      const res = await apiFetch('/api/models');
       if (res.ok) {
         const data = await res.json();
         setAvailableModels(data);
@@ -180,7 +192,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   // Fetch Model Specs
   const fetchModelInfo = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/model-info`);
+      const res = await apiFetch('/api/model-info');
       if (res.ok) {
         const data = await res.json();
         setModelSpecs(data);
@@ -193,7 +205,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   // Fetch Chat Sessions
   const fetchSessions = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/sessions?user_id=${encodeURIComponent(activeUserId)}`, {
+      const res = await apiFetch(`/api/sessions?user_id=${encodeURIComponent(activeUserId)}`, {
         headers: { 'X-User-Id': activeUserId }
       });
       if (res.ok) {
@@ -212,7 +224,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const fetchSessionMessages = async (sessionId) => {
     if (isGenerating) return; // Guard against overwriting optimistic user prompt while generating
     try {
-      const res = await fetch(`${API_BASE}/api/sessions/${sessionId}`);
+      const res = await apiFetch(`/api/sessions/${sessionId}`);
       if (res.ok) {
         const data = await res.json();
         setMessages(data.messages || []);
@@ -226,7 +238,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const handleModelChange = async (newModelId) => {
     setActiveModel(newModelId);
     try {
-      const res = await fetch(`${API_BASE}/api/switch-model`, {
+      const res = await apiFetch('/api/switch-model', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model_name: newModelId })
@@ -243,7 +255,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   // Start New Chat Session
   const handleNewSession = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/sessions`, {
+      const res = await apiFetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
         body: JSON.stringify({ title: 'New Chat', user_id: activeUserId })
@@ -264,7 +276,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const handleDeleteSession = async (sessionId, e) => {
     e.stopPropagation();
     try {
-      await fetch(`${API_BASE}/api/sessions/${sessionId}`, { method: 'DELETE' });
+      await apiFetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
       const remaining = sessions.filter(s => s.id !== sessionId);
       setSessions(remaining);
       if (currentSessionId === sessionId) {
@@ -548,7 +560,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
+      const res = await apiFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
         body: JSON.stringify({
