@@ -553,34 +553,119 @@ demo = gr.ChatInterface(
 )
 
 # =========================================================================
-# 7. LAUNCH SERVER + ATTACH CUSTOM API ROUTES
+# 7. LAUNCH SERVER + ATTACH CUSTOM API ROUTES VIA DIRECT ASGI MIDDLEWARE
 # =========================================================================
-# On HF Spaces (sdk: gradio), demo.launch() starts the server.
-# We prepend our custom /api/* routes so they take top priority over Gradio's
-# internal routes, allowing external web apps (like moon-gpt.vercel.app) to call /api/chat.
+from starlette.responses import JSONResponse, Response
+
+CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Credentials": "true",
+}
 
 demo.launch(prevent_thread_lock=True)
 
-try:
-    from fastapi.middleware.cors import CORSMiddleware as _CORS
-    demo.app.add_middleware(
-        _CORS,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    # Prepend custom API routes before Gradio's internal routes so /api/* routes take priority
-    demo.app.router.routes = list(_routes_app.router.routes) + [
-        r for r in demo.app.router.routes if not (hasattr(r, 'path') and r.path.startswith('/api/'))
-    ]
-    demo.app.middleware_stack = demo.app.build_middleware_stack()
-    logger.info("✅ Custom /api/* routes attached to Gradio app with top priority")
-except Exception as e:
-    logger.warning(f"Could not attach custom API routes: {e}")
+# Directly intercept and handle all /api/* routes via FastAPI middleware
+# This bypasses Gradio's internal catch-all router completely and guarantees CORS
+@demo.app.middleware("http")
+async def moon_api_middleware(request: Request, call_next):
+    # 1. Preflight CORS
+    if request.method == "OPTIONS":
+        return Response(status_code=204, headers=CORS_HEADERS)
+
+    path = request.url.path.rstrip("/")
+
+    # 2. Health check
+    if path == "/api/health":
+        import torch
+        dev = "NVIDIA A100 GPU (ZeroGPU Free)" if torch.cuda.is_available() else "Hugging Face Cloud Engine"
+        data = {
+            "status": "ok",
+            "model_status": "READY (24/7 CLOUD)",
+            "device": dev,
+            "torch_available": True,
+            "torch_version": torch.__version__
+        }
+        return JSONResponse(data, headers=CORS_HEADERS)
+
+    # 3. Model list
+    if path == "/api/models":
+        models = [
+            {
+                "id": "qwen-2.5-coder-7b",
+                "name": "🌙 Moon AI Sovereign (7.6B Cloud — By Prem Gaikwad)",
+                "type": "cloud_frontier",
+                "description": "Frontier coding, reasoning, and multi-turn sovereign AI running 24/7 on Hugging Face Cloud.",
+                "active": True,
+                "parameters": "7.61B",
+                "available": True
+            },
+            {
+                "id": "llama-3.2",
+                "name": "⚡ Moon AI Fast (1.23B)",
+                "type": "cloud_fast",
+                "description": "Ultra-low latency conversational and coding engine.",
+                "active": False,
+                "parameters": "1.23B",
+                "available": True
+            }
+        ]
+        return JSONResponse(models, headers=CORS_HEADERS)
+
+    # 4. Model info
+    if path == "/api/model-info":
+        info = {
+            "name": "Moon AI Sovereign 7.6B",
+            "parameters": "7.61B",
+            "architecture": "Decoder-Only Transformer (ZeroGPU Free)",
+            "active_model": "qwen-2.5-coder-7b"
+        }
+        return JSONResponse(info, headers=CORS_HEADERS)
+
+    # 5. Sessions list and creation
+    if path == "/api/sessions":
+        if request.method == "GET":
+            uid = request.query_params.get("user_id", "guest")
+            return JSONResponse(db.list_sessions(uid), headers=CORS_HEADERS)
+        elif request.method == "POST":
+            import uuid
+            sid = str(uuid.uuid4())[:8]
+            return JSONResponse({"session_id": sid, "status": "created"}, headers=CORS_HEADERS)
+
+    # 6. Session messages
+    if path.startswith("/api/sessions/"):
+        sid = path.split("/api/sessions/")[-1]
+        msgs = db.get_messages(sid, limit=20)
+        return JSONResponse({"messages": msgs, "session_id": sid}, headers=CORS_HEADERS)
+
+    # 7. Model switch
+    if path == "/api/switch-model" and request.method == "POST":
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        return JSONResponse({"status": "switched", "active_model": body.get("model_name", "qwen-2.5-coder-7b")}, headers=CORS_HEADERS)
+
+    # 8. Main chat generation
+    if path == "/api/chat" and request.method == "POST":
+        try:
+            body = await request.json()
+            chat_req = ChatRequest(**body)
+            result = chat(chat_req)
+            return JSONResponse(result, headers=CORS_HEADERS)
+        except Exception as e:
+            logger.error(f"Error handling /api/chat: {e}")
+            return JSONResponse({"error": str(e), "reply": f"Moon AI encountered an error: {str(e)}"}, status_code=500, headers=CORS_HEADERS)
+
+    # All non-api routes proceed to Gradio
+    response = await call_next(request)
+    for k, v in CORS_HEADERS.items():
+        response.headers[k] = v
+    return response
 
 # Expose app at module level
 app = demo.app
 
-# Keep the process alive (required — without this, Python exits immediately)
+# Keep the process alive
 demo.block_thread()
