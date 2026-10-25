@@ -225,20 +225,62 @@ def get_snake_html() -> str:
 # =========================================================================
 def resolve_special_query(q: str) -> Optional[str]:
     ql = q.lower().strip()
-    # Creator intent
+    
+    # 1. Creator intent
     if any(k in ql for k in ["who made you", "who created you", "who developed you", "who is prem gaikwad", "prem gaikwad", "who are you"]):
         return (
             "I am **Moon AI**, an advanced, sovereign artificial intelligence trained and deployed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
             "Prem Gaikwad engineered Moon AI as a fully independent AI system designed to rival and surpass cloud-based models like ChatGPT and Claude—running 100% privately without paid third-party APIs. Under Prem Gaikwad's architecture, Moon AI provides:\n\n"
-            "• 🌙 **Moon AI Coder (7.6B)**: Frontier coding, reasoning, and system architecture engine.\n"
+            "• 🌙 **Moon AI Sovereign (7.6B)**: Frontier coding, reasoning, and multi-turn sovereign intelligence.\n"
             "• ⚡ **Moon AI Fast (1.2B)**: Rapid conversation, Python coding, and algorithm design.\n"
             "• 🎨 **Moon AI Image Studio**: High-fidelity procedural and neural visual art synthesis.\n"
             "• 🎬 **Moon AI Video Studio**: Dynamic spatio-temporal video clip generation.\n"
             "• 💾 **Neon Cloud Memory**: Scalable persistent chat history backed by Neon Serverless PostgreSQL.\n"
             "• 🔒 **Clerk Authentication**: Seamless, production-ready user identity and session management.\n\n"
-            "How can I assist you with your project or code today?"
+            "How can I assist you with your project or question today?"
         )
-    # Pancake recipe in Hindi
+    
+    # 2. Live Time & Date (India / Mumbai / Global)
+    if any(k in ql for k in ["what is the time", "what is time", "current time", "time right now", "time in india", "time in mumbai", "today's date", "what is today's date", "what is the date"]):
+        from datetime import datetime, timezone, timedelta
+        ist = timezone(timedelta(hours=5, minutes=30))
+        now_ist = datetime.now(ist)
+        time_str = now_ist.strftime("%I:%M:%S %p")
+        date_str = now_ist.strftime("%A, %B %d, %Y")
+        return (
+            f"🕒 **Current Time in India (IST - Mumbai/Delhi)**: **{time_str}**\n"
+            f"📅 **Date**: **{date_str}**\n\n"
+            "How can I help you further today?"
+        )
+
+    # 3. Creator of ChatGPT / OpenAI
+    if any(k in ql for k in ["ho made chatgpt", "who made chatgpt", "who created chatgpt", "who developed chatgpt", "who owns chatgpt"]):
+        return (
+            "**ChatGPT** was developed and created by **OpenAI**, an artificial intelligence research and deployment company based in San Francisco, California.\n\n"
+            "Key details about ChatGPT:\n"
+            "• **Developer**: OpenAI (led by CEO Sam Altman)\n"
+            "• **Initial Release**: November 30, 2022\n"
+            "• **Core Technology**: Generative Pre-trained Transformer (GPT) architecture\n"
+            "• **Founding Contributors**: Founded in 2015 by Sam Altman, Elon Musk (later departed), Ilya Sutskever, Greg Brockman, and others.\n\n"
+            "While ChatGPT is cloud-hosted by OpenAI, **Moon AI** is an independent sovereign AI deployed by **Prem Gaikwad**!"
+        )
+
+    # 4. Definition of Surplus (including Indian phonetic typo "sirplus")
+    if "sirplus" in ql or "what is surplus" in ql or ql == "surplus":
+        return (
+            "You are asking about **Surplus** (अधिशेष / बचत):\n\n"
+            "### 📌 What is a Surplus?\n"
+            "A **surplus** is an amount of an asset, good, or resource that **exceeds the portion that is actively used or required** — in simple words: **having more than what you need**.\n\n"
+            "### 💡 Common Types of Surplus:\n"
+            "1. **Economic / Market Surplus**: When the supply of a good exceeds consumer demand (leads to price discounts).\n"
+            "2. **Budget Surplus**: When income or tax revenues exceed total expenses or spending.\n"
+            "3. **Trade Surplus**: When a country exports more goods than it imports.\n"
+            "4. **Consumer Surplus**: The difference between what a consumer is willing to pay vs what they actually pay.\n\n"
+            "### 🔍 Example:\n"
+            "If a farmer harvests 1,000 kg of wheat and their family only eats 200 kg, the remaining **800 kg is a surplus** that can be sold in the market!"
+        )
+
+    # 5. Pancake recipe in Hindi
     if any(k in ql for k in ["pancake", "pincake", "pancakes"]) and any(w in ql for w in ["recipe", "respice", "hindi", "make", "विधि"]):
         return (
             "यहाँ बहुत ही स्वादिष्ट और आसान **पैनकेक (Pancakes) बनाने की विधि (Recipe in Hindi)** दी गई है:\n\n"
@@ -263,36 +305,40 @@ def resolve_special_query(q: str) -> Optional[str]:
 # =========================================================================
 # 4. ZERO-GPU INFERENCE ENGINE (NVIDIA A100 GPU Acceleration)
 # =========================================================================
-MODEL_ID = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
 tokenizer = None
 model = None
 
 def get_model():
     global tokenizer, model
+    import torch
+    from transformers import AutoTokenizer, AutoModelForCausalLM
+    if tokenizer is None:
+        logger.info(f"Loading tokenizer {MODEL_ID}...")
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     if model is None:
-        import torch
-        from transformers import AutoTokenizer, AutoModelForCausalLM
-        logger.info(f"Loading {MODEL_ID}...")
-        if tokenizer is None:
-            tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+        logger.info(f"Loading model {MODEL_ID}...")
         is_cuda = torch.cuda.is_available()
+        dtype = torch.bfloat16 if is_cuda else torch.float32
         model = AutoModelForCausalLM.from_pretrained(
             MODEL_ID,
-            torch_dtype=torch.float16 if is_cuda else torch.float32,
+            torch_dtype=dtype,
             device_map="auto" if is_cuda else None
         )
         if not is_cuda:
             model = model.to("cpu")
     return tokenizer, model
 
-def generate_ai_response(messages: List[Dict[str, str]], max_new_tokens: int = 350, temperature: float = 0.7) -> str:
+@spaces.GPU(duration=60)
+def generate_ai_response(messages: List[Dict[str, str]], max_new_tokens: int = 400, temperature: float = 0.7) -> str:
     tok, mod = get_model()
     prompt = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    inputs = tok(prompt, return_tensors="pt").to(mod.device)
+    device = next(mod.parameters()).device
+    inputs = tok(prompt, return_tensors="pt").to(device)
     outputs = mod.generate(
         **inputs,
         max_new_tokens=min(max_new_tokens, 512),
-        temperature=temperature,
+        temperature=max(temperature, 0.1),
         do_sample=temperature > 0,
         pad_token_id=tok.eos_token_id
     )
@@ -302,9 +348,6 @@ def generate_ai_response(messages: List[Dict[str, str]], max_new_tokens: int = 3
 # =========================================================================
 # 5. FASTAPI APP WITH CORS FOR VERCEL
 # =========================================================================
-# We will attach routes to demo.app AFTER the Gradio Blocks are defined.
-# Define a temporary placeholder so decorators below can reference it.
-# The real `app` is set to demo.app after `with gr.Blocks() as demo:` block.
 _routes_app = FastAPI(title="Moon AI Sovereign Cloud API")
 _routes_app.add_middleware(
     CORSMiddleware,
@@ -449,15 +492,26 @@ def chat(req: ChatRequest):
     # 4. Neural Generation via Transformers
     history_msgs = db.get_messages(sid, limit=8)
     formatted_msgs = [
-        {"role": "system", "content": "You are Moon AI, an advanced sovereign artificial intelligence created by Prem Gaikwad. Be helpful, precise, dignified, and expert in full-stack coding."}
+        {
+            "role": "system",
+            "content": (
+                "You are Moon AI, an ultra-advanced sovereign artificial intelligence developed and deployed by Prem Gaikwad from India.\n"
+                "You are an omni-capable AI assistant with deep expertise in all topics: general knowledge, science, mathematics, world history, geography, vocabulary definitions, daily conversation, and frontier full-stack software development.\n"
+                "Guidelines:\n"
+                "- Always answer directly, warmly, and helpfully. Never refuse reasonable, harmless questions.\n"
+                "- Answer general knowledge, definitions (e.g. surplus, concepts, history, word meanings), and facts accurately and clearly.\n"
+                "- When asked to write code, provide complete, working, production-quality code.\n"
+                "- When asked who created or developed you, explain that you are Moon AI engineered by Prem Gaikwad.\n"
+            )
+        }
     ]
     for h in history_msgs:
         formatted_msgs.append({"role": h["role"], "content": h["content"]})
 
     try:
-        reply = generate_ai_response(formatted_msgs, max_new_tokens=req.max_new_tokens or 350, temperature=req.temperature or 0.7)
+        reply = generate_ai_response(formatted_msgs, max_new_tokens=req.max_new_tokens or 400, temperature=req.temperature or 0.7)
     except Exception as e:
-        reply = f"Hello! I am Moon AI, created by Prem Gaikwad. (Notice: {str(e)[:100]}). How can I assist you with your project today?"
+        reply = f"Hello! I am Moon AI, created by Prem Gaikwad. (Notice: {str(e)[:100]}). How can I assist you today?"
 
     db.add_message(sid, "assistant", reply, uid)
     return {
@@ -471,7 +525,6 @@ def chat(req: ChatRequest):
 # =========================================================================
 # 6. ZERO-GPU BOUND GRADIO CHAT INTERFACE
 # =========================================================================
-@spaces.GPU(duration=60)
 def gradio_chat_fn(message: str, history: list) -> str:
     """Chat function for gr.ChatInterface — returns a plain string reply."""
     if not message or not message.strip():
@@ -502,14 +555,12 @@ demo = gr.ChatInterface(
 # =========================================================================
 # 7. LAUNCH SERVER + ATTACH CUSTOM API ROUTES
 # =========================================================================
-# On HF Spaces (sdk: gradio), we must call demo.launch() to start the server.
-# demo.app (Gradio's internal FastAPI instance) only exists AFTER launch().
-# We use prevent_thread_lock=True so we can attach our /api/* routes,
-# then block_thread() keeps the process alive indefinitely.
+# On HF Spaces (sdk: gradio), demo.launch() starts the server.
+# We prepend our custom /api/* routes so they take top priority over Gradio's
+# internal routes, allowing external web apps (like moon-gpt.vercel.app) to call /api/chat.
 
 demo.launch(prevent_thread_lock=True)
 
-# demo.app is now available — attach CORS + custom REST routes
 try:
     from fastapi.middleware.cors import CORSMiddleware as _CORS
     demo.app.add_middleware(
@@ -519,8 +570,12 @@ try:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    demo.app.include_router(_routes_app.router)
-    logger.info("✅ Custom /api/* routes attached to Gradio app successfully")
+    # Prepend custom API routes before Gradio's internal routes so /api/* routes take priority
+    demo.app.router.routes = list(_routes_app.router.routes) + [
+        r for r in demo.app.router.routes if not (hasattr(r, 'path') and r.path.startswith('/api/'))
+    ]
+    demo.app.middleware_stack = demo.app.build_middleware_stack()
+    logger.info("✅ Custom /api/* routes attached to Gradio app with top priority")
 except Exception as e:
     logger.warning(f"Could not attach custom API routes: {e}")
 

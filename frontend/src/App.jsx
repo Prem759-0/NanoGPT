@@ -39,8 +39,8 @@ import './App.css';
 // Read Clerk key from Vite env or localStorage
 const DEFAULT_CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || localStorage.getItem('clerk_publishable_key') || '';
 
-// Read API base URL for deployment (defaults to '' in local dev for Vite proxy, or full cloud URL on Vercel)
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+// Read API base URL for deployment (defaults to live 24/7 Hugging Face Cloud GPU backend)
+const API_BASE = (import.meta.env.VITE_API_URL || 'https://a7006418-moon-ai-backend.hf.space').replace(/\/$/, '');
 const resolveMediaUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
