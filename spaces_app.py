@@ -477,14 +477,13 @@ def gradio_chat(user_msg, history):
         return history or [], ""
     history = history or []
     req = ChatRequest(message=user_msg, user_id="hf_spaces_user")
-    res = chat(req)
-    reply = res.get("reply", "Hello! Moon AI is ready.")
-    
-    if history and isinstance(history[0], dict):
-        history.append({"role": "user", "content": user_msg})
-        history.append({"role": "assistant", "content": reply})
-    else:
-        history.append((user_msg, reply))
+    try:
+        res = chat(req)
+        reply = res.get("reply", "Hello! I am Moon AI, created by Prem Gaikwad. How can I help?")
+    except Exception as e:
+        reply = f"Moon AI encountered an error: {str(e)[:200]}"
+    history.append({"role": "user", "content": user_msg})
+    history.append({"role": "assistant", "content": reply})
     return history, ""
 
 with gr.Blocks(title="Moon AI Sovereign Backend") as demo:
@@ -494,7 +493,7 @@ with gr.Blocks(title="Moon AI Sovereign Backend") as demo:
     with gr.Row():
         gr.Markdown("🟢 **Status**: ONLINE (Serving `/api/chat`, `/api/models`, `/api/health`)")
     
-    chatbot = gr.Chatbot(label="Moon AI Live Tester", height=400)
+    chatbot = gr.Chatbot(label="Moon AI Live Tester", height=400, type="messages")
     with gr.Row():
         txt = gr.Textbox(placeholder="Ask Moon AI anything or test coding...", scale=4, container=False)
         btn = gr.Button("Send", variant="primary", scale=1)
