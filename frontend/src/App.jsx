@@ -1,29 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  ClerkProvider, 
-  SignedIn, 
-  SignedOut, 
-  UserButton, 
-  SignInButton, 
-  useUser 
+import {
+  ClerkProvider,
+  SignedIn,
+  SignedOut,
+  UserButton,
+  SignInButton,
+  useUser
 } from '@clerk/clerk-react';
-import { 
-  Send, 
-  Code2, 
-  Gamepad2, 
-  Image as ImageIcon, 
-  Video, 
-  Mic, 
-  MicOff, 
+import {
+  Send,
+  Code2,
+  Gamepad2,
+  Image as ImageIcon,
+  Video,
+  Mic,
+  MicOff,
   Volume2,
   VolumeX,
   Download,
-  Play, 
-  Copy, 
-  Check, 
-  X, 
-  Plus, 
-  Trash2, 
+  Play,
+  Copy,
+  Check,
+  X,
+  Plus,
+  Trash2,
   RefreshCw,
   Cpu,
   Layers,
@@ -36,11 +36,8 @@ import {
 } from 'lucide-react';
 import './App.css';
 
-// Read Clerk key from Vite env or fallback to pre-configured publishable key
-const DEFAULT_CLERK_KEY = 
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 
-  localStorage.getItem('clerk_publishable_key') || 
-  'pk_test_cG9ldGljLXJhcHRvci00MjM0LmNsZXJrLmFjY291bnRzLmRldiQ';
+// Read Clerk key from Vite env or localStorage
+const DEFAULT_CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || localStorage.getItem('clerk_publishable_key') || '';
 
 // Read API base URL for deployment (defaults to '' in local dev for Vite proxy, or full cloud URL on Vercel)
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
@@ -117,7 +114,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     }
     return () => clearInterval(interval);
   }, [isGenerating]);
-  
+
   // Artifacts Split-Screen Canvas State
   const [canvasDrawerOpen, setCanvasDrawerOpen] = useState(false);
   const [canvasData, setCanvasData] = useState({ title: 'Grok Canvas', code: '', lang: 'html', tab: 'code' });
@@ -145,7 +142,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     return () => {
       stopSpeaking();
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
+        try { recognitionRef.current.stop(); } catch (e) { }
       }
     };
   }, []);
@@ -391,7 +388,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     // Select natural English voice if available
     try {
       const voices = window.speechSynthesis.getVoices() || [];
-      const englishVoice = 
+      const englishVoice =
         voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('David') || v.name.includes('Zira'))) ||
         voices.find(v => v.lang.startsWith('en')) ||
         voices[0];
@@ -449,7 +446,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     // Pre-cancel to clear frozen browser state
     try {
       window.speechSynthesis.cancel();
-    } catch (e) {}
+    } catch (e) { }
 
     playNextSpeechChunk();
   };
@@ -537,7 +534,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     // Halt any active speech and speech-to-text recording
     stopSpeaking();
     if (isRecording || isRecordingRef.current) {
-      try { recognitionRef.current?.stop(); } catch (e) {}
+      try { recognitionRef.current?.stop(); } catch (e) { }
       setIsRecording(false);
       isRecordingRef.current = false;
     }
@@ -701,11 +698,11 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
         if (!isMedia) {
           tokens.push(
-            <a 
-              key={tokKey} 
-              href={href} 
-              target="_blank" 
-              rel="noreferrer" 
+            <a
+              key={tokKey}
+              href={href}
+              target="_blank"
+              rel="noreferrer"
               className="grok-md-link"
             >
               {label}
@@ -742,10 +739,10 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     const filteredLines = lines.filter(line => {
       const trimmed = line.trim();
       if (/🎬\s*(\*\*)?Video Clip(\*\*)?:/i.test(trimmed) ||
-          /\[Download Full MP4 Video\]/i.test(trimmed) ||
-          /^!\[.*?\]\(.*?\)$/i.test(trimmed) ||
-          /\[Download Full Resolution Image/i.test(trimmed) ||
-          /^\[.*?\.mp4\]\(\/static\/generated\/.*?\.mp4\)$/i.test(trimmed)) {
+        /\[Download Full MP4 Video\]/i.test(trimmed) ||
+        /^!\[.*?\]\(.*?\)$/i.test(trimmed) ||
+        /\[Download Full Resolution Image/i.test(trimmed) ||
+        /^\[.*?\.mp4\]\(\/static\/generated\/.*?\.mp4\)$/i.test(trimmed)) {
         return false;
       }
       return true;
@@ -793,10 +790,10 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
           const resolvedVUrl = resolveMediaUrl(vUrl);
           return (
             <div key={`video-${vIdx}`} className="grok-media-container">
-              <video 
-                src={resolvedVUrl} 
-                controls 
-                playsInline 
+              <video
+                src={resolvedVUrl}
+                controls
+                playsInline
                 preload="metadata"
                 className="grok-media-video"
               />
@@ -819,9 +816,9 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
           const resolvedImgUrl = resolveMediaUrl(imgUrl);
           return (
             <div key={`image-${iIdx}`} className="grok-media-container">
-              <img 
-                src={resolvedImgUrl} 
-                alt="Generated visual" 
+              <img
+                src={resolvedImgUrl}
+                alt="Generated visual"
                 className="grok-media-image"
                 onClick={() => window.open(resolvedImgUrl, '_blank')}
                 title="Click to view full resolution"
@@ -896,7 +893,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                 </div>
                 <div className="grok-code-actions">
                   {p.isHtml && (
-                    <button 
+                    <button
                       className="grok-action-chip"
                       onClick={() => openSnippetInCanvas(p.code, 'html', '🎮 Interactive App')}
                       title="Launch in Grok Canvas"
@@ -905,7 +902,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                       <span>Live Preview</span>
                     </button>
                   )}
-                  <button 
+                  <button
                     className="grok-action-chip"
                     onClick={() => handleCopyCode(p.code, blockId)}
                   >
@@ -957,8 +954,8 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
         <div className="sidebar-content">
           <div>
             <div className="sidebar-section-title">Active Engine</div>
-            <select 
-              className="grok-model-pill" 
+            <select
+              className="grok-model-pill"
               style={{ width: '100%', outline: 'none' }}
               value={activeModel}
               onChange={(e) => handleModelChange(e.target.value)}
@@ -1026,7 +1023,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
             </div>
 
             {/* Grok Fun Mode & Think Mode Toggles */}
-            <button 
+            <button
               className={`grok-mode-toggle ${grokMode === 'fun' ? 'active-fun' : ''}`}
               onClick={() => setGrokMode(prev => prev === 'fun' ? 'normal' : 'fun')}
               title="Toggle Grok Fun / Witty Mode"
@@ -1035,7 +1032,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
               <span>Fun Mode</span>
             </button>
 
-            <button 
+            <button
               className={`grok-mode-toggle ${grokMode === 'think' ? 'active-think' : ''}`}
               onClick={() => setGrokMode(prev => prev === 'think' ? 'normal' : 'think')}
               title="Toggle Deep Reasoning Mode"
@@ -1045,20 +1042,20 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
             </button>
 
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.74rem', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: 6 }}>
-              <input 
-                type="checkbox" 
-                checked={autoSpeak} 
+              <input
+                type="checkbox"
+                checked={autoSpeak}
                 onChange={(e) => {
                   setAutoSpeak(e.target.checked);
                   if (!e.target.checked) stopSpeaking();
-                }} 
+                }}
               />
               <span>🔊 Auto-Speak</span>
             </label>
 
             {speakingIndex !== null && (
-              <button 
-                className="grok-action-chip" 
+              <button
+                className="grok-action-chip"
                 onClick={stopSpeaking}
                 style={{ borderColor: '#ef4444', color: '#ef4444', background: 'rgba(239, 68, 68, 0.15)', cursor: 'pointer' }}
                 title="Stop Speech Playback"
@@ -1089,8 +1086,8 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
             )}
 
             {/* Canvas Drawer Toggle */}
-            <button 
-              className="grok-btn-ghost" 
+            <button
+              className="grok-btn-ghost"
               onClick={() => setCanvasDrawerOpen(prev => !prev)}
               title="Toggle Grok Canvas / Artifacts Drawer"
             >
@@ -1114,7 +1111,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                   </p>
 
                   <div className="grok-hero-cards">
-                    <div 
+                    <div
                       className="grok-card"
                       onClick={() => handleSubmit(null, 'Write a complete, playable Snake Game in a single HTML, CSS, and JS file')}
                     >
@@ -1125,7 +1122,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                       </div>
                     </div>
 
-                    <div 
+                    <div
                       className="grok-card"
                       onClick={() => handleSubmit(null, 'Write an ultra-fast Python palindrome verification function with docstrings and doctests')}
                     >
@@ -1136,7 +1133,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                       </div>
                     </div>
 
-                    <div 
+                    <div
                       className="grok-card"
                       onClick={() => handleSubmit(null, '/imagine a futuristic cybernetic city at dusk with neon flying speeders, 8k cinematic')}
                     >
@@ -1147,7 +1144,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                       </div>
                     </div>
 
-                    <div 
+                    <div
                       className="grok-card"
                       onClick={() => handleSubmit(null, '/video a cinematic drone flight over glowing neon skyscrapers in the rain')}
                     >
@@ -1222,13 +1219,13 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <RefreshCw size={14} className="animate-spin" />
                       <span>
-                        {generationSeconds < 5 
+                        {generationSeconds < 5
                           ? 'Moon AI is thinking...'
                           : generationSeconds < 30
-                          ? `Moon AI is thinking... (${generationSeconds}s)`
-                          : generationSeconds < 90
-                          ? `⏳ Loading 7B model into memory... (${generationSeconds}s — first load takes ~60s)`
-                          : `🔄 Generating response... (${generationSeconds}s — 7B CPU inference is slow, please wait)`
+                            ? `Moon AI is thinking... (${generationSeconds}s)`
+                            : generationSeconds < 90
+                              ? `⏳ Loading 7B model into memory... (${generationSeconds}s — first load takes ~60s)`
+                              : `🔄 Generating response... (${generationSeconds}s — 7B CPU inference is slow, please wait)`
                         }
                       </span>
                     </div>
@@ -1247,7 +1244,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
           {/* Grok Floating Pill Input Bar */}
           <div className="grok-input-container">
-            <div 
+            <div
               className="grok-input-card"
               style={isRecording ? { borderColor: '#ef4444', boxShadow: '0 0 18px rgba(239, 68, 68, 0.4)' } : {}}
             >
@@ -1256,11 +1253,11 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                 className="grok-textarea"
                 rows={2}
                 placeholder={
-                  isRecording 
+                  isRecording
                     ? "🎙️ Listening... Speak into your microphone now (click Voice to finish)..."
-                    : (grokMode === 'fun' 
-                        ? "Ask Moon AI anything (Fun Mode 🌶️ is active — expect wit & punch)..."
-                        : "Ask Moon AI to code, design a game, or /imagine an image...")
+                    : (grokMode === 'fun'
+                      ? "Ask Moon AI anything (Fun Mode 🌶️ is active — expect wit & punch)..."
+                      : "Ask Moon AI to code, design a game, or /imagine an image...")
                 }
                 value={inputPrompt}
                 onChange={(e) => setInputPrompt(e.target.value)}
@@ -1274,7 +1271,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
               <div className="grok-toolbar">
                 <div className="toolbar-left">
-                  <button 
+                  <button
                     className="toolbar-pill"
                     onClick={() => {
                       setInputPrompt('/code ');
@@ -1285,7 +1282,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                     <span>Code</span>
                   </button>
 
-                  <button 
+                  <button
                     className="toolbar-pill"
                     onClick={() => {
                       setInputPrompt('/imagine ');
@@ -1296,7 +1293,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                     <span>Image</span>
                   </button>
 
-                  <button 
+                  <button
                     className="toolbar-pill"
                     onClick={() => {
                       setInputPrompt('/video ');
@@ -1307,7 +1304,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                     <span>Video</span>
                   </button>
 
-                  <button 
+                  <button
                     className="toolbar-pill"
                     onClick={toggleRecording}
                     style={isRecording ? { borderColor: '#ef4444', color: '#ef4444', background: 'rgba(239, 68, 68, 0.15)' } : {}}
@@ -1319,8 +1316,8 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                 </div>
 
                 <div className="toolbar-right">
-                  <button 
-                    className="grok-send-btn" 
+                  <button
+                    className="grok-send-btn"
                     onClick={handleSubmit}
                     disabled={!inputPrompt.trim() || isGenerating}
                     title="Send to Grok (Enter)"
@@ -1345,14 +1342,14 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div className="canvas-tabs">
-                    <button 
+                    <button
                       className={`canvas-tab ${canvasData.tab === 'code' ? 'active' : ''}`}
                       onClick={() => setCanvasData(prev => ({ ...prev, tab: 'code' }))}
                     >
                       Code
                     </button>
                     {canvasData.lang === 'html' && (
-                      <button 
+                      <button
                         className={`canvas-tab ${canvasData.tab === 'preview' ? 'active' : ''}`}
                         onClick={() => setCanvasData(prev => ({ ...prev, tab: 'preview' }))}
                       >
@@ -1361,15 +1358,15 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                     )}
                   </div>
 
-                  <button 
-                    className="grok-action-chip" 
+                  <button
+                    className="grok-action-chip"
                     onClick={() => handleCopyCode(canvasData.code, 'drawer')}
                     title="Copy code"
                   >
                     {codeCopiedIndex === 'drawer' ? <Check size={13} color="#22c55e" /> : <Copy size={13} />}
                   </button>
 
-                  <button 
+                  <button
                     className="grok-action-chip"
                     onClick={() => setCanvasDrawerOpen(false)}
                     title="Close Canvas"
@@ -1381,7 +1378,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
               <div className="canvas-body">
                 {canvasData.tab === 'preview' && canvasData.lang === 'html' ? (
-                  <iframe 
+                  <iframe
                     className="canvas-iframe"
                     title="Grok Live Preview"
                     sandbox="allow-scripts allow-modals"
