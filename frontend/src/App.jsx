@@ -48,12 +48,12 @@ const resolveMediaUrl = (url) => {
   return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-// Safe API fetch helper that routes directly to Vercel same-origin and sends Gemini Key
+// Safe API fetch helper that routes directly to Vercel same-origin and sends custom GPU tunnel if set
 const apiFetch = (path, options = {}) => {
-  const geminiKey = (typeof localStorage !== 'undefined' ? localStorage.getItem('gemini_api_key') : '') || '';
+  const customGpuUrl = (typeof localStorage !== 'undefined' ? localStorage.getItem('moon_custom_gpu_url') : '') || '';
   const headers = {
     'ngrok-skip-browser-warning': 'true',
-    ...(geminiKey ? { 'X-Gemini-Key': geminiKey } : {}),
+    ...(customGpuUrl ? { 'X-Custom-Gpu-Url': customGpuUrl } : {}),
     ...(options.headers || {})
   };
   const isVercelOrLocal = typeof window !== 'undefined' && (window.location.hostname.includes('vercel.app') || window.location.hostname === 'localhost');
@@ -183,9 +183,30 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationSeconds, setGenerationSeconds] = useState(0);
   const [availableModels, setAvailableModels] = useState(DEFAULT_MODELS);
-  const [activeModel, setActiveModel] = useState('moon-gemini-pro');
+  const [activeModel, setActiveModel] = useState('moon-sovereign-v2');
   const [modelSpecs, setModelSpecs] = useState(null);
-  const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
+  const [customGpuUrl, setCustomGpuUrl] = useState(() => (typeof localStorage !== 'undefined' ? localStorage.getItem('moon_custom_gpu_url') : '') || '');
+
+  // Connect Custom Sovereign GPU (Colab + ngrok)
+  const handleConfigureCustomGpu = () => {
+    const current = (typeof localStorage !== 'undefined' ? localStorage.getItem('moon_custom_gpu_url') : '') || '';
+    const input = prompt(
+      'Connect Your Custom Sovereign GPU Model (Google Colab / Private Server):\\n\\nEnter your live ngrok public URL from Step 9 in Train_Super_AI_Colab.ipynb:\\n(e.g., https://xxxx.ngrok-free.app)\\n\\nLeave blank to disconnect.',
+      current
+    );
+    if (input !== null) {
+      const trimmed = input.trim();
+      if (trimmed) {
+        localStorage.setItem('moon_custom_gpu_url', trimmed);
+        setCustomGpuUrl(trimmed);
+        alert('🟢 Connected to your trained Moon AI Sovereign GPU! Every query will now be answered directly by your custom fine-tuned neural model.');
+      } else {
+        localStorage.removeItem('moon_custom_gpu_url');
+        setCustomGpuUrl('');
+        alert('ℹ️ Disconnected custom GPU.');
+      }
+    }
+  };
 
   // Grok Signature Modes: 'normal', 'fun' (witty/unhinged), 'think' (deep reasoning)
   const [grokMode, setGrokMode] = useState('normal');
@@ -1313,6 +1334,17 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
               </div>
             )}
 
+
+            {/* Sovereign Colab GPU Tunnel Button */}
+            <button
+              className="grok-btn-ghost"
+              onClick={handleConfigureCustomGpu}
+              title="Connect your custom trained Moon AI Colab GPU model via ngrok"
+              style={customGpuUrl ? { borderColor: '#10b981', color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' } : {}}
+            >
+              <Cpu size={14} color={customGpuUrl ? '#10b981' : '#a1a1aa'} />
+              <span>{customGpuUrl ? '🟢 Colab GPU Active' : '⚡ Connect Colab GPU'}</span>
+            </button>
 
             {/* Canvas Drawer Toggle */}
             <button

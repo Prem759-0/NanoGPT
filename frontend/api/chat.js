@@ -654,6 +654,33 @@ export default async function handler(req, res) {
 
     const sid = session_id || `session_${Date.now()}`;
 
+    // 0. Custom Sovereign Neural GPU Forwarding (Colab GPU + ngrok / Private Server)
+    const customGpuUrl = req.headers['x-custom-gpu-url'] || process.env.CUSTOM_GPU_URL;
+    if (customGpuUrl) {
+      try {
+        const cleanGpuUrl = customGpuUrl.replace(/\/+$/, '');
+        const targetEndpoint = cleanGpuUrl.endsWith('/api/chat') ? cleanGpuUrl : `${cleanGpuUrl}/api/chat`;
+        const gpuResp = await fetch(targetEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+          body: JSON.stringify({ message: prompt })
+        });
+        if (gpuResp.ok) {
+          const gpuData = await gpuResp.json();
+          if (gpuData.reply) {
+            return res.status(200).json({
+              reply: gpuData.reply,
+              model_name: gpuData.model_name || 'Moon AI Sovereign 7.6B (Trained by Prem Gaikwad)',
+              device: gpuData.device || 'Colab NVIDIA GPU (Private Sovereign Engine)',
+              session_id: sid
+            });
+          }
+        }
+      } catch (gpuErr) {
+        console.warn('Custom GPU forward failed, falling back to sovereign offline engine:', gpuErr.message);
+      }
+    }
+
     // 1. Math computation
     const mathAnswer = calculateMath(prompt);
     if (mathAnswer) {
