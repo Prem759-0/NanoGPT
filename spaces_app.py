@@ -5,9 +5,11 @@ except ImportError:
     SPACES_AVAILABLE = False
     class spaces:
         @staticmethod
-        def GPU(duration=60):
-            def decorator(func):
+        def GPU(func=None, duration=60, **kwargs):
+            if func is not None and callable(func):
                 return func
+            def decorator(f):
+                return f
             return decorator
 
 import os
@@ -500,3 +502,13 @@ with gr.Blocks(title="Moon AI Sovereign Backend") as demo:
 
 # Mount Gradio into FastAPI for Hugging Face Spaces
 app = gr.mount_gradio_app(app, demo, path="/")
+
+if __name__ == "__main__":
+    try:
+        import spaces.zero
+        spaces.zero.startup()
+    except Exception as e:
+        logger.info(f"ZeroGPU startup hook notice: {e}")
+    
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=7860)
