@@ -59,6 +59,74 @@ const apiFetch = (path, options = {}) => {
   });
 };
 
+// Default high-performance cloud models (so dropdown is never empty)
+const DEFAULT_MODELS = [
+  {
+    id: 'qwen-2.5-coder-7b',
+    name: '🌙 Moon AI Sovereign (7.6B Cloud — By Prem Gaikwad)',
+    type: 'cloud_frontier',
+    description: 'Frontier reasoning, general knowledge, and full-stack coding running 24/7 on Cloud NVIDIA GPU.',
+    active: true,
+    parameters: '7.61B',
+    available: true
+  },
+  {
+    id: 'llama-3.2',
+    name: '⚡ Moon AI Fast (1.23B)',
+    type: 'cloud_fast',
+    description: 'Ultra-low latency conversational and coding engine.',
+    active: false,
+    parameters: '1.23B',
+    available: true
+  }
+];
+
+// Direct ZeroGPU generator using Gradio 6's verified native API endpoint
+const callGradioChatFn = async (prompt) => {
+  const postUrl = `${API_BASE}/gradio_api/call/v2/gradio_chat_fn`;
+  const postRes = await fetch(postUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: prompt })
+  });
+
+  if (!postRes.ok) {
+    throw new Error(`Cloud engine HTTP ${postRes.status}`);
+  }
+
+  const { event_id } = await postRes.json();
+  if (!event_id) {
+    throw new Error('Cloud engine did not provide an event ID');
+  }
+
+  const streamUrl = `${API_BASE}/gradio_api/call/v2/gradio_chat_fn/${event_id}`;
+  const streamRes = await fetch(streamUrl);
+  if (!streamRes.ok) {
+    throw new Error(`Failed to read response stream (HTTP ${streamRes.status})`);
+  }
+
+  const text = await streamRes.text();
+  const lines = text.split('\n');
+  for (const line of lines) {
+    if (line.startsWith('data:')) {
+      try {
+        const parsed = JSON.parse(line.slice(5).trim());
+        if (Array.isArray(parsed) && parsed[0]) {
+          return parsed[0];
+        }
+      } catch (e) {}
+    }
+  }
+
+  const match = text.match(/data:\s*(\[[\s\S]*?\])/);
+  if (match) {
+    const arr = JSON.parse(match[1]);
+    if (arr[0]) return arr[0];
+  }
+
+  throw new Error('Incomplete response received from cloud engine');
+};
+
 export default function App() {
   const [clerkKey, setClerkKey] = useState(DEFAULT_CLERK_KEY);
 
@@ -95,7 +163,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const [inputPrompt, setInputPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationSeconds, setGenerationSeconds] = useState(0);
-  const [availableModels, setAvailableModels] = useState([]);
+  const [availableModels, setAvailableModels] = useState(DEFAULT_MODELS);
   const [activeModel, setActiveModel] = useState('qwen-2.5-coder-7b');
   const [modelSpecs, setModelSpecs] = useState(null);
 
@@ -179,13 +247,19 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     try {
       const res = await apiFetch('/api/models');
       if (res.ok) {
-        const data = await res.json();
-        setAvailableModels(data);
-        const active = data.find(m => m.active);
-        if (active) setActiveModel(active.id);
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setAvailableModels(data);
+            const active = data.find(m => m.active);
+            if (active) setActiveModel(active.id);
+            return;
+          }
+        }
       }
     } catch (e) {
-      console.warn('Failed to fetch models:', e);
+      console.warn('Failed to fetch models from server:', e);
     }
   };
 
@@ -209,15 +283,28 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
         headers: { 'X-User-Id': activeUserId }
       });
       if (res.ok) {
-        const data = await res.json();
-        setSessions(data);
-        if (!currentSessionId && data.length > 0) {
-          setCurrentSessionId(data[0].id);
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setSessions(data);
+            try { localStorage.setItem(`moon_sessions_${activeUserId}`, JSON.stringify(data)); } catch (e) {}
+            if (!currentSessionId) setCurrentSessionId(data[0].id);
+            return;
+          }
         }
       }
     } catch (e) {
-      console.warn('Failed to fetch sessions:', e);
+      console.warn('Failed to fetch sessions from server:', e);
     }
+    // Fallback to local storage so sidebar is never blank
+    try {
+      const local = JSON.parse(localStorage.getItem(`moon_sessions_${activeUserId}`) || '[]');
+      if (local && local.length > 0) {
+        setSessions(local);
+        if (!currentSessionId) setCurrentSessionId(local[0].id);
+      }
+    } catch (e) {}
   };
 
   // Fetch Messages for a Session
@@ -226,12 +313,26 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     try {
       const res = await apiFetch(`/api/sessions/${sessionId}`);
       if (res.ok) {
-        const data = await res.json();
-        setMessages(data.messages || []);
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const data = await res.json();
+          if (data.messages && data.messages.length > 0) {
+            setMessages(data.messages);
+            try { localStorage.setItem(`moon_msgs_${sessionId}`, JSON.stringify(data.messages)); } catch (e) {}
+            return;
+          }
+        }
       }
     } catch (e) {
-      console.warn('Failed to load session messages:', e);
+      console.warn('Failed to load session messages from server:', e);
     }
+    // Fallback to local storage
+    try {
+      const localMsgs = JSON.parse(localStorage.getItem(`moon_msgs_${sessionId}`) || '[]');
+      if (localMsgs.length > 0) {
+        setMessages(localMsgs);
+      }
+    } catch (e) {}
   };
 
   // Switch Active Model
@@ -254,21 +355,29 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
   // Start New Chat Session
   const handleNewSession = async () => {
+    const newSessionId = `session_${Date.now()}`;
+    const newSession = {
+      id: newSessionId,
+      title: 'New Chat',
+      created_at: new Date().toISOString()
+    };
+    setCurrentSessionId(newSessionId);
+    localStorage.setItem('nanogpt_session_id', newSessionId);
+    setMessages([]);
+    setSessions(prev => {
+      const updated = [newSession, ...prev.filter(s => s.id !== newSessionId)];
+      try { localStorage.setItem(`moon_sessions_${activeUserId}`, JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
+
     try {
-      const res = await apiFetch('/api/sessions', {
+      await apiFetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
-        body: JSON.stringify({ title: 'New Chat', user_id: activeUserId })
+        body: JSON.stringify({ id: newSessionId, title: 'New Chat', user_id: activeUserId })
       });
-      if (res.ok) {
-        const data = await res.json();
-        setCurrentSessionId(data.session_id);
-        localStorage.setItem('nanogpt_session_id', data.session_id);
-        setMessages([]);
-        fetchSessions();
-      }
     } catch (e) {
-      console.error('Failed to create session:', e);
+      console.warn('Could not sync new session to server:', e);
     }
   };
 
@@ -277,18 +386,22 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     e.stopPropagation();
     try {
       await apiFetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
-      const remaining = sessions.filter(s => s.id !== sessionId);
-      setSessions(remaining);
-      if (currentSessionId === sessionId) {
-        if (remaining.length > 0) {
-          setCurrentSessionId(remaining[0].id);
-        } else {
-          setCurrentSessionId(null);
-          setMessages([]);
-        }
-      }
     } catch (e) {
-      console.error('Failed to delete session:', e);
+      console.warn('Failed to delete session on server:', e);
+    }
+    const remaining = sessions.filter(s => s.id !== sessionId);
+    setSessions(remaining);
+    try { localStorage.setItem(`moon_sessions_${activeUserId}`, JSON.stringify(remaining)); } catch (e) {}
+    try { localStorage.removeItem(`moon_msgs_${sessionId}`); } catch (e) {}
+    if (currentSessionId === sessionId) {
+      if (remaining.length > 0) {
+        setCurrentSessionId(remaining[0].id);
+        localStorage.setItem('nanogpt_session_id', remaining[0].id);
+      } else {
+        setCurrentSessionId(null);
+        localStorage.removeItem('nanogpt_session_id');
+        setMessages([]);
+      }
     }
   };
 
@@ -543,12 +656,34 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     setIsGenerating(true);
     setGenerationSeconds(0);
 
+    // Ensure we have a valid session ID
+    let activeSessionId = currentSessionId;
+    if (!activeSessionId) {
+      activeSessionId = `session_${Date.now()}`;
+      setCurrentSessionId(activeSessionId);
+      localStorage.setItem('nanogpt_session_id', activeSessionId);
+    }
+
     // Optimistically append user message
     const tempUserMsg = { role: 'user', content: prompt, timestamp: new Date().toISOString() };
-    setMessages(prev => [...prev, tempUserMsg]);
+    const updatedMessagesWithUser = [...messages, tempUserMsg];
+    setMessages(updatedMessagesWithUser);
+
+    // Update or create session title in sidebar
+    const cleanTitle = prompt.length > 28 ? prompt.slice(0, 28) + '...' : prompt;
+    setSessions(prev => {
+      const existing = prev.find(s => s.id === activeSessionId);
+      let nextSessions;
+      if (existing) {
+        nextSessions = prev.map(s => s.id === activeSessionId ? { ...s, title: s.title === 'New Chat' || !s.title ? cleanTitle : s.title } : s);
+      } else {
+        nextSessions = [{ id: activeSessionId, title: cleanTitle, created_at: new Date().toISOString() }, ...prev];
+      }
+      try { localStorage.setItem(`moon_sessions_${activeUserId}`, JSON.stringify(nextSessions)); } catch (e) {}
+      return nextSessions;
+    });
 
     const isCodeQuery = prompt.toLowerCase().includes('game') || prompt.toLowerCase().includes('code') || prompt.toLowerCase().includes('write') || prompt.startsWith('/code');
-    // CPU budget: 400 for code (still reasonable), 160 for conversational (fast reply)
     const tokenBudget = isCodeQuery ? 400 : 160;
 
     // Grok Mode Persona Injection
@@ -560,58 +695,72 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     }
 
     try {
-      const res = await apiFetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
-        body: JSON.stringify({
-          message: outgoingMessage,
-          session_id: currentSessionId,
-          user_id: activeUserId,
-          max_new_tokens: tokenBudget,
-          temperature: grokMode === 'fun' ? 0.85 : 0.65
-        })
-      });
+      let replyText = '';
+      let meta = {
+        model_name: 'Moon AI Sovereign (7.6B Cloud — By Prem Gaikwad)',
+        tokens: 'Variable',
+        device: 'Cloud NVIDIA ZeroGPU'
+      };
 
-      if (!res.ok) {
-        throw new Error(`Inference returned status ${res.status}`);
-      }
+      // 1. Direct ZeroGPU Gradio 6 API call (most reliable on Hugging Face Spaces)
+      try {
+        replyText = await callGradioChatFn(outgoingMessage);
+      } catch (gradioErr) {
+        console.warn('Direct Gradio call failed, trying standard API proxy:', gradioErr);
+        // 2. Fallback to /api/chat
+        const res = await apiFetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
+          body: JSON.stringify({
+            message: outgoingMessage,
+            session_id: activeSessionId,
+            user_id: activeUserId,
+            max_new_tokens: tokenBudget,
+            temperature: grokMode === 'fun' ? 0.85 : 0.65
+          })
+        });
 
-      const data = await res.json();
-      if (data.session_id && data.session_id !== currentSessionId) {
-        setCurrentSessionId(data.session_id);
-        localStorage.setItem('nanogpt_session_id', data.session_id);
+        if (!res.ok) {
+          throw new Error(`Cloud engine returned status ${res.status}`);
+        }
+
+        const data = await res.json();
+        replyText = data.reply;
+        if (data.model_name) meta.model_name = data.model_name;
+        if (data.tokens_generated) meta.tokens = data.tokens_generated;
+        if (data.device) meta.device = data.device;
+        if (data.session_id && data.session_id !== activeSessionId) {
+          activeSessionId = data.session_id;
+          setCurrentSessionId(data.session_id);
+          localStorage.setItem('nanogpt_session_id', data.session_id);
+        }
       }
-      // Always refresh session list so dynamic titles (e.g., 🎬 Video: dog) appear live in the sidebar
-      fetchSessions();
 
       const assistantMsg = {
         role: 'assistant',
-        content: data.reply,
-        meta: {
-          model_name: data.model_name,
-          tokens: data.tokens_generated,
-          device: data.device
-        },
+        content: replyText,
+        meta,
         timestamp: new Date().toISOString()
       };
 
-      setMessages(prev => [...prev, assistantMsg]);
+      const finalMessages = [...updatedMessagesWithUser, assistantMsg];
+      setMessages(finalMessages);
+      try { localStorage.setItem(`moon_msgs_${activeSessionId}`, JSON.stringify(finalMessages)); } catch (e) {}
 
       // If response includes code or interactive game, auto-open in Grok Canvas drawer
-      checkForArtifacts(data.reply);
+      checkForArtifacts(replyText);
 
       if (autoSpeak) {
-        speakText(data.reply);
+        speakText(replyText);
       }
     } catch (err) {
-      setMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: `⚠️ Error during generation: ${err.message}. Check that the local server is running.`,
-          timestamp: new Date().toISOString()
-        }
-      ]);
+      console.error('Generation error:', err);
+      const errMsg = {
+        role: 'assistant',
+        content: `⚠️ Error during generation: ${err.message}. Please check connection to cloud GPU server.`,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errMsg]);
     } finally {
       setIsGenerating(false);
     }
