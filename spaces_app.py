@@ -302,9 +302,11 @@ def generate_ai_response(messages: List[Dict[str, str]], max_new_tokens: int = 3
 # =========================================================================
 # 5. FASTAPI APP WITH CORS FOR VERCEL
 # =========================================================================
-app = FastAPI(title="Moon AI Sovereign Cloud API")
-
-app.add_middleware(
+# We will attach routes to demo.app AFTER the Gradio Blocks are defined.
+# Define a temporary placeholder so decorators below can reference it.
+# The real `app` is set to demo.app after `with gr.Blocks() as demo:` block.
+_routes_app = FastAPI(title="Moon AI Sovereign Cloud API")
+_routes_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
@@ -319,7 +321,7 @@ class ChatRequest(BaseModel):
     max_new_tokens: Optional[int] = 350
     temperature: Optional[float] = 0.7
 
-@app.get("/api/health")
+@_routes_app.get("/api/health")
 def health():
     import torch
     dev = "NVIDIA A100 GPU (ZeroGPU Free)" if torch.cuda.is_available() else "Hugging Face Cloud Engine"
@@ -331,7 +333,7 @@ def health():
         "torch_version": torch.__version__
     }
 
-@app.get("/api/models")
+@_routes_app.get("/api/models")
 def list_models():
     return [
         {
@@ -354,7 +356,7 @@ def list_models():
         }
     ]
 
-@app.get("/api/model-info")
+@_routes_app.get("/api/model-info")
 def model_info():
     return {
         "name": "Moon AI Sovereign 7.6B",
@@ -363,26 +365,26 @@ def model_info():
         "active_model": "qwen-2.5-coder-7b"
     }
 
-@app.get("/api/sessions")
+@_routes_app.get("/api/sessions")
 def get_sessions(user_id: str = "guest"):
     return db.list_sessions(user_id)
 
-@app.post("/api/sessions")
+@_routes_app.post("/api/sessions")
 def create_session(req: Request):
     import uuid
     sid = str(uuid.uuid4())[:8]
     return {"session_id": sid, "status": "created"}
 
-@app.get("/api/sessions/{session_id}")
+@_routes_app.get("/api/sessions/{session_id}")
 def get_session_messages(session_id: str):
     msgs = db.get_messages(session_id, limit=20)
     return {"messages": msgs, "session_id": session_id}
 
-@app.post("/api/switch-model")
+@_routes_app.post("/api/switch-model")
 def switch_model(data: Dict[str, Any]):
     return {"status": "switched", "active_model": data.get("model_name", "qwen-2.5-coder-7b")}
 
-@app.post("/api/chat")
+@_routes_app.post("/api/chat")
 def chat(req: ChatRequest):
     import uuid
     sid = req.session_id or str(uuid.uuid4())[:8]
@@ -500,19 +502,24 @@ with gr.Blocks(title="Moon AI Sovereign Backend") as demo:
     txt.submit(gradio_chat, [txt, chatbot], [chatbot, txt])
     btn.click(gradio_chat, [txt, chatbot], [chatbot, txt])
 
-# Mount Gradio into FastAPI for Hugging Face Spaces
-app = gr.mount_gradio_app(app, demo, path="/")
+# =========================================================================
+# 7. ATTACH API ROUTES TO GRADIO'S BUILT-IN FASTAPI APP
+# =========================================================================
+# HF Spaces (Gradio SDK) manages the server lifecycle automatically.
+# We MUST NOT call demo.launch() or gr.mount_gradio_app() here —
+# doing so conflicts with ZeroGPU's internal Node.js proxy on port 7860.
+#
+# Instead, we add all API routes to demo.app (Gradio's own FastAPI instance)
+# via include_router so they are served alongside the Gradio UI.
+from fastapi.middleware.cors import CORSMiddleware as _CORS
+demo.app.add_middleware(
+    _CORS,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+demo.app.include_router(_routes_app.router)
 
-if __name__ == "__main__":
-    try:
-        import spaces.zero
-        spaces.zero.startup()
-    except Exception as e:
-        logger.info(f"ZeroGPU startup hook notice: {e}")
-    
-    try:
-        demo.launch()
-    except Exception as e:
-        logger.warning(f"demo.launch() fallback to uvicorn: {e}")
-        import uvicorn
-        uvicorn.run(app, host="0.0.0.0", port=7860)
+# Expose `app` at module level so HF Spaces can find it if needed.
+app = demo.app
