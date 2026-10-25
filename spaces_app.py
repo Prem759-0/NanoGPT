@@ -503,23 +503,32 @@ with gr.Blocks(title="Moon AI Sovereign Backend") as demo:
     btn.click(gradio_chat, [txt, chatbot], [chatbot, txt])
 
 # =========================================================================
-# 7. ATTACH API ROUTES TO GRADIO'S BUILT-IN FASTAPI APP
+# 7. LAUNCH SERVER + ATTACH CUSTOM API ROUTES
 # =========================================================================
-# HF Spaces (Gradio SDK) manages the server lifecycle automatically.
-# We MUST NOT call demo.launch() or gr.mount_gradio_app() here —
-# doing so conflicts with ZeroGPU's internal Node.js proxy on port 7860.
-#
-# Instead, we add all API routes to demo.app (Gradio's own FastAPI instance)
-# via include_router so they are served alongside the Gradio UI.
-from fastapi.middleware.cors import CORSMiddleware as _CORS
-demo.app.add_middleware(
-    _CORS,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-demo.app.include_router(_routes_app.router)
+# On HF Spaces (sdk: gradio), we must call demo.launch() to start the server.
+# demo.app (Gradio's internal FastAPI instance) only exists AFTER launch().
+# We use prevent_thread_lock=True so we can attach our /api/* routes,
+# then block_thread() keeps the process alive indefinitely.
 
-# Expose `app` at module level so HF Spaces can find it if needed.
+demo.launch(prevent_thread_lock=True)
+
+# demo.app is now available — attach CORS + custom REST routes
+try:
+    from fastapi.middleware.cors import CORSMiddleware as _CORS
+    demo.app.add_middleware(
+        _CORS,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    demo.app.include_router(_routes_app.router)
+    logger.info("✅ Custom /api/* routes attached to Gradio app successfully")
+except Exception as e:
+    logger.warning(f"Could not attach custom API routes: {e}")
+
+# Expose app at module level
 app = demo.app
+
+# Keep the process alive (required — without this, Python exits immediately)
+demo.block_thread()
