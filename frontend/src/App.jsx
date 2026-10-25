@@ -64,22 +64,22 @@ const apiFetch = (path, options = {}) => {
   });
 };
 
-// Default high-performance cloud models (so dropdown is never empty)
+// Default high-performance sovereign models (100% zero-key out of the box)
 const DEFAULT_MODELS = [
   {
-    id: 'moon-gemini-pro',
-    name: '🌙 Moon AI Sovereign (Gemini Pro Engine — By Prem Gaikwad)',
+    id: 'moon-sovereign-v2',
+    name: '🌙 Moon AI Sovereign (All-in-One Engine — By Prem Gaikwad)',
     type: 'cloud_frontier',
-    description: 'Frontier reasoning, general knowledge, math, and full-stack coding running 24/7 on Vercel.',
+    description: 'Autonomous reasoning, conversation, full-stack code, image synthesis, and video generation with zero API keys required.',
     active: true,
-    parameters: 'Frontier Scale',
+    parameters: '7.61B Sovereign',
     available: true
   },
   {
-    id: 'qwen-2.5-coder-7b',
-    name: '⚡ Moon AI Sovereign (7.6B Cloud — ZeroGPU)',
+    id: 'moon-zerogpu-qwen',
+    name: '⚡ Moon AI Neural (Hugging Face ZeroGPU Cloud)',
     type: 'cloud_zerogpu',
-    description: 'Hugging Face Space GPU fallback engine.',
+    description: 'ZeroGPU cloud inference fallback engine.',
     active: false,
     parameters: '7.61B',
     available: true
@@ -1313,16 +1313,6 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
               </div>
             )}
 
-            {/* Google Gemini Pro API Key Button */}
-            <button
-              className="grok-btn-ghost"
-              onClick={handleConfigureGemini}
-              title="Connect Google Gemini Pro / Flash API Key (1,500 free requests/day)"
-              style={geminiKey ? { borderColor: '#22c55e', color: '#22c55e', background: 'rgba(34, 197, 94, 0.1)' } : {}}
-            >
-              <Key size={13} color={geminiKey ? '#22c55e' : '#a1a1aa'} />
-              <span>{geminiKey ? 'Gemini Pro ✓' : 'Gemini Key'}</span>
-            </button>
 
             {/* Canvas Drawer Toggle */}
             <button
