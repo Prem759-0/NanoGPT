@@ -1,6 +1,7 @@
 {
   "name": "moon-ai",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "cd frontend && npm install && npm run build",
     "dev": "cd frontend && npm run dev"
