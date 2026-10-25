@@ -510,5 +510,9 @@ if __name__ == "__main__":
     except Exception as e:
         logger.info(f"ZeroGPU startup hook notice: {e}")
     
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    try:
+        demo.launch()
+    except Exception as e:
+        logger.warning(f"demo.launch() fallback to uvicorn: {e}")
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=7860)
