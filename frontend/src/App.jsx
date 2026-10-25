@@ -83,7 +83,8 @@ const DEFAULT_MODELS = [
 
 // Direct ZeroGPU generator using Gradio 6's verified native API endpoint
 const callGradioChatFn = async (prompt) => {
-  const postUrl = `${API_BASE}/gradio_api/call/v2/gradio_chat_fn`;
+  const hfBase = API_BASE.includes('hf.space') ? API_BASE : 'https://a7006418-moon-ai-backend.hf.space';
+  const postUrl = `${hfBase}/gradio_api/call/v2/gradio_chat_fn`;
   const postRes = await fetch(postUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -99,7 +100,8 @@ const callGradioChatFn = async (prompt) => {
     throw new Error('Cloud engine did not provide an event ID');
   }
 
-  const streamUrl = `${API_BASE}/gradio_api/call/v2/gradio_chat_fn/${event_id}`;
+  // Gradio 6 official stream GET URL has NO /v2/ in path:
+  const streamUrl = `${hfBase}/gradio_api/call/gradio_chat_fn/${event_id}`;
   const streamRes = await fetch(streamUrl);
   if (!streamRes.ok) {
     throw new Error(`Failed to read response stream (HTTP ${streamRes.status})`);
@@ -707,21 +709,37 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
         replyText = await callGradioChatFn(outgoingMessage);
       } catch (gradioErr) {
         console.warn('Direct Gradio call failed, trying standard API proxy:', gradioErr);
-        // 2. Fallback to /api/chat
-        const res = await apiFetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
-          body: JSON.stringify({
-            message: outgoingMessage,
-            session_id: activeSessionId,
-            user_id: activeUserId,
-            max_new_tokens: tokenBudget,
-            temperature: grokMode === 'fun' ? 0.85 : 0.65
-          })
-        });
+        // 2. Fallback to /api/chat or local development server (port 8000)
+        let res;
+        try {
+          res = await apiFetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
+            body: JSON.stringify({
+              message: outgoingMessage,
+              session_id: activeSessionId,
+              user_id: activeUserId,
+              max_new_tokens: tokenBudget,
+              temperature: grokMode === 'fun' ? 0.85 : 0.65
+            })
+          });
+        } catch (fetchErr) {
+          // If apiFetch failed, try local server on port 8000
+          res = await fetch('http://localhost:8000/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
+            body: JSON.stringify({
+              message: outgoingMessage,
+              session_id: activeSessionId,
+              user_id: activeUserId,
+              max_new_tokens: tokenBudget,
+              temperature: grokMode === 'fun' ? 0.85 : 0.65
+            })
+          });
+        }
 
-        if (!res.ok) {
-          throw new Error(`Cloud engine returned status ${res.status}`);
+        if (!res || !res.ok) {
+          throw new Error(`Cloud engine returned status ${res ? res.status : 'No response'}`);
         }
 
         const data = await res.json();
