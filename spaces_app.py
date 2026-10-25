@@ -497,7 +497,6 @@ demo = gr.ChatInterface(
         scale=7,
     ),
     submit_btn="Send 🚀",
-    type="messages",
 )
 
 # =========================================================================
