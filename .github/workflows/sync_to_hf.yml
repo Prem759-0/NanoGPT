@@ -10,17 +10,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          lfs: true
 
-      - name: Push to Hugging Face
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Hugging Face Hub
+        run: pip install --upgrade huggingface_hub
+
+      - name: Upload files to Hugging Face Spaces
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          if [ -n "$HF_TOKEN" ]; then
-            git push --force https://a7006418:$HF_TOKEN@huggingface.co/spaces/a7006418/moon-ai-backend main
-            echo "Successfully pushed to Hugging Face Spaces!"
-          else
-            echo "Notice: HF_TOKEN secret is not set in GitHub repository settings. Skipping action sync."
-          fi
+          python -c '
+          import os, sys
+          from huggingface_hub import HfApi
+
+          token = os.environ.get("HF_TOKEN")
+          if not token:
+              print("Notice: HF_TOKEN secret is not set in GitHub repository settings. Skipping HF sync.")
+              sys.exit(0)
+
+          api = HfApi(token=token)
+          repo = "a7006418/moon-ai-backend"
+          print(f"Syncing app.py to {repo}...")
+          api.upload_file(path_or_fileobj="app.py", path_in_repo="app.py", repo_id=repo, repo_type="space")
+          if os.path.exists("requirements.txt"):
+              print(f"Syncing requirements.txt to {repo}...")
+              api.upload_file(path_or_fileobj="requirements.txt", path_in_repo="requirements.txt", repo_id=repo, repo_type="space")
+          print("Successfully updated Hugging Face Space via HfApi!")
+          '
