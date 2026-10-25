@@ -32,7 +32,8 @@ import {
   Search,
   Sparkles,
   Terminal,
-  ExternalLink
+  ExternalLink,
+  Key
 } from 'lucide-react';
 import './App.css';
 
@@ -47,13 +48,17 @@ const resolveMediaUrl = (url) => {
   return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-// Safe API fetch helper that automatically bypasses ngrok browser warnings
+// Safe API fetch helper that routes directly to Vercel same-origin and sends Gemini Key
 const apiFetch = (path, options = {}) => {
+  const geminiKey = (typeof localStorage !== 'undefined' ? localStorage.getItem('gemini_api_key') : '') || '';
   const headers = {
     'ngrok-skip-browser-warning': 'true',
+    ...(geminiKey ? { 'X-Gemini-Key': geminiKey } : {}),
     ...(options.headers || {})
   };
-  return fetch(`${API_BASE}${path}`, {
+  const isVercelOrLocal = typeof window !== 'undefined' && (window.location.hostname.includes('vercel.app') || window.location.hostname === 'localhost');
+  const targetUrl = (path.startsWith('/api') && isVercelOrLocal) ? path : `${API_BASE}${path}`;
+  return fetch(targetUrl, {
     ...options,
     headers
   });
@@ -62,21 +67,21 @@ const apiFetch = (path, options = {}) => {
 // Default high-performance cloud models (so dropdown is never empty)
 const DEFAULT_MODELS = [
   {
-    id: 'qwen-2.5-coder-7b',
-    name: '🌙 Moon AI Sovereign (7.6B Cloud — By Prem Gaikwad)',
+    id: 'moon-gemini-pro',
+    name: '🌙 Moon AI Sovereign (Gemini Pro Engine — By Prem Gaikwad)',
     type: 'cloud_frontier',
-    description: 'Frontier reasoning, general knowledge, and full-stack coding running 24/7 on Cloud NVIDIA GPU.',
+    description: 'Frontier reasoning, general knowledge, math, and full-stack coding running 24/7 on Vercel.',
     active: true,
-    parameters: '7.61B',
+    parameters: 'Frontier Scale',
     available: true
   },
   {
-    id: 'llama-3.2',
-    name: '⚡ Moon AI Fast (1.23B)',
-    type: 'cloud_fast',
-    description: 'Ultra-low latency conversational and coding engine.',
+    id: 'qwen-2.5-coder-7b',
+    name: '⚡ Moon AI Sovereign (7.6B Cloud — ZeroGPU)',
+    type: 'cloud_zerogpu',
+    description: 'Hugging Face Space GPU fallback engine.',
     active: false,
-    parameters: '1.23B',
+    parameters: '7.61B',
     available: true
   }
 ];
@@ -114,16 +119,28 @@ const callGradioChatFn = async (prompt) => {
       try {
         const parsed = JSON.parse(line.slice(5).trim());
         if (Array.isArray(parsed) && parsed[0]) {
-          return parsed[0];
+          const content = String(parsed[0]);
+          if (content.includes('ZeroGPU runs limit') || content.includes('quota')) {
+            throw new Error('ZeroGPU quota limit reached');
+          }
+          return content;
         }
-      } catch (e) {}
+      } catch (e) {
+        if (e.message && e.message.includes('ZeroGPU')) throw e;
+      }
     }
   }
 
   const match = text.match(/data:\s*(\[[\s\S]*?\])/);
   if (match) {
     const arr = JSON.parse(match[1]);
-    if (arr[0]) return arr[0];
+    if (arr[0]) {
+      const content = String(arr[0]);
+      if (content.includes('ZeroGPU runs limit') || content.includes('quota')) {
+        throw new Error('ZeroGPU quota limit reached');
+      }
+      return content;
+    }
   }
 
   throw new Error('Incomplete response received from cloud engine');
@@ -166,8 +183,9 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationSeconds, setGenerationSeconds] = useState(0);
   const [availableModels, setAvailableModels] = useState(DEFAULT_MODELS);
-  const [activeModel, setActiveModel] = useState('qwen-2.5-coder-7b');
+  const [activeModel, setActiveModel] = useState('moon-gemini-pro');
   const [modelSpecs, setModelSpecs] = useState(null);
+  const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_api_key') || '');
 
   // Grok Signature Modes: 'normal', 'fun' (witty/unhinged), 'think' (deep reasoning)
   const [grokMode, setGrokMode] = useState('normal');
@@ -699,20 +717,60 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     try {
       let replyText = '';
       let meta = {
-        model_name: 'Moon AI Sovereign (7.6B Cloud — By Prem Gaikwad)',
+        model_name: 'Moon AI Sovereign (Gemini / Unified Vercel Engine)',
         tokens: 'Variable',
-        device: 'Cloud NVIDIA ZeroGPU'
+        device: 'Vercel Serverless'
       };
 
-      // 1. Direct ZeroGPU Gradio 6 API call (most reliable on Hugging Face Spaces)
+      let success = false;
+
+      // 1. Unified Vercel Serverless Backend (Instant math, general knowledge, Gemini Pro — No ZeroGPU limits!)
       try {
-        replyText = await callGradioChatFn(outgoingMessage);
-      } catch (gradioErr) {
-        console.warn('Direct Gradio call failed, trying standard API proxy:', gradioErr);
-        // 2. Fallback to /api/chat or local development server (port 8000)
-        let res;
+        const res = await apiFetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
+          body: JSON.stringify({
+            message: outgoingMessage,
+            session_id: activeSessionId,
+            user_id: activeUserId,
+            max_new_tokens: tokenBudget,
+            temperature: grokMode === 'fun' ? 0.85 : 0.65
+          })
+        });
+
+        if (res.ok) {
+          const ct = res.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            const data = await res.json();
+            if (data.reply) {
+              replyText = data.reply;
+              if (data.model_name) meta.model_name = data.model_name;
+              if (data.tokens_generated) meta.tokens = data.tokens_generated;
+              if (data.device) meta.device = data.device;
+              if (data.session_id && data.session_id !== activeSessionId) {
+                activeSessionId = data.session_id;
+                setCurrentSessionId(data.session_id);
+                localStorage.setItem('nanogpt_session_id', data.session_id);
+              }
+              success = true;
+            }
+          }
+        }
+      } catch (vercelErr) {
+        console.warn('Vercel API attempt failed, trying fallback engines:', vercelErr);
+      }
+
+      // 2. Fallback to ZeroGPU Hugging Face Space if Vercel serverless wasn't reachable
+      if (!success) {
         try {
-          res = await apiFetch('/api/chat', {
+          replyText = await callGradioChatFn(outgoingMessage);
+          meta.model_name = 'Moon AI Sovereign (7.6B Cloud — ZeroGPU)';
+          meta.device = 'Cloud NVIDIA GPU';
+          success = true;
+        } catch (gradioErr) {
+          console.warn('Direct Gradio call failed, trying local port 8000:', gradioErr);
+          // 3. Fallback to local development server (port 8000)
+          const localRes = await fetch('http://localhost:8000/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
             body: JSON.stringify({
@@ -723,34 +781,14 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
               temperature: grokMode === 'fun' ? 0.85 : 0.65
             })
           });
-        } catch (fetchErr) {
-          // If apiFetch failed, try local server on port 8000
-          res = await fetch('http://localhost:8000/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
-            body: JSON.stringify({
-              message: outgoingMessage,
-              session_id: activeSessionId,
-              user_id: activeUserId,
-              max_new_tokens: tokenBudget,
-              temperature: grokMode === 'fun' ? 0.85 : 0.65
-            })
-          });
-        }
 
-        if (!res || !res.ok) {
-          throw new Error(`Cloud engine returned status ${res ? res.status : 'No response'}`);
-        }
-
-        const data = await res.json();
-        replyText = data.reply;
-        if (data.model_name) meta.model_name = data.model_name;
-        if (data.tokens_generated) meta.tokens = data.tokens_generated;
-        if (data.device) meta.device = data.device;
-        if (data.session_id && data.session_id !== activeSessionId) {
-          activeSessionId = data.session_id;
-          setCurrentSessionId(data.session_id);
-          localStorage.setItem('nanogpt_session_id', data.session_id);
+          if (!localRes.ok) {
+            throw new Error(`Inference returned status ${localRes.status}`);
+          }
+          const localData = await localRes.json();
+          replyText = localData.reply;
+          if (localData.model_name) meta.model_name = localData.model_name;
+          success = true;
         }
       }
 
@@ -824,6 +862,29 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     if (key && key.trim().startsWith('pk_')) {
       localStorage.setItem('clerk_publishable_key', key.trim());
       onUpdateKey(key.trim());
+    }
+  };
+
+  // Prompt Google Gemini Pro Key Input Modal
+  const handleConfigureGemini = () => {
+    const current = localStorage.getItem('gemini_api_key') || '';
+    const key = prompt(
+      '🔑 Connect Google Gemini Pro / Flash (Frontier AI Engine):\n\n' +
+      'Get your 100% free key with 1,500 requests/day from:\n' +
+      '👉 https://aistudio.google.com/app/apikey\n\n' +
+      'Paste your Gemini API Key below (starts with AIza...):',
+      current
+    );
+    if (key !== null) {
+      if (key.trim()) {
+        localStorage.setItem('gemini_api_key', key.trim());
+        setGeminiKey(key.trim());
+        alert('✅ Gemini Pro Key saved! Moon AI will now run with frontier Gemini 1.5 Pro / Flash reasoning.');
+      } else {
+        localStorage.removeItem('gemini_api_key');
+        setGeminiKey('');
+        alert('Gemini key removed. Moon AI is using built-in reasoning engine.');
+      }
     }
   };
 
@@ -1251,6 +1312,17 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                 </SignedOut>
               </div>
             )}
+
+            {/* Google Gemini Pro API Key Button */}
+            <button
+              className="grok-btn-ghost"
+              onClick={handleConfigureGemini}
+              title="Connect Google Gemini Pro / Flash API Key (1,500 free requests/day)"
+              style={geminiKey ? { borderColor: '#22c55e', color: '#22c55e', background: 'rgba(34, 197, 94, 0.1)' } : {}}
+            >
+              <Key size={13} color={geminiKey ? '#22c55e' : '#a1a1aa'} />
+              <span>{geminiKey ? 'Gemini Pro ✓' : 'Gemini Key'}</span>
+            </button>
 
             {/* Canvas Drawer Toggle */}
             <button
