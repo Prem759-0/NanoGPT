@@ -469,37 +469,36 @@ def chat(req: ChatRequest):
     }
 
 # =========================================================================
-# 6. ZERO-GPU BOUND GRADIO DASHBOARD
+# 6. ZERO-GPU BOUND GRADIO CHAT INTERFACE
 # =========================================================================
 @spaces.GPU(duration=60)
-def gradio_chat(user_msg, history):
-    if not user_msg or not user_msg.strip():
-        return history or [], ""
-    history = history or []
-    req = ChatRequest(message=user_msg, user_id="hf_spaces_user")
+def gradio_chat_fn(message: str, history: list) -> str:
+    """Chat function for gr.ChatInterface — returns a plain string reply."""
+    if not message or not message.strip():
+        return "Please enter a message."
     try:
+        req = ChatRequest(message=message, user_id="hf_spaces_user")
         res = chat(req)
-        reply = res.get("reply", "Hello! I am Moon AI, created by Prem Gaikwad. How can I help?")
+        return res.get("reply", "Hello! I am Moon AI, created by Prem Gaikwad. How can I help?")
     except Exception as e:
-        reply = f"Moon AI encountered an error: {str(e)[:200]}"
-    history.append({"role": "user", "content": user_msg})
-    history.append({"role": "assistant", "content": reply})
-    return history, ""
+        return f"Moon AI encountered an error: {str(e)[:200]}"
 
-with gr.Blocks(title="Moon AI Sovereign Backend") as demo:
-    gr.Markdown("# 🌙 Moon AI Cloud Engine — By Prem Gaikwad")
-    gr.Markdown("### 24/7 Sovereign REST API for Moon AI Webapp ([moon-gpt.vercel.app](https://moon-gpt.vercel.app/))")
-    
-    with gr.Row():
-        gr.Markdown("🟢 **Status**: ONLINE (Serving `/api/chat`, `/api/models`, `/api/health`)")
-    
-    chatbot = gr.Chatbot(label="Moon AI Live Tester", height=400, type="messages")
-    with gr.Row():
-        txt = gr.Textbox(placeholder="Ask Moon AI anything or test coding...", scale=4, container=False)
-        btn = gr.Button("Send", variant="primary", scale=1)
-
-    txt.submit(gradio_chat, [txt, chatbot], [chatbot, txt])
-    btn.click(gradio_chat, [txt, chatbot], [chatbot, txt])
+demo = gr.ChatInterface(
+    fn=gradio_chat_fn,
+    title="🌙 Moon AI Cloud Engine — By Prem Gaikwad",
+    description=(
+        "### 24/7 Sovereign REST API for Moon AI Webapp "
+        "([moon-gpt.vercel.app](https://moon-gpt.vercel.app/))\n"
+        "🟢 **Status**: ONLINE — Serving `/api/chat`, `/api/models`, `/api/health`"
+    ),
+    textbox=gr.Textbox(
+        placeholder="Ask Moon AI anything — coding, reasoning, creative...",
+        container=False,
+        scale=7,
+    ),
+    submit_btn="Send 🚀",
+    type="messages",
+)
 
 # =========================================================================
 # 7. LAUNCH SERVER + ATTACH CUSTOM API ROUTES
