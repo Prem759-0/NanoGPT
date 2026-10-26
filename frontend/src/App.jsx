@@ -745,19 +745,48 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
       let success = false;
 
-      // 1. Unified Vercel Serverless Backend (Instant math, general knowledge, Gemini Pro — No ZeroGPU limits!)
-      try {
-        const res = await apiFetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
-          body: JSON.stringify({
-            message: outgoingMessage,
-            session_id: activeSessionId,
-            user_id: activeUserId,
-            max_new_tokens: tokenBudget,
-            temperature: grokMode === 'fun' ? 0.85 : 0.65
-          })
-        });
+      // 0. Direct Custom Colab GPU Call (Real Neural Network on GPU — Zero Middleman Timeout!)
+      const customGpu = (typeof localStorage !== 'undefined' ? localStorage.getItem('moon_custom_gpu_url') : '') || '';
+      if (customGpu) {
+        try {
+          const cleanGpu = customGpu.trim().replace(/\/+$/, '');
+          const endpoint = cleanGpu.endsWith('/api/chat') ? cleanGpu : `${cleanGpu}/api/chat`;
+          const gpuRes = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true'
+            },
+            body: JSON.stringify({ message: outgoingMessage })
+          });
+          if (gpuRes.ok) {
+            const gpuData = await gpuRes.json();
+            if (gpuData.reply) {
+              replyText = gpuData.reply;
+              meta.model_name = gpuData.model_name || 'Moon AI Sovereign 7.6B (Trained by Prem Gaikwad)';
+              meta.device = gpuData.device || 'Google Colab NVIDIA GPU (Live Custom Model)';
+              success = true;
+            }
+          }
+        } catch (gpuErr) {
+          console.warn('Direct Colab GPU call failed, falling back to sovereign engine:', gpuErr);
+        }
+      }
+
+      // 1. Unified Vercel Serverless Backend (Instant sovereign fallback if GPU offline)
+      if (!success) {
+        try {
+          const res = await apiFetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
+            body: JSON.stringify({
+              message: outgoingMessage,
+              session_id: activeSessionId,
+              user_id: activeUserId,
+              max_new_tokens: tokenBudget,
+              temperature: grokMode === 'fun' ? 0.85 : 0.65
+            })
+          });
 
         if (res.ok) {
           const ct = res.headers.get('content-type') || '';
@@ -780,6 +809,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
       } catch (vercelErr) {
         console.warn('Vercel API attempt failed, trying fallback engines:', vercelErr);
       }
+    }
 
       // 2. Fallback to ZeroGPU Hugging Face Space if Vercel serverless wasn't reachable
       if (!success) {
