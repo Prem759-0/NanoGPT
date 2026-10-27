@@ -42,6 +42,8 @@ const DEFAULT_CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || localSto
 
 // Read API base URL for deployment (defaults to live 24/7 Hugging Face Cloud GPU backend)
 const API_BASE = (import.meta.env.VITE_API_URL || 'https://a7006418-moon-ai-backend.hf.space').replace(/\/$/, '');
+const DEFAULT_SOVEREIGN_GPU_URL = 'https://jayceon-embryological-lasandra.ngrok-free.dev';
+
 const resolveMediaUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -50,7 +52,7 @@ const resolveMediaUrl = (url) => {
 
 // Safe API fetch helper that routes directly to Vercel same-origin and sends custom GPU tunnel if set
 const apiFetch = (path, options = {}) => {
-  const customGpuUrl = (typeof localStorage !== 'undefined' ? localStorage.getItem('moon_custom_gpu_url') : '') || '';
+  const customGpuUrl = (typeof localStorage !== 'undefined' && localStorage.getItem('moon_custom_gpu_url') !== null ? localStorage.getItem('moon_custom_gpu_url') : DEFAULT_SOVEREIGN_GPU_URL) || '';
   const headers = {
     'ngrok-skip-browser-warning': 'true',
     ...(customGpuUrl ? { 'X-Custom-Gpu-Url': customGpuUrl } : {}),
@@ -185,11 +187,11 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const [availableModels, setAvailableModels] = useState(DEFAULT_MODELS);
   const [activeModel, setActiveModel] = useState('moon-sovereign-v2');
   const [modelSpecs, setModelSpecs] = useState(null);
-  const [customGpuUrl, setCustomGpuUrl] = useState(() => (typeof localStorage !== 'undefined' ? localStorage.getItem('moon_custom_gpu_url') : '') || '');
+  const [customGpuUrl, setCustomGpuUrl] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('moon_custom_gpu_url') !== null ? localStorage.getItem('moon_custom_gpu_url') : DEFAULT_SOVEREIGN_GPU_URL));
 
   // Connect Custom Sovereign GPU (Colab + ngrok)
   const handleConfigureCustomGpu = () => {
-    const current = (typeof localStorage !== 'undefined' ? localStorage.getItem('moon_custom_gpu_url') : '') || '';
+    const current = (typeof localStorage !== 'undefined' && localStorage.getItem('moon_custom_gpu_url') !== null ? localStorage.getItem('moon_custom_gpu_url') : DEFAULT_SOVEREIGN_GPU_URL) || '';
     const input = prompt(
       'Connect Your Custom Sovereign GPU Model (Google Colab / Private Server):\\n\\nEnter your live ngrok public URL from Step 9 in Train_Super_AI_Colab.ipynb:\\n(e.g., https://xxxx.ngrok-free.app)\\n\\nLeave blank to disconnect.',
       current
@@ -746,7 +748,9 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
       let success = false;
 
       // 0. Direct Custom Colab GPU Call (Real Neural Network on GPU — Zero Middleman Timeout!)
-      const customGpu = (typeof localStorage !== 'undefined' ? localStorage.getItem('moon_custom_gpu_url') : '') || '';
+      const customGpu = (typeof localStorage !== 'undefined' && localStorage.getItem('moon_custom_gpu_url') !== null
+        ? localStorage.getItem('moon_custom_gpu_url')
+        : DEFAULT_SOVEREIGN_GPU_URL) || '';
       if (customGpu) {
         try {
           const cleanGpu = customGpu.trim().replace(/\/+$/, '');

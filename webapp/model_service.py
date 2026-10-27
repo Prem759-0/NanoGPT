@@ -561,6 +561,41 @@ class ModelService:
                 "device": "CPU Local Engine"
             }
 
+        # --- 0. Remote Sovereign Colab GPU Fast-Path (sub-second cloud inference) ---
+        colab_gpu_url = os.environ.get("COLAB_GPU_URL", "https://jayceon-embryological-lasandra.ngrok-free.dev").strip().rstrip("/")
+        if colab_gpu_url and self.active_model_name != "scratch" and not os.environ.get("DISABLE_REMOTE_GPU"):
+            try:
+                import urllib.request, json
+                endpoint = f"{colab_gpu_url}/api/chat"
+                payload = json.dumps({
+                    "message": clean_prompt,
+                    "max_new_tokens": max_new_tokens,
+                    "temperature": temperature
+                }).encode("utf-8")
+                gpu_req = urllib.request.Request(
+                    endpoint,
+                    data=payload,
+                    headers={
+                        "Content-Type": "application/json",
+                        "ngrok-skip-browser-warning": "true",
+                        "User-Agent": "MoonAI-Hybrid-Client/1.0"
+                    }
+                )
+                with urllib.request.urlopen(gpu_req, timeout=5.0) as resp:
+                    if resp.status == 200:
+                        gpu_data = json.loads(resp.read().decode("utf-8"))
+                        if gpu_data.get("reply"):
+                            return {
+                                "reply": gpu_data["reply"],
+                                "full_text": gpu_data["reply"],
+                                "model_name": gpu_data.get("model_name", "Moon AI Sovereign (Colab T4 GPU)"),
+                                "prompt_length": len(clean_prompt),
+                                "tokens_generated": gpu_data.get("tokens_generated", len(gpu_data["reply"].split())),
+                                "device": gpu_data.get("device", "Colab NVIDIA T4 (CUDA)")
+                            }
+            except Exception:
+                pass  # Fall through to local GGUF / scratch inference seamlessly
+
         # --- 1. GGUF Generation (Qwen-2.5-Coder-7B & LLaMA-3.2) ---
         if self.active_model_name in ["qwen-2.5-coder-7b", "llama-3.2"] and self.llama_model is not None:
             is_qwen = "qwen" in self.active_model_name
