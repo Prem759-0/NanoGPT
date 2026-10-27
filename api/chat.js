@@ -665,6 +665,75 @@ function resolveConversationalKnowledge(prompt) {
       `• **Communication**: Cats communicate through over 100 vocal sounds (including purring, trilling, hissing, and meowing), scent marking, and tail positioning.`;
   }
 
+  // Animal facts: "what is dog"
+  if (ql === 'what is dog' || ql === 'what is a dog' || ql === 'dog' || (ql.includes('dog') && (ql.includes('what is') || ql.includes('tell me about') || ql.includes('explain')))) {
+    return `A **dog** (*Canis lupus familiaris*) is a domesticated carnivorous mammal belonging to the family **Canidae** and is the first animal ever domesticated by humans.\n\n` +
+      `### 🐕 Key Scientific & Biological Highlights:\n` +
+      `• **Domestication**: Evolved from an ancestral Eurasian wolf population between 15,000 and 30,000 years ago during the Upper Paleolithic era, forming a unique evolutionary bond with human civilization.\n` +
+      `• **Sensory Acuity**: Possesses up to **300 million olfactory receptors** in their nasal cavities (compared to ~6 million in humans), enabling them to detect scents at concentrations of parts per trillion.\n` +
+      `• **Cognitive Empathy**: Dogs have co-evolved specialized facial musculature to communicate with humans, accurately interpreting pointing gestures, eye contact, and emotional vocal tones.\n` +
+      `• **Diversity**: Over 340 distinct breeds worldwide, exhibiting the greatest morphological variety of any terrestrial land mammal.`;
+  }
+
+  // Solar System & Space
+  if (ql.includes('solar system') || (ql.includes('planet') && (ql.includes('order') || ql.includes('name') || ql.includes('how many') || ql.includes('what is')))) {
+    return `The **Solar System** is our gravitationally bound planetary system that formed approximately **4.6 billion years ago** from the gravitational collapse of a giant interstellar molecular cloud.\n\n` +
+      `### ☀️ 1. The Central Star: The Sun\n` +
+      `• Contains **99.86% of all mass** in the entire Solar System.\n` +
+      `• Powers planetary atmospheres, ocean currents, and biological life through hydrogen-to-helium nuclear fusion at its core (core temperature: ~15,000,000°C).\n\n` +
+      `### 🪐 2. The 8 Major Planets (In Order from the Sun):\n` +
+      `1. **Mercury**: The smallest planet, closest to the Sun, with extreme surface temperature swings (-180°C to 430°C) and no atmosphere.\n` +
+      `2. **Venus**: Earth's "twin" in size, enveloped in a runaway greenhouse atmosphere of dense $CO_2$ and sulfuric acid clouds (surface temp ~465°C, hottest in the system).\n` +
+      `3. **Earth**: The only known harbor for life in the universe, defined by liquid surface oceans, plate tectonics, and a protective magnetic field.\n` +
+      `4. **Mars**: The "Red Planet", rich in iron oxide (rust), featuring *Olympus Mons* (tallest volcano in the solar system, 22 km high) and ancient river channels.\n` +
+      `*(The Asteroid Belt: Millions of rocky remnants orbiting between Mars and Jupiter, including the dwarf planet Ceres)*\n` +
+      `5. **Jupiter**: The largest planet (more massive than all other planets combined), featuring the ancient *Great Red Spot* storm and 95 moons (including ice-covered Europa).\n` +
+      `6. **Saturn**: Famous for its dazzling ring system composed of billions of water-ice fragments, and moon *Titan* with liquid methane lakes.\n` +
+      `7. **Uranus**: An ice giant tilted on its side at an angle of 98°, rotating almost completely sideways with a faint blue-green methane atmosphere.\n` +
+      `8. **Neptune**: The outermost major planet, an ice giant with supersonic winds reaching over 2,100 km/h (1,300 mph).\n\n` +
+      `### 🌌 3. The Outer Frontier:\n` +
+      `• **Kuiper Belt**: An icy debris ring beyond Neptune home to dwarf planets including **Pluto**, Eris, and Makemake.\n` +
+      `• **Oort Cloud**: A colossal spherical cloud of billions of icy comets enveloping the outer boundary of the solar system, extending nearly a light-year into interstellar space.`;
+  }
+
+  // Sun and Moon
+  if ((ql.includes('sun') && ql.includes('moon')) || ql.includes('sun and moon')) {
+    return `Here is a clear, scientific comparison between the **Sun** and the **Moon**:\n\n` +
+      `### ☀️ The Sun (The Star of Our System)\n` +
+      `• **Nature**: A yellow dwarf star (spectral type G2V) generating colossal energy via continuous hydrogen fusion into helium.\n` +
+      `• **Scale**: ~1.39 million km in diameter (109 times Earth's width), holding 99.86% of the solar system's total mass.\n` +
+      `• **Function**: Emits radiant light and heat that drives Earth's climate, weather systems, and biological photosynthesis.\n\n` +
+      `### 🌙 The Moon (Earth's Natural Satellite)\n` +
+      `• **Nature**: A rocky, cratered natural satellite orbiting Earth at an average distance of 384,400 km, with no atmosphere or liquid water.\n` +
+      `• **Scale**: ~3,474 km in diameter (roughly 1/4 the width of Earth).\n` +
+      `• **Function**: Its gravitational pull creates oceanic tides, and its orbital presence stabilizes Earth's 23.5° axial tilt, preventing catastrophic climate instability.`;
+  }
+
+  // Photosynthesis
+  if (ql.includes('photosynthesis')) {
+    return `**Photosynthesis** is the fundamental biological process by which green plants, algae, and cyanobacteria convert light energy into chemical energy stored in glucose molecules.\n\n` +
+      `### 🌿 The Chemical Equation:\n` +
+      `$$\n6CO_2 + 6H_2O + \\text{Sunlight (Photons)} \\xrightarrow{\\text{Chlorophyll}} C_6H_{12}O_6 \\text{ (Glucose)} + 6O_2 \\text{ (Oxygen)}\n$$\n\n` +
+      `### 🔬 The Two Core Stages:\n` +
+      `1. **Light-Dependent Reactions (in Thylakoid Membranes)**:\n` +
+      `   • Chlorophyll pigments absorb photons, splitting water molecules ($H_2O$) via photolysis.\n` +
+      `   • This releases **$O_2$ (Oxygen)** into the atmosphere and charges $ATP$ and $NADPH$ energy carriers.\n` +
+      `2. **Light-Independent Reactions / The Calvin Cycle (in the Stroma)**:\n` +
+      `   • Atmospheric carbon dioxide ($CO_2$) is converted into high-energy sugars (**Glucose**) using energy from ATP and NADPH, fueling plant growth and sustaining the terrestrial food chain.`;
+  }
+
+  // Gravity
+  if (ql.includes('gravity') || ql.includes('what is gravity')) {
+    return `**Gravity** is one of the four fundamental forces of nature (alongside electromagnetism, strong nuclear, and weak nuclear forces):\n\n` +
+      `### 🍎 1. Newton's Universal Gravitation (Classical Mechanics)\n` +
+      `Every object with mass attracts every other object with a force proportional to the product of their masses and inversely proportional to the square of the distance between their centers:\n` +
+      `$$\nF = G \\frac{m_1 m_2}{r^2}\n$$\n\n` +
+      `### 🌌 2. Einstein's General Relativity (Modern Physics)\n` +
+      `In 1915, Albert Einstein revealed that gravity is **not an invisible mechanical force**, but the **curvature of 4D spacetime** caused by mass and energy. Massive bodies like planets warp the fabric of space, and free-falling objects follow straight paths (geodesics) along this curved space.\n\n` +
+      `### 🌍 Real-World Role:\n` +
+      `Gravity keeps Earth in stable orbit around the Sun, keeps our atmosphere and oceans anchored to the surface, and drives the birth of stars and galaxies.`;
+  }
+
   // Biology: Male & Female sex
   if (ql.includes('sex') && (ql.includes('biology') || ql.includes('male') || ql.includes('female') || ql.includes('human'))) {
     return `In **Biological Science**, sex refers to the classification of organisms based on their reproductive anatomy and genetic composition:\n\n` +
@@ -725,20 +794,20 @@ function generateConversationalResponse(prompt) {
       `What specific detail or challenge would you like to tackle next?`;
   }
 
-  // Default deep, friendly, intellectual dialogue
-  return `Thank you for sharing that question with Moon AI!\n\n` +
-    `Regarding **"${p}"**:\n\n` +
-    `### 🧠 Core Analysis & Insights:\n` +
-    `This topic touches upon essential concepts in modern understanding. Whether evaluated from an analytical, practical, or conceptual standpoint, the most effective approach combines thorough research with deliberate execution.\n\n` +
-    `### 🔍 Key Dimensions to Consider:\n` +
-    `1. **Structural Context**: Understanding the foundational elements that govern this subject allows you to predict outcomes accurately.\n` +
-    `2. **Practical Application**: Translating theoretical knowledge into daily workflows or functional code yields tangible value.\n` +
-    `3. **Future Evolution**: As technology and methodologies progress, staying adaptable ensures long-term success.\n\n` +
-    `### 💬 How Moon AI Can Help Further:\n` +
-    `• If you want code for this, type: \`/code [your goal]\`\n` +
-    `• If you want visual artwork for this, type: \`/imagine [your visual prompt]\`\n` +
-    `• If you want an animated video simulation, type: \`/video [your prompt]\`\n\n` +
-    `Tell me what specific aspect you would like to explore next!`;
+  // Dynamic, structured educational response
+  const topicTitle = p.replace(/^(?:what\s+is|who\s+is|explain|tell\s+me\s+about|describe|define)\s+(?:an?\s+|the\s+)?/i, '').replace(/[\?!.]+$/, '').trim();
+  const capitalizedTopic = topicTitle ? topicTitle.charAt(0).toUpperCase() + topicTitle.slice(1) : 'This Subject';
+
+  return `### 💡 Overview of ${capitalizedTopic}\n\n` +
+    `**${capitalizedTopic}** is a fundamental subject in scientific, technical, and analytical knowledge.\n\n` +
+    `### 🔬 Core Scientific & Systematic Breakdown:\n` +
+    `• **Definition**: Refers to the structured set of mechanisms, principles, or components that define how **${capitalizedTopic}** exists and operates.\n` +
+    `• **Key Properties**: Characterized by distinct attributes that interact within its broader ecosystem or environment according to established natural or computational laws.\n` +
+    `• **Functionality**: Serves a vital purpose by facilitating operations, enabling communication, or sustaining dynamic balance within its domain.\n\n` +
+    `### 🛠️ Practical Application & Real-World Context:\n` +
+    `• **Daily Impact**: Utilized by researchers, engineers, and practitioners to understand complex phenomena, optimize workflows, and solve practical challenges.\n` +
+    `• **Analysis**: When exploring **${capitalizedTopic}**, observing its behavior under different conditions reveals how its individual elements work together as a unified system.\n\n` +
+    `*💡 You can ask me for more details: \`"Give me an example of ${capitalizedTopic}"\`, \`"Write code for ${capitalizedTopic}"\`, or \`"Explain ${capitalizedTopic} for beginners"\`!*`;
 }
 
 // Vercel Serverless Handler
