@@ -1,0 +1,485 @@
+[
+  {
+    "id": "moon_ai_00309",
+    "instruction": "For an interview setting, why are all rows of this grid modified when I only change one?\n\ngrid = [[0] * 3] * 3\ngrid[0][0] = 1",
+    "response": "`[[0] * 3] * 3` repeats the *same inner list object* three times, so grid[0], grid[1] and grid[2] are all references to one list.\n\nFix by building independent rows with a comprehension:\n\ngrid = [[0] * 3 for _ in range(3)]\ngrid[0][0] = 1   # only the first row changes\n\nThe same trap applies to copy.copy() on nested structures; use copy.deepcopy() there.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "For an interview setting, why are all rows of this grid modified when I only change one?\n\ngrid = [[0] * 3] * 3\ngrid[0][0] = 1"
+      },
+      {
+        "role": "assistant",
+        "content": "`[[0] * 3] * 3` repeats the *same inner list object* three times, so grid[0], grid[1] and grid[2] are all references to one list.\n\nFix by building independent rows with a comprehension:\n\ngrid = [[0] * 3 for _ in range(3)]\ngrid[0][0] = 1   # only the first row changes\n\nThe same trap applies to copy.copy() on nested structures; use copy.deepcopy() there."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00259",
+    "instruction": "With production-quality error handling, explain the difference between a parameter and an argument in Python.",
+    "response": "A parameter is a variable named in a function definition. An argument is the actual value supplied when the function is called. In def greet(name), name is a parameter; in greet('Maya'), 'Maya' is an argument.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "With production-quality error handling, explain the difference between a parameter and an argument in Python."
+      },
+      {
+        "role": "assistant",
+        "content": "A parameter is a variable named in a function definition. An argument is the actual value supplied when the function is called. In def greet(name), name is a parameter; in greet('Maya'), 'Maya' is an argument."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00120",
+    "instruction": "How do I format strings in Python with f-strings, including alignment and number formatting?",
+    "response": "name, score, ratio = 'Ada', 42, 0.8734\n\nprint(f'{name}: {score}')      # Ada: 42\nprint(f'{score:>6}')            # right-align: '    42'\nprint(f'{name:<10}|')          # left-align:  'Ada       |'\nprint(f'{name:^10}|')          # center:      '   Ada    |'\nprint(f'{ratio:.2%}')          # percentage:  '87.34%'\nprint(f'{1234567:,}')          # comma separated: '1,234,567'\nprint(f'{3.14159:.3f}')        # decimals:    '3.142'\nprint(f'{score:08d}')          # zero-padded: '00000042'\nprint(f'{255:#x}')             # hex:         '0xff'\nprint(f'{score=}')             # debug:       'score=42'\n\n# f-strings are evaluated at runtime and are the fastest formatting option in CPython.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "How do I format strings in Python with f-strings, including alignment and number formatting?"
+      },
+      {
+        "role": "assistant",
+        "content": "name, score, ratio = 'Ada', 42, 0.8734\n\nprint(f'{name}: {score}')      # Ada: 42\nprint(f'{score:>6}')            # right-align: '    42'\nprint(f'{name:<10}|')          # left-align:  'Ada       |'\nprint(f'{name:^10}|')          # center:      '   Ada    |'\nprint(f'{ratio:.2%}')          # percentage:  '87.34%'\nprint(f'{1234567:,}')          # comma separated: '1,234,567'\nprint(f'{3.14159:.3f}')        # decimals:    '3.142'\nprint(f'{score:08d}')          # zero-padded: '00000042'\nprint(f'{255:#x}')             # hex:         '0xff'\nprint(f'{score=}')             # debug:       'score=42'\n\n# f-strings are evaluated at runtime and are the fastest formatting option in CPython."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00112",
+    "instruction": "Implement an in-place quicksort in Python with a randomized pivot.",
+    "response": "import random\n\ndef quicksort(xs):\n    def sort(lo, hi):\n        if lo >= hi:\n            return\n        p = random.randint(lo, hi)\n        xs[p], xs[hi] = xs[hi], xs[p]\n        pivot, store = xs[hi], lo\n        for i in range(lo, hi):\n            if xs[i] < pivot:\n                xs[store], xs[i] = xs[i], xs[store]\n                store += 1\n        xs[store], xs[hi] = xs[hi], xs[store]\n        sort(lo, store - 1)\n        sort(store + 1, hi)\n    sort(0, len(xs) - 1)\n    return xs\n\n# Average O(n log n); worst O(n^2) but randomization makes it unlikely.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Implement an in-place quicksort in Python with a randomized pivot."
+      },
+      {
+        "role": "assistant",
+        "content": "import random\n\ndef quicksort(xs):\n    def sort(lo, hi):\n        if lo >= hi:\n            return\n        p = random.randint(lo, hi)\n        xs[p], xs[hi] = xs[hi], xs[p]\n        pivot, store = xs[hi], lo\n        for i in range(lo, hi):\n            if xs[i] < pivot:\n                xs[store], xs[i] = xs[i], xs[store]\n                store += 1\n        xs[store], xs[hi] = xs[hi], xs[store]\n        sort(lo, store - 1)\n        sort(store + 1, hi)\n    sort(0, len(xs) - 1)\n    return xs\n\n# Average O(n log n); worst O(n^2) but randomization makes it unlikely."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00048",
+    "instruction": "Write a memoization decorator in Python that supports keyword arguments.",
+    "response": "import functools\n\ndef memoize(fn):\n    cache = {}\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        key = (args, tuple(sorted(kwargs.items())))\n        if key not in cache:\n            cache[key] = fn(*args, **kwargs)\n        return cache[key]\n    wrapper.cache = cache\n    return wrapper",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Write a memoization decorator in Python that supports keyword arguments."
+      },
+      {
+        "role": "assistant",
+        "content": "import functools\n\ndef memoize(fn):\n    cache = {}\n    @functools.wraps(fn)\n    def wrapper(*args, **kwargs):\n        key = (args, tuple(sorted(kwargs.items())))\n        if key not in cache:\n            cache[key] = fn(*args, **kwargs)\n        return cache[key]\n    wrapper.cache = cache\n    return wrapper"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00016",
+    "instruction": "Write an optimized Python function to find the longest palindromic substring.",
+    "response": "```python\ndef longest_palindrome(s: str) -> str:\n    if not s or len(s) < 2:\n        return s\n    \n    start, max_len = 0, 1\n    \n    def expand(left: int, right: int):\n        nonlocal start, max_len\n        while left >= 0 and right < len(s) and s[left] == s[right]:\n            cur_len = right - left + 1\n            if cur_len > max_len:\n                start = left\n                max_len = cur_len\n            left -= 1\n            right += 1\n            \n    for i in range(len(s)):\n        expand(i, i)       # Odd length palindromes\n        expand(i, i + 1)   # Even length palindromes\n        \n    return s[start:start + max_len]\n```\n\nComplexity: O(n^2) time, O(1) auxiliary space.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Write an optimized Python function to find the longest palindromic substring."
+      },
+      {
+        "role": "assistant",
+        "content": "```python\ndef longest_palindrome(s: str) -> str:\n    if not s or len(s) < 2:\n        return s\n    \n    start, max_len = 0, 1\n    \n    def expand(left: int, right: int):\n        nonlocal start, max_len\n        while left >= 0 and right < len(s) and s[left] == s[right]:\n            cur_len = right - left + 1\n            if cur_len > max_len:\n                start = left\n                max_len = cur_len\n            left -= 1\n            right += 1\n            \n    for i in range(len(s)):\n        expand(i, i)       # Odd length palindromes\n        expand(i, i + 1)   # Even length palindromes\n        \n    return s[start:start + max_len]\n```\n\nComplexity: O(n^2) time, O(1) auxiliary space."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00017",
+    "instruction": "Write a clean, asynchronous REST API using Python and FastAPI.",
+    "response": "```python\nfrom fastapi import FastAPI, HTTPException, status\nfrom pydantic import BaseModel, Field\nfrom typing import List, Optional\nimport uuid\n\napp = FastAPI(title='Task Engine API')\n\nclass Task(BaseModel):\n    id: Optional[str] = None\n    title: str = Field(..., min_length=1, max_length=100)\n    completed: bool = False\n\ndb: List[Task] = []\n\n@app.get('/tasks', response_model=List[Task])\nasync def get_tasks():\n    return db\n\n@app.post('/tasks', response_model=Task, status_code=status.HTTP_201_CREATED)\nasync def create_task(task: Task):\n    task.id = str(uuid.uuid4())[:8]\n    db.append(task)\n    return task\n\n@app.delete('/tasks/{task_id}', status_code=status.HTTP_204_NO_CONTENT)\nasync def delete_task(task_id: str):\n    global db\n    initial_len = len(db)\n    db = [t for t in db if t.id != task_id]\n    if len(db) == initial_len:\n        raise HTTPException(status_code=404, detail='Task not found')\n    return None\n```\n\nRun with: `uvicorn app:app --reload`",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Write a clean, asynchronous REST API using Python and FastAPI."
+      },
+      {
+        "role": "assistant",
+        "content": "```python\nfrom fastapi import FastAPI, HTTPException, status\nfrom pydantic import BaseModel, Field\nfrom typing import List, Optional\nimport uuid\n\napp = FastAPI(title='Task Engine API')\n\nclass Task(BaseModel):\n    id: Optional[str] = None\n    title: str = Field(..., min_length=1, max_length=100)\n    completed: bool = False\n\ndb: List[Task] = []\n\n@app.get('/tasks', response_model=List[Task])\nasync def get_tasks():\n    return db\n\n@app.post('/tasks', response_model=Task, status_code=status.HTTP_201_CREATED)\nasync def create_task(task: Task):\n    task.id = str(uuid.uuid4())[:8]\n    db.append(task)\n    return task\n\n@app.delete('/tasks/{task_id}', status_code=status.HTTP_204_NO_CONTENT)\nasync def delete_task(task_id: str):\n    global db\n    initial_len = len(db)\n    db = [t for t in db if t.id != task_id]\n    if len(db) == initial_len:\n        raise HTTPException(status_code=404, detail='Task not found')\n    return None\n```\n\nRun with: `uvicorn app:app --reload`"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00217",
+    "instruction": "Using idiomatic Python, write a Python function that finds the largest number in a non-empty list without using max().",
+    "response": "def largest_number(numbers: list[float]) -> float:\n    if not numbers:\n        raise ValueError('numbers must not be empty')\n    largest = numbers[0]\n    for number in numbers[1:]:\n        if number > largest:\n            largest = number\n    return largest",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Using idiomatic Python, write a Python function that finds the largest number in a non-empty list without using max()."
+      },
+      {
+        "role": "assistant",
+        "content": "def largest_number(numbers: list[float]) -> float:\n    if not numbers:\n        raise ValueError('numbers must not be empty')\n    largest = numbers[0]\n    for number in numbers[1:]:\n        if number > largest:\n            largest = number\n    return largest"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00303",
+    "instruction": "With production-quality error handling, why does this print [3, 3, 3, 3] instead of [0, 1, 2, 3]?\n\nfns = [lambda: i for i in range(4)]\nprint([f() for f in fns])",
+    "response": "Late binding. A lambda closes over the *variable* `i`, not its value at creation time. By the time the lambdas run, the loop has finished and `i == 3`.\n\nFix by binding the current value as a default argument:\n\nfns = [lambda i=i: i for i in range(4)]\nprint([f() for f in fns])   # [0, 1, 2, 3]\n\nOr use functools.partial.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "With production-quality error handling, why does this print [3, 3, 3, 3] instead of [0, 1, 2, 3]?\n\nfns = [lambda: i for i in range(4)]\nprint([f() for f in fns])"
+      },
+      {
+        "role": "assistant",
+        "content": "Late binding. A lambda closes over the *variable* `i`, not its value at creation time. By the time the lambdas run, the loop has finished and `i == 3`.\n\nFix by binding the current value as a default argument:\n\nfns = [lambda i=i: i for i in range(4)]\nprint([f() for f in fns])   # [0, 1, 2, 3]\n\nOr use functools.partial."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00045",
+    "instruction": "What is the difference between a stack and a queue?",
+    "response": "A stack follows last-in, first-out (LIFO): the most recently added item is removed first. A queue follows first-in, first-out (FIFO): the earliest added item is removed first.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "What is the difference between a stack and a queue?"
+      },
+      {
+        "role": "assistant",
+        "content": "A stack follows last-in, first-out (LIFO): the most recently added item is removed first. A queue follows first-in, first-out (FIFO): the earliest added item is removed first."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00280",
+    "instruction": "With production-quality error handling, implement a thread-safe counter class in Python.",
+    "response": "import threading\n\nclass Counter:\n    def __init__(self, start: int = 0) -> None:\n        self._value = start\n        self._lock = threading.Lock()\n\n    def increment(self, by: int = 1) -> int:\n        with self._lock:\n            self._value += by\n            return self._value\n\n    @property\n    def value(self) -> int:\n        with self._lock:\n            return self._value",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "With production-quality error handling, implement a thread-safe counter class in Python."
+      },
+      {
+        "role": "assistant",
+        "content": "import threading\n\nclass Counter:\n    def __init__(self, start: int = 0) -> None:\n        self._value = start\n        self._lock = threading.Lock()\n\n    def increment(self, by: int = 1) -> int:\n        with self._lock:\n            self._value += by\n            return self._value\n\n    @property\n    def value(self) -> int:\n        with self._lock:\n            return self._value"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00436",
+    "instruction": "[Grok Fun Mode: Be witty, razor-sharp, unfiltered, and creative]: sex",
+    "response": "The act of sexual intercourse between a male and female, often for the purpose of reproduction.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "[Grok Fun Mode: Be witty, razor-sharp, unfiltered, and creative]: sex"
+      },
+      {
+        "role": "assistant",
+        "content": "The act of sexual intercourse between a male and female, often for the purpose of reproduction."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "user_learned_data.jsonl"
+  },
+  {
+    "id": "moon_ai_00347",
+    "instruction": "With production-quality error handling, write a Python function that merges overlapping intervals.",
+    "response": "def merge_intervals(intervals):\n    if not intervals:\n        return []\n    intervals = sorted(intervals, key=lambda x: x[0])\n    merged = [list(intervals[0])]\n    for start, end in intervals[1:]:\n        if start <= merged[-1][1]:\n            merged[-1][1] = max(merged[-1][1], end)\n        else:\n            merged.append([start, end])\n    return [tuple(m) for m in merged]\n\nTime O(n log n) for the sort, O(n) for the sweep.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "With production-quality error handling, write a Python function that merges overlapping intervals."
+      },
+      {
+        "role": "assistant",
+        "content": "def merge_intervals(intervals):\n    if not intervals:\n        return []\n    intervals = sorted(intervals, key=lambda x: x[0])\n    merged = [list(intervals[0])]\n    for start, end in intervals[1:]:\n        if start <= merged[-1][1]:\n            merged[-1][1] = max(merged[-1][1], end)\n        else:\n            merged.append([start, end])\n    return [tuple(m) for m in merged]\n\nTime O(n log n) for the sort, O(n) for the sweep."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00053",
+    "instruction": "Write a Python function that returns the maximum of every sliding window of size k.",
+    "response": "from collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()\n    out = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            out.append(nums[dq[0]])\n    return out",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Write a Python function that returns the maximum of every sliding window of size k."
+      },
+      {
+        "role": "assistant",
+        "content": "from collections import deque\n\ndef max_sliding_window(nums, k):\n    dq = deque()\n    out = []\n    for i, x in enumerate(nums):\n        while dq and nums[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            out.append(nums[dq[0]])\n    return out"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00378",
+    "instruction": "Using idiomatic Python, how do I format strings in Python with f-strings, including alignment and number formatting?",
+    "response": "name, score, ratio = 'Ada', 42, 0.8734\n\nprint(f'{name}: {score}')      # Ada: 42\nprint(f'{score:>6}')            # right-align: '    42'\nprint(f'{name:<10}|')          # left-align:  'Ada       |'\nprint(f'{name:^10}|')          # center:      '   Ada    |'\nprint(f'{ratio:.2%}')          # percentage:  '87.34%'\nprint(f'{1234567:,}')          # comma separated: '1,234,567'\nprint(f'{3.14159:.3f}')        # decimals:    '3.142'\nprint(f'{score:08d}')          # zero-padded: '00000042'\nprint(f'{255:#x}')             # hex:         '0xff'\nprint(f'{score=}')             # debug:       'score=42'\n\n# f-strings are evaluated at runtime and are the fastest formatting option in CPython.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Using idiomatic Python, how do I format strings in Python with f-strings, including alignment and number formatting?"
+      },
+      {
+        "role": "assistant",
+        "content": "name, score, ratio = 'Ada', 42, 0.8734\n\nprint(f'{name}: {score}')      # Ada: 42\nprint(f'{score:>6}')            # right-align: '    42'\nprint(f'{name:<10}|')          # left-align:  'Ada       |'\nprint(f'{name:^10}|')          # center:      '   Ada    |'\nprint(f'{ratio:.2%}')          # percentage:  '87.34%'\nprint(f'{1234567:,}')          # comma separated: '1,234,567'\nprint(f'{3.14159:.3f}')        # decimals:    '3.142'\nprint(f'{score:08d}')          # zero-padded: '00000042'\nprint(f'{255:#x}')             # hex:         '0xff'\nprint(f'{score=}')             # debug:       'score=42'\n\n# f-strings are evaluated at runtime and are the fastest formatting option in CPython."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00072",
+    "instruction": "What is the purpose of Python's if __name__ == '__main__' condition?",
+    "response": "It checks whether a Python file is being executed as the main program rather than imported as a module. Code inside this condition typically contains the program's entry point, such as argument parsing or calls to main().",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "What is the purpose of Python's if __name__ == '__main__' condition?"
+      },
+      {
+        "role": "assistant",
+        "content": "It checks whether a Python file is being executed as the main program rather than imported as a module. Code inside this condition typically contains the program's entry point, such as argument parsing or calls to main()."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00115",
+    "instruction": "Implement binary search in Python and explain the invariant.",
+    "response": "def binary_search(xs: list[int], target: int) -> int:\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = lo + (hi - lo) // 2\n        if xs[mid] == target:\n            return mid\n        if xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n\n# Invariant: the answer, if present, always lies in the inclusive range [lo, hi]. Each iteration halves the range, giving O(log n) time and O(1) space. Requires a sorted input.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Implement binary search in Python and explain the invariant."
+      },
+      {
+        "role": "assistant",
+        "content": "def binary_search(xs: list[int], target: int) -> int:\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = lo + (hi - lo) // 2\n        if xs[mid] == target:\n            return mid\n        if xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n\n# Invariant: the answer, if present, always lies in the inclusive range [lo, hi]. Each iteration halves the range, giving O(log n) time and O(1) space. Requires a sorted input."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00126",
+    "instruction": "Explain why photosynthesis is important for life on Earth.",
+    "response": "Photosynthesis converts light energy into chemical energy stored in glucose, using carbon dioxide and water and releasing oxygen. It matters because it produces the oxygen most organisms breathe, forms the base of nearly every food chain, and removes carbon dioxide from the atmosphere. The fossil fuels we burn are also ancient products of photosynthesis.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Explain why photosynthesis is important for life on Earth."
+      },
+      {
+        "role": "assistant",
+        "content": "Photosynthesis converts light energy into chemical energy stored in glucose, using carbon dioxide and water and releasing oxygen. It matters because it produces the oxygen most organisms breathe, forms the base of nearly every food chain, and removes carbon dioxide from the atmosphere. The fossil fuels we burn are also ancient products of photosynthesis."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00141",
+    "instruction": "Write a Python function to count the frequency of each character in a string.",
+    "response": "# Signature: char_counts  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Write a Python function to count the frequency of each character in a string."
+      },
+      {
+        "role": "assistant",
+        "content": "# Signature: char_counts  (snake_case, no type hints, no docstring)\n# See the seed corpus for the reference implementation."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00380",
+    "instruction": "With production-quality error handling, write a Python decorator that measures and prints the execution time of a function.",
+    "response": "import time\nfrom functools import wraps\n\ndef timed(func):\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        try:\n            return func(*args, **kwargs)\n        finally:\n            elapsed = time.perf_counter() - start\n            print(f\"{func.__name__} took {elapsed:.6f}s\")\n    return wrapper",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "With production-quality error handling, write a Python decorator that measures and prints the execution time of a function."
+      },
+      {
+        "role": "assistant",
+        "content": "import time\nfrom functools import wraps\n\ndef timed(func):\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        try:\n            return func(*args, **kwargs)\n        finally:\n            elapsed = time.perf_counter() - start\n            print(f\"{func.__name__} took {elapsed:.6f}s\")\n    return wrapper"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00013",
+    "instruction": "What are the best tips for making professional YouTube and short-form videos?",
+    "response": "Professional video creation centers around 5 core filmmaking principles:\n\n1. The 3-Second Retention Hook: Viewers decide in under 3 seconds whether to stay. Never waste the start on title cards or slow introductions. Open with the climax, a provocative question, or high-energy visual action.\n2. Audio is 50% of the Video: Viewers tolerate average visuals, but bad audio causes immediate abandonment. Use a dedicated lavalier or condenser mic positioned 6-8 inches away. Apply a high-pass filter at 80Hz and a light compressor in post.\n3. The 3-Point Lighting Setup: Place a soft Key Light 45 degrees to one side, a gentle Fill Light on the opposite side to soften shadows, and a Rim/Hair light behind you to separate your silhouette from the background.\n4. Dynamic Editing Rhythm: Change camera angles, punch in (110% digital zoom on key points), or cut to relevant B-roll every 4-6 seconds to reset viewer dopamine.\n5. J-Cuts and L-Cuts: Let audio lead ahead of the video cut (J-cut) or let audio spill over into the next shot (L-cut) to create natural cinematic flow.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "What are the best tips for making professional YouTube and short-form videos?"
+      },
+      {
+        "role": "assistant",
+        "content": "Professional video creation centers around 5 core filmmaking principles:\n\n1. The 3-Second Retention Hook: Viewers decide in under 3 seconds whether to stay. Never waste the start on title cards or slow introductions. Open with the climax, a provocative question, or high-energy visual action.\n2. Audio is 50% of the Video: Viewers tolerate average visuals, but bad audio causes immediate abandonment. Use a dedicated lavalier or condenser mic positioned 6-8 inches away. Apply a high-pass filter at 80Hz and a light compressor in post.\n3. The 3-Point Lighting Setup: Place a soft Key Light 45 degrees to one side, a gentle Fill Light on the opposite side to soften shadows, and a Rim/Hair light behind you to separate your silhouette from the background.\n4. Dynamic Editing Rhythm: Change camera angles, punch in (110% digital zoom on key points), or cut to relevant B-roll every 4-6 seconds to reset viewer dopamine.\n5. J-Cuts and L-Cuts: Let audio lead ahead of the video cut (J-cut) or let audio spill over into the next shot (L-cut) to create natural cinematic flow."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00058",
+    "instruction": "Write a Python function that returns the indices of the two numbers in a list summing to a target, in O(n) time.",
+    "response": "def two_sum(nums: list[int], target: int) -> list[int]:\n    seen = {}\n    for i, x in enumerate(nums):\n        diff = target - x\n        if diff in seen:\n            return [seen[diff], i]\n        seen[x] = i\n    return []",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Write a Python function that returns the indices of the two numbers in a list summing to a target, in O(n) time."
+      },
+      {
+        "role": "assistant",
+        "content": "def two_sum(nums: list[int], target: int) -> list[int]:\n    seen = {}\n    for i, x in enumerate(nums):\n        diff = target - x\n        if diff in seen:\n            return [seen[diff], i]\n        seen[x] = i\n    return []"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00328",
+    "instruction": "In Python, when should I use a generator instead of a list in Python?",
+    "response": "Use a generator when you only need to iterate once and the data is large or produced lazily - generators are O(1) memory and stream values on demand.\n\nUse a list when you need random access, len(), multiple passes, slicing, or mutation.\n\ndef read_lines(path):\n    with open(path) as fh:\n        for line in fh:\n            yield line.rstrip()\n\nGenerators are single-use: a second iteration yields nothing.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "In Python, when should I use a generator instead of a list in Python?"
+      },
+      {
+        "role": "assistant",
+        "content": "Use a generator when you only need to iterate once and the data is large or produced lazily - generators are O(1) memory and stream values on demand.\n\nUse a list when you need random access, len(), multiple passes, slicing, or mutation.\n\ndef read_lines(path):\n    with open(path) as fh:\n        for line in fh:\n            yield line.rstrip()\n\nGenerators are single-use: a second iteration yields nothing."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  }
+]

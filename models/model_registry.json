@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "current_best_model": {
+    "name": "Moon AI Sovereign (7.6B v1)",
+    "checkpoint": "Moon-AI-v1.Q4_K_M.gguf",
+    "composite_score": 75.0,
+    "promoted_at": "2026-10-27T16:03:47.493285+00:00"
+  },
+  "promotion_history": [
+    {
+      "candidate_name": "scratch",
+      "evaluated_at": "2026-10-27T16:03:47.494873+00:00",
+      "status": "REJECTED",
+      "score": 65.3,
+      "reasons": [
+        "Candidate score (65.3) regressed compared to current best (75.0)."
+      ]
+    }
+  ]
+}

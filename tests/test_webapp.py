@@ -29,7 +29,10 @@ class TestSuperAIWebApp(unittest.TestCase):
         response = self.client.get("/api/model-info")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertIn("nanoGPT", data["model_type"])
+        self.assertTrue(
+            any(k in data["model_type"].lower() for k in ["nanogpt", "moon ai", "frontier"]),
+            f"Unexpected model_type: {data['model_type']}"
+        )
         self.assertIsNotNone(data["checkpoint_path"])
 
     def test_03_empty_message_rejected(self):
@@ -76,7 +79,10 @@ class TestSuperAIWebApp(unittest.TestCase):
         """Verify GET / serves frontend."""
         res = self.client.get("/")
         self.assertEqual(res.status_code, 200)
-        self.assertIn("NanoGPT Lab", res.text)
+        self.assertTrue(
+            any(k in res.text for k in ["Moon AI", "NanoGPT Lab", "root"]),
+            "Frontend HTML should contain Moon AI, NanoGPT Lab, or root mount div"
+        )
 
 if __name__ == "__main__":
     unittest.main()

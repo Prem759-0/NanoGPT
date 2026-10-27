@@ -20,12 +20,14 @@ class ModelService:
 
     ALLOWED_CHECKPOINT_DIRS = [
         "out-assistant",
-        "out-shakespeare-char",
+        "out-nanogpt-scratch",
         "out",
     ]
 
-    def __init__(self, base_dir: Optional[str] = None):
+    def __init__(self, base_dir: Optional[str] = None, preferred_checkpoint: Optional[str] = None):
         self.base_dir = base_dir or os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        self.preferred_checkpoint = preferred_checkpoint
+        self.debug_mode = os.environ.get("DEBUG_INFERENCE") == "1"
         self.model = None
         self.llama_model = None
         self.model_args = None
@@ -141,12 +143,36 @@ class ModelService:
         """Finds best available GGUF model (prioritizing 7B Qwen Coder, then LLaMA 1B)."""
         return self.find_qwen_gguf() or self.find_llama_gguf()
 
-    def find_checkpoint(self) -> Optional[str]:
-        """Safely scans allowed directories within the project for a local scratch checkpoint."""
+    def find_checkpoint(self, preferred_path: Optional[str] = None) -> Optional[str]:
+        """
+        Safely locates an explicit or default scratch assistant checkpoint.
+        Prioritizes:
+        1. Explicit preferred_path parameter (no fallback if specified)
+        2. self.preferred_checkpoint (no fallback if specified)
+        3. Environment variable NANOGPT_CHECKPOINT_PATH (no fallback if specified)
+        4. Environment variable NANOGPT_CHECKPOINT_DIR/ckpt.pt (no fallback if specified)
+        5. out-assistant/ckpt.pt or out-nanogpt-scratch/ckpt.pt (default dirs)
+        NEVER silently falls back to Shakespeare or unrelated datasets.
+        """
+        if preferred_path:
+            return os.path.abspath(preferred_path) if os.path.isfile(preferred_path) else None
+
+        if getattr(self, "preferred_checkpoint", None):
+            return os.path.abspath(self.preferred_checkpoint) if os.path.isfile(self.preferred_checkpoint) else None
+
+        env_path = os.environ.get("NANOGPT_CHECKPOINT_PATH")
+        if env_path:
+            return os.path.abspath(env_path) if os.path.isfile(env_path) else None
+
+        env_dir = os.environ.get("NANOGPT_CHECKPOINT_DIR")
+        if env_dir:
+            cand = os.path.join(env_dir, "ckpt.pt")
+            return os.path.abspath(cand) if os.path.isfile(cand) else None
+
         for rel_dir in self.ALLOWED_CHECKPOINT_DIRS:
             candidate = os.path.join(self.base_dir, rel_dir, "ckpt.pt")
             if os.path.isfile(candidate):
-                return candidate
+                return os.path.abspath(candidate)
         return None
 
     def get_status(self) -> str:
@@ -356,7 +382,7 @@ class ModelService:
                 ckpt_path = self.find_checkpoint()
                 if not ckpt_path:
                     self.model = None
-                    self.error_message = "No local trained checkpoint found on disk."
+                    self.error_message = "No local scratch assistant checkpoint found on disk. Expected out-assistant/ckpt.pt or NANOGPT_CHECKPOINT_PATH."
                     return False
 
                 try:
@@ -364,6 +390,10 @@ class ModelService:
                     from model import GPTConfig, GPT
 
                     checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=False)
+                    if not isinstance(checkpoint, dict) or "model" not in checkpoint or "model_args" not in checkpoint:
+                        self.error_message = f"Invalid checkpoint format in {ckpt_path}: missing required 'model' or 'model_args' keys."
+                        return False
+
                     model_args = checkpoint.get("model_args", {})
                     self.model_args = model_args
                     gptconf = GPTConfig(**model_args)
@@ -386,9 +416,15 @@ class ModelService:
                     self.active_model_name = "scratch"
                     self.current_checkpoint_path = os.path.relpath(ckpt_path, self.base_dir)
                     self.checkpoint_meta = checkpoint.get("config", {})
-                    self.dataset_name = self.checkpoint_meta.get("dataset", "assistant_chat")
+                    if not self.checkpoint_meta:
+                        self.checkpoint_meta = {
+                            "iter_num": checkpoint.get("iter_num"),
+                            "best_val_loss": checkpoint.get("best_val_loss"),
+                        }
+                    self.dataset_name = checkpoint.get("config", {}).get("dataset", "assistant_chat")
                     
-                    self._setup_scratch_tokenizer(self.dataset_name)
+                    # Strict tokenizer setup and validation (fails loudly if meta.pkl is missing)
+                    self._setup_scratch_tokenizer(ckpt_path=ckpt_path, dataset=self.dataset_name)
                     self.error_message = None
                     return True
                 except Exception as e:
@@ -399,27 +435,53 @@ class ModelService:
                 self.error_message = f"Unknown model name: {target}"
                 return False
 
-    def _setup_scratch_tokenizer(self, dataset: str):
-        """Loads dataset-specific character mapping (meta.pkl)."""
-        meta_path = os.path.join(self.base_dir, "data", dataset, "meta.pkl")
-        if os.path.exists(meta_path):
-            with open(meta_path, "rb") as f:
-                meta = pickle.load(f)
-            stoi, itos = meta["stoi"], meta["itos"]
-            self.vocab_size = meta.get("vocab_size", len(stoi))
-            
-            def char_encode(s: str) -> List[int]:
-                return [stoi.get(c, stoi.get(" ", 0)) for c in s]
-                
-            def char_decode(tokens: List[int]) -> str:
-                return "".join([itos.get(i, "?") for i in tokens])
-                
-            self.encode_fn = char_encode
-            self.decode_fn = char_decode
-        else:
-            self.encode_fn = lambda s: [ord(c) % 256 for c in s]
-            self.decode_fn = lambda tokens: "".join([chr(t) for t in tokens])
-            self.vocab_size = 256
+    def _setup_scratch_tokenizer(self, ckpt_path: str, dataset: str):
+        """
+        Loads dataset-specific character mapping (meta.pkl) and validates it against model_args.
+        Strictly fails if metadata is missing or vocabulary size does not match checkpoint.
+        """
+        ckpt_meta_path = os.path.join(os.path.dirname(ckpt_path), "meta.pkl")
+        data_meta_path = os.path.join(self.base_dir, "data", dataset, "meta.pkl")
+
+        meta_path = None
+        if os.path.isfile(ckpt_meta_path):
+            meta_path = ckpt_meta_path
+        elif os.path.isfile(data_meta_path):
+            meta_path = data_meta_path
+
+        if not meta_path or not os.path.isfile(meta_path):
+            raise FileNotFoundError(
+                f"Required tokenizer metadata (meta.pkl) is missing. Checked '{ckpt_meta_path}' and '{data_meta_path}'. "
+                f"Scratch model cannot run deterministic inference without matching character vocabulary mapping."
+            )
+
+        with open(meta_path, "rb") as f:
+            meta = pickle.load(f)
+
+        if "stoi" not in meta or "itos" not in meta:
+            raise ValueError(f"Malformed meta.pkl at {meta_path}: missing required 'stoi' or 'itos' dictionaries.")
+
+        stoi, itos = meta["stoi"], meta["itos"]
+        meta_vocab_size = meta.get("vocab_size", len(stoi))
+
+        if self.model_args and self.model_args.get("vocab_size") is not None:
+            expected_vocab = self.model_args["vocab_size"]
+            if expected_vocab != meta_vocab_size:
+                raise ValueError(
+                    f"Vocabulary size mismatch: checkpoint model_args specifies vocab_size={expected_vocab}, "
+                    f"but tokenizer at {meta_path} defines vocab_size={meta_vocab_size}."
+                )
+
+        self.vocab_size = meta_vocab_size
+
+        def char_encode(s: str) -> List[int]:
+            return [stoi.get(c, stoi.get(" ", 0)) for c in s]
+
+        def char_decode(tokens: List[int]) -> str:
+            return "".join([itos.get(i, "?") for i in tokens])
+
+        self.encode_fn = char_encode
+        self.decode_fn = char_decode
 
     def switch_model(self, model_name: str) -> bool:
         """Switches active model between 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', and 'scratch'."""
@@ -436,6 +498,19 @@ class ModelService:
             success = self.load_model(self.active_model_name)
             if not success:
                 raise ModelNotTrainedException(self.error_message or "Model could not be initialized.")
+
+        # Handle empty prompt
+        if not prompt or not prompt.strip():
+            return {
+                "reply": "[Error: Empty prompt provided. Please enter a valid message.]",
+                "raw_reply": "",
+                "stop_reason": "empty_prompt",
+                "full_text": "",
+                "model_name": self.active_model_name,
+                "prompt_length": 0,
+                "tokens_generated": 0,
+                "device": self.device
+            }
 
         # Strip /code prefix if provided
         clean_prompt = prompt.strip()
@@ -600,8 +675,10 @@ class ModelService:
                     raise
 
             reply = res["choices"][0]["message"].get("content", "").strip()
+            raw_reply = reply
+            stop_reason = res["choices"][0].get("finish_reason", "stop")
             if not reply:
-                reply = "I understand. How can I assist you with your code today?"
+                reply = "[Diagnostic: Empty response received from GGUF inference engine.]"
 
             usage = res.get("usage", {})
             if is_qwen:
@@ -612,6 +689,8 @@ class ModelService:
             dev_label = "NVIDIA GPU (CUDA 4-Bit Acceleration)" if (self.device == "cuda" or os.environ.get("USE_GPU") == "1") else "CPU (AVX2 4-Bit Quantized)"
             return {
                 "reply": reply,
+                "raw_reply": raw_reply,
+                "stop_reason": stop_reason,
                 "full_text": reply,
                 "model_name": display_model_name,
                 "prompt_length": usage.get("prompt_tokens", len(clean_prompt)),
@@ -650,8 +729,10 @@ class ModelService:
         start_ids = self.encode_fn(prompt_str)
         
         block_size = getattr(self.model_config, "block_size", 1024 if self.active_model_name == "gpt2" else 128)
-        if len(start_ids) >= block_size:
+        prompt_len = len(start_ids)
+        if prompt_len >= block_size:
             start_ids = start_ids[-(block_size - 1):]
+            prompt_len = len(start_ids)
 
         x = torch.tensor(start_ids, dtype=torch.long, device=self.device)[None, ...]
         capped_tokens = min(max_new_tokens, 150)
@@ -667,24 +748,37 @@ class ModelService:
         generated_tokens = y[0].tolist()
         full_text = self.decode_fn(generated_tokens)
         
-        prompt_len = len(start_ids)
         new_token_ids = generated_tokens[prompt_len:]
         raw_reply = self.decode_fn(new_token_ids) if new_token_ids else full_text[len(prompt_str):]
         
         clean_reply = raw_reply.strip()
+        stop_reason = "max_tokens_reached"
         stop_markers = ["\nUser:", "\nAssistant:", "\n\nUser", "<|endoftext|>"]
         for marker in stop_markers:
             if marker in clean_reply:
                 clean_reply = clean_reply.split(marker)[0].strip()
+                stop_reason = f"stop_marker ({marker.strip()})"
+                break
+
+        if len(new_token_ids) == 0:
+            stop_reason = "zero_tokens_generated"
 
         if not clean_reply:
-            clean_reply = "I understand. How else can I assist your coding or exploration today?"
+            if self.active_model_name == "scratch":
+                clean_reply = f"[Diagnostic: Scratch model emitted 0 readable tokens (iter_num={self.checkpoint_meta.get('iter_num', 'N/A')}, val_loss={self.checkpoint_meta.get('best_val_loss', 'N/A')}). Train more steps on assistant_chat to improve vocabulary confidence.]"
+            else:
+                clean_reply = "[Diagnostic: Model generation returned empty response.]"
+
+        if os.environ.get("DEBUG_INFERENCE") == "1" or self.debug_mode:
+            print(f"[Inference Diagnostic] model={self.active_model_name} prompt_tokens={prompt_len} gen_tokens={len(new_token_ids)} stop_reason={stop_reason} raw_reply={repr(raw_reply[:80])}")
 
         return {
             "reply": clean_reply,
+            "raw_reply": raw_reply,
+            "stop_reason": stop_reason,
             "full_text": full_text,
             "model_name": f"NanoGPT - {'Light (124M)' if self.active_model_name == 'gpt2' else 'Core (0.8M)'}",
-            "prompt_length": len(start_ids),
+            "prompt_length": prompt_len,
             "tokens_generated": len(new_token_ids),
             "device": self.device
         }

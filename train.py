@@ -284,6 +284,10 @@ while True:
                 }
                 print(f"saving checkpoint to {out_dir}")
                 torch.save(checkpoint, os.path.join(out_dir, 'ckpt.pt'))
+                # Also copy tokenizer meta.pkl into checkpoint directory for self-contained portability
+                if os.path.exists(os.path.join(data_dir, 'meta.pkl')):
+                    import shutil
+                    shutil.copy(os.path.join(data_dir, 'meta.pkl'), os.path.join(out_dir, 'meta.pkl'))
     if iter_num == 0 and eval_only:
         break
 

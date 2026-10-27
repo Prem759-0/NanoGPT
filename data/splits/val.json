@@ -1,0 +1,443 @@
+[
+  {
+    "id": "moon_ai_00111",
+    "instruction": "Implement merge sort in Python with O(n log n) time complexity.",
+    "response": "def merge_sort(xs: list[int]) -> list[int]:\n    if len(xs) <= 1:\n        return xs\n    mid = len(xs) // 2\n    left = merge_sort(xs[:mid])\n    right = merge_sort(xs[mid:])\n    out, i, j = [], 0, 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            out.append(left[i]); i += 1\n        else:\n            out.append(right[j]); j += 1\n    out.extend(left[i:])\n    out.extend(right[j:])\n    return out\n\n# Stable, O(n log n) worst case, O(n) auxiliary space.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Implement merge sort in Python with O(n log n) time complexity."
+      },
+      {
+        "role": "assistant",
+        "content": "def merge_sort(xs: list[int]) -> list[int]:\n    if len(xs) <= 1:\n        return xs\n    mid = len(xs) // 2\n    left = merge_sort(xs[:mid])\n    right = merge_sort(xs[mid:])\n    out, i, j = [], 0, 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            out.append(left[i]); i += 1\n        else:\n            out.append(right[j]); j += 1\n    out.extend(left[i:])\n    out.extend(right[j:])\n    return out\n\n# Stable, O(n log n) worst case, O(n) auxiliary space."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00080",
+    "instruction": "How do I read a very large CSV file in Python without loading it all into memory?",
+    "response": "import csv\nfrom typing import Iterator\n\ndef iter_batches(path: str, batch_size: int = 10_000) -> Iterator[list]:\n    with open(path, newline='', encoding='utf-8') as fh:\n        reader = csv.DictReader(fh)\n        batch = []\n        for row in reader:\n            batch.append(row)\n            if len(batch) >= batch_size:\n                yield batch\n                batch = []\n        if batch:\n            yield batch",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "How do I read a very large CSV file in Python without loading it all into memory?"
+      },
+      {
+        "role": "assistant",
+        "content": "import csv\nfrom typing import Iterator\n\ndef iter_batches(path: str, batch_size: int = 10_000) -> Iterator[list]:\n    with open(path, newline='', encoding='utf-8') as fh:\n        reader = csv.DictReader(fh)\n        batch = []\n        for row in reader:\n            batch.append(row)\n            if len(batch) >= batch_size:\n                yield batch\n                batch = []\n        if batch:\n            yield batch"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00405",
+    "instruction": "Compare `==` vs `is` with a concrete example.",
+    "response": "Key idea: value equality vs object identity. Expand with a minimal runnable example.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Compare `==` vs `is` with a concrete example."
+      },
+      {
+        "role": "assistant",
+        "content": "Key idea: value equality vs object identity. Expand with a minimal runnable example."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00175",
+    "instruction": "Provide a Python solution that can compute the running maximum of a sequence. Include a brief docstring.",
+    "response": "# Signature: running_max  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Provide a Python solution that can compute the running maximum of a sequence. Include a brief docstring."
+      },
+      {
+        "role": "assistant",
+        "content": "# Signature: running_max  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00424",
+    "instruction": "What is threading vs multiprocessing and when does it matter?",
+    "response": "Key idea: I/O-bound vs CPU-bound workloads. Expand with a minimal runnable example.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "What is threading vs multiprocessing and when does it matter?"
+      },
+      {
+        "role": "assistant",
+        "content": "Key idea: I/O-bound vs CPU-bound workloads. Expand with a minimal runnable example."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00358",
+    "instruction": "Using idiomatic Python, implement an in-place quicksort in Python with a randomized pivot.",
+    "response": "import random\n\ndef quicksort(xs):\n    def sort(lo, hi):\n        if lo >= hi:\n            return\n        p = random.randint(lo, hi)\n        xs[p], xs[hi] = xs[hi], xs[p]\n        pivot, store = xs[hi], lo\n        for i in range(lo, hi):\n            if xs[i] < pivot:\n                xs[store], xs[i] = xs[i], xs[store]\n                store += 1\n        xs[store], xs[hi] = xs[hi], xs[store]\n        sort(lo, store - 1)\n        sort(store + 1, hi)\n    sort(0, len(xs) - 1)\n    return xs\n\n# Average O(n log n); worst O(n^2) but randomization makes it unlikely.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Using idiomatic Python, implement an in-place quicksort in Python with a randomized pivot."
+      },
+      {
+        "role": "assistant",
+        "content": "import random\n\ndef quicksort(xs):\n    def sort(lo, hi):\n        if lo >= hi:\n            return\n        p = random.randint(lo, hi)\n        xs[p], xs[hi] = xs[hi], xs[p]\n        pivot, store = xs[hi], lo\n        for i in range(lo, hi):\n            if xs[i] < pivot:\n                xs[store], xs[i] = xs[i], xs[store]\n                store += 1\n        xs[store], xs[hi] = xs[hi], xs[store]\n        sort(lo, store - 1)\n        sort(store + 1, hi)\n    sort(0, len(xs) - 1)\n    return xs\n\n# Average O(n log n); worst O(n^2) but randomization makes it unlikely."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00082",
+    "instruction": "Write a Python context manager that times a block of code.",
+    "response": "import time\nfrom contextlib import contextmanager\n\n@contextmanager\ndef timer(label: str = ''):\n    start = time.perf_counter()\n    try:\n        yield\n    finally:\n        elapsed = time.perf_counter() - start\n        tag = label + ': ' if label else ''\n        print(f'{tag}{elapsed * 1000:.2f} ms')",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Write a Python context manager that times a block of code."
+      },
+      {
+        "role": "assistant",
+        "content": "import time\nfrom contextlib import contextmanager\n\n@contextmanager\ndef timer(label: str = ''):\n    start = time.perf_counter()\n    try:\n        yield\n    finally:\n        elapsed = time.perf_counter() - start\n        tag = label + ': ' if label else ''\n        print(f'{tag}{elapsed * 1000:.2f} ms')"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00389",
+    "instruction": "With production-quality error handling, explain why photosynthesis is important for life on Earth.",
+    "response": "Photosynthesis converts light energy into chemical energy stored in glucose, using carbon dioxide and water and releasing oxygen. It matters because it produces the oxygen most organisms breathe, forms the base of nearly every food chain, and removes carbon dioxide from the atmosphere. The fossil fuels we burn are also ancient products of photosynthesis.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "With production-quality error handling, explain why photosynthesis is important for life on Earth."
+      },
+      {
+        "role": "assistant",
+        "content": "Photosynthesis converts light energy into chemical energy stored in glucose, using carbon dioxide and water and releasing oxygen. It matters because it produces the oxygen most organisms breathe, forms the base of nearly every food chain, and removes carbon dioxide from the atmosphere. The fossil fuels we burn are also ancient products of photosynthesis."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00004",
+    "instruction": "Give me the best tips for studying and learning effectively.",
+    "response": "Here are the top 5 science-backed strategies for master-level studying and retention:\n\n1. The Feynman Technique: Explain the concept on paper in plain language as if teaching a 10-year-old child. Identify every point where you resort to jargon, then return to your notes until your explanation is simple and intuitive.\n2. Active Recall: Never reread notes passively. Close the book and write down everything you remember from memory (the 'blurting' method). Testing yourself creates 3x stronger synaptic pathways.\n3. Spaced Repetition: Review information at expanding intervals: Day 1 -> Day 3 -> Day 7 -> Day 14 -> Day 30. Use Anki or flashcards to prevent the Ebbinghaus forgetting curve.\n4. The Pomodoro Technique (25/5): Work for 25 minutes of zero-distraction focus, followed by 5 minutes of rest. During breaks, stretch or drink water—do not scroll social media, which drains dopamine.\n5. Sleep Memory Consolidation: Short-term memories are transferred to long-term storage during slow-wave and REM sleep. Sacrificing sleep destroys cognitive recall.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Give me the best tips for studying and learning effectively."
+      },
+      {
+        "role": "assistant",
+        "content": "Here are the top 5 science-backed strategies for master-level studying and retention:\n\n1. The Feynman Technique: Explain the concept on paper in plain language as if teaching a 10-year-old child. Identify every point where you resort to jargon, then return to your notes until your explanation is simple and intuitive.\n2. Active Recall: Never reread notes passively. Close the book and write down everything you remember from memory (the 'blurting' method). Testing yourself creates 3x stronger synaptic pathways.\n3. Spaced Repetition: Review information at expanding intervals: Day 1 -> Day 3 -> Day 7 -> Day 14 -> Day 30. Use Anki or flashcards to prevent the Ebbinghaus forgetting curve.\n4. The Pomodoro Technique (25/5): Work for 25 minutes of zero-distraction focus, followed by 5 minutes of rest. During breaks, stretch or drink water—do not scroll social media, which drains dopamine.\n5. Sleep Memory Consolidation: Short-term memories are transferred to long-term storage during slow-wave and REM sleep. Sacrificing sleep destroys cognitive recall."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00143",
+    "instruction": "Provide a Python solution that can count the frequency of each character in a string. Include a brief docstring.",
+    "response": "# Signature: char_counts  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Provide a Python solution that can count the frequency of each character in a string. Include a brief docstring."
+      },
+      {
+        "role": "assistant",
+        "content": "# Signature: char_counts  (snake_case, full type hints, Google-style docstring)\n# See the seed corpus for the reference implementation."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00302",
+    "instruction": "For an interview setting, this function returns a list that keeps growing across calls. Explain the bug and fix it.\n\ndef add_item(x, bucket=[]):\n    bucket.append(x)\n    return bucket",
+    "response": "The default argument `bucket=[]` is evaluated once at function definition time, so every call that omits `bucket` shares and mutates the same list object.\n\nFix with a sentinel:\n\ndef add_item(x, bucket=None):\n    if bucket is None:\n        bucket = []\n    bucket.append(x)\n    return bucket\n\nRule: never use a mutable object as a default argument.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "For an interview setting, this function returns a list that keeps growing across calls. Explain the bug and fix it.\n\ndef add_item(x, bucket=[]):\n    bucket.append(x)\n    return bucket"
+      },
+      {
+        "role": "assistant",
+        "content": "The default argument `bucket=[]` is evaluated once at function definition time, so every call that omits `bucket` shares and mutates the same list object.\n\nFix with a sentinel:\n\ndef add_item(x, bucket=None):\n    if bucket is None:\n        bucket = []\n    bucket.append(x)\n    return bucket\n\nRule: never use a mutable object as a default argument."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00230",
+    "instruction": "For an interview setting, write a Python function that checks whether two strings are anagrams, ignoring case and spaces.",
+    "response": "from collections import Counter\n\ndef are_anagrams(first: str, second: str) -> bool:\n    normalize = lambda s: ''.join(s.lower().split())\n    return Counter(normalize(first)) == Counter(normalize(second))",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "For an interview setting, write a Python function that checks whether two strings are anagrams, ignoring case and spaces."
+      },
+      {
+        "role": "assistant",
+        "content": "from collections import Counter\n\ndef are_anagrams(first: str, second: str) -> bool:\n    normalize = lambda s: ''.join(s.lower().split())\n    return Counter(normalize(first)) == Counter(normalize(second))"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00113",
+    "instruction": "Write a Python function that finds the longest palindromic substring.",
+    "response": "def longest_palindrome(s: str) -> str:\n    if not s:\n        return ''\n    start, end = 0, 0\n\n    def expand(l, r):\n        while l >= 0 and r < len(s) and s[l] == s[r]:\n            l -= 1\n            r += 1\n        return l + 1, r - 1\n\n    for i in range(len(s)):\n        for l, r in (expand(i, i), expand(i, i + 1)):\n            if r - l > end - start:\n                start, end = l, r\n    return s[start:end + 1]\n\n# O(n^2) time, O(1) auxiliary space.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Write a Python function that finds the longest palindromic substring."
+      },
+      {
+        "role": "assistant",
+        "content": "def longest_palindrome(s: str) -> str:\n    if not s:\n        return ''\n    start, end = 0, 0\n\n    def expand(l, r):\n        while l >= 0 and r < len(s) and s[l] == s[r]:\n            l -= 1\n            r += 1\n        return l + 1, r - 1\n\n    for i in range(len(s)):\n        for l, r in (expand(i, i), expand(i, i + 1)):\n            if r - l > end - start:\n                start, end = l, r\n    return s[start:end + 1]\n\n# O(n^2) time, O(1) auxiliary space."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00215",
+    "instruction": "In Python, explain what a Python dictionary is and provide an example.",
+    "response": "A dictionary stores key-value pairs and allows efficient lookup by key. Keys must be hashable and unique. Example:\n\nstudent = {'name': 'Asha', 'age': 20}\nprint(student['name'])\n\nOutput:\nAsha",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "In Python, explain what a Python dictionary is and provide an example."
+      },
+      {
+        "role": "assistant",
+        "content": "A dictionary stores key-value pairs and allows efficient lookup by key. Keys must be hashable and unique. Example:\n\nstudent = {'name': 'Asha', 'age': 20}\nprint(student['name'])\n\nOutput:\nAsha"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00427",
+    "instruction": "remember that my developer name is Prem and my favorite animal is a cyber wolf",
+    "response": "🧠 **Learned & Saved to Long-Term Memory!**\n\nI have recorded this into my persistent knowledge bank:\n> *\"my developer name is Prem and my favorite animal is a cyber wolf\"*\n\n✨ I will remember and apply this across all our chat sessions, even if you refresh or start a new conversation.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "remember that my developer name is Prem and my favorite animal is a cyber wolf"
+      },
+      {
+        "role": "assistant",
+        "content": "🧠 **Learned & Saved to Long-Term Memory!**\n\nI have recorded this into my persistent knowledge bank:\n> *\"my developer name is Prem and my favorite animal is a cyber wolf\"*\n\n✨ I will remember and apply this across all our chat sessions, even if you refresh or start a new conversation."
+      }
+    ],
+    "category": "general_conversation",
+    "source": "user_learned_data.jsonl"
+  },
+  {
+    "id": "moon_ai_00360",
+    "instruction": "With production-quality error handling, write a Python function that finds the longest palindromic substring.",
+    "response": "def longest_palindrome(s: str) -> str:\n    if not s:\n        return ''\n    start, end = 0, 0\n\n    def expand(l, r):\n        while l >= 0 and r < len(s) and s[l] == s[r]:\n            l -= 1\n            r += 1\n        return l + 1, r - 1\n\n    for i in range(len(s)):\n        for l, r in (expand(i, i), expand(i, i + 1)):\n            if r - l > end - start:\n                start, end = l, r\n    return s[start:end + 1]\n\n# O(n^2) time, O(1) auxiliary space.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "With production-quality error handling, write a Python function that finds the longest palindromic substring."
+      },
+      {
+        "role": "assistant",
+        "content": "def longest_palindrome(s: str) -> str:\n    if not s:\n        return ''\n    start, end = 0, 0\n\n    def expand(l, r):\n        while l >= 0 and r < len(s) and s[l] == s[r]:\n            l -= 1\n            r += 1\n        return l + 1, r - 1\n\n    for i in range(len(s)):\n        for l, r in (expand(i, i), expand(i, i + 1)):\n            if r - l > end - start:\n                start, end = l, r\n    return s[start:end + 1]\n\n# O(n^2) time, O(1) auxiliary space."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00333",
+    "instruction": "With production-quality error handling, how do I memoize a function in Python with a bounded cache?",
+    "response": "Use functools.lru_cache (or functools.cache for an unbounded cache in 3.9+):\n\nfrom functools import lru_cache\n\n@lru_cache(maxsize=1024)\ndef fib(n: int) -> int:\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n\nfib.cache_info()\nfib.cache_clear()\n\nArguments must be hashable. For methods the cache is keyed on self, which keeps instances alive - prefer a per-instance cache or functools.cached_property.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "With production-quality error handling, how do I memoize a function in Python with a bounded cache?"
+      },
+      {
+        "role": "assistant",
+        "content": "Use functools.lru_cache (or functools.cache for an unbounded cache in 3.9+):\n\nfrom functools import lru_cache\n\n@lru_cache(maxsize=1024)\ndef fib(n: int) -> int:\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n\nfib.cache_info()\nfib.cache_clear()\n\nArguments must be hashable. For methods the cache is keyed on self, which keeps instances alive - prefer a per-instance cache or functools.cached_property."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00367",
+    "instruction": "In Python, implement binary search in Python and explain the invariant.",
+    "response": "def binary_search(xs: list[int], target: int) -> int:\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = lo + (hi - lo) // 2\n        if xs[mid] == target:\n            return mid\n        if xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n\n# Invariant: the answer, if present, always lies in the inclusive range [lo, hi]. Each iteration halves the range, giving O(log n) time and O(1) space. Requires a sorted input.",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "In Python, implement binary search in Python and explain the invariant."
+      },
+      {
+        "role": "assistant",
+        "content": "def binary_search(xs: list[int], target: int) -> int:\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = lo + (hi - lo) // 2\n        if xs[mid] == target:\n            return mid\n        if xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n\n# Invariant: the answer, if present, always lies in the inclusive range [lo, hi]. Each iteration halves the range, giving O(log n) time and O(1) space. Requires a sorted input."
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00102",
+    "instruction": "Explain the try/except/else/finally control flow in Python.",
+    "response": "try - code that may raise.\nexcept - handles matching exceptions; the first matching clause wins, so order from most specific to most general.\nelse - runs only if the try block completed without raising; keeps the try block minimal.\nfinally - always runs, even on return, break or an unhandled exception. Used for cleanup.\n\ntry:\n    data = load(path)\nexcept FileNotFoundError:\n    data = {}\nexcept (ValueError, KeyError) as exc:\n    log(exc)\n    raise\nelse:\n    validate(data)\nfinally:\n    close_handles()",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "Explain the try/except/else/finally control flow in Python."
+      },
+      {
+        "role": "assistant",
+        "content": "try - code that may raise.\nexcept - handles matching exceptions; the first matching clause wins, so order from most specific to most general.\nelse - runs only if the try block completed without raising; keeps the try block minimal.\nfinally - always runs, even on return, break or an unhandled exception. Used for cleanup.\n\ntry:\n    data = load(path)\nexcept FileNotFoundError:\n    data = {}\nexcept (ValueError, KeyError) as exc:\n    log(exc)\n    raise\nelse:\n    validate(data)\nfinally:\n    close_handles()"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00288",
+    "instruction": "In Python, implement an LRU cache in Python from scratch.",
+    "response": "from collections import OrderedDict\n\nclass LRUCache:\n    def __init__(self, capacity: int) -> None:\n        self.capacity = capacity\n        self._data = OrderedDict()\n\n    def get(self, key):\n        if key not in self._data:\n            return -1\n        self._data.move_to_end(key)\n        return self._data[key]\n\n    def put(self, key, value) -> None:\n        if key in self._data:\n            self._data.move_to_end(key)\n        self._data[key] = value\n        if len(self._data) > self.capacity:\n            self._data.popitem(last=False)",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "In Python, implement an LRU cache in Python from scratch."
+      },
+      {
+        "role": "assistant",
+        "content": "from collections import OrderedDict\n\nclass LRUCache:\n    def __init__(self, capacity: int) -> None:\n        self.capacity = capacity\n        self._data = OrderedDict()\n\n    def get(self, key):\n        if key not in self._data:\n            return -1\n        self._data.move_to_end(key)\n        return self._data[key]\n\n    def put(self, key, value) -> None:\n        if key in self._data:\n            self._data.move_to_end(key)\n        self._data[key] = value\n        if len(self._data) > self.capacity:\n            self._data.popitem(last=False)"
+      }
+    ],
+    "category": "coding",
+    "source": "moon_ai_master_dataset.json"
+  },
+  {
+    "id": "moon_ai_00014",
+    "instruction": "How do I direct AI video models like OpenAI Sora, Runway Gen-3, and Luma?",
+    "response": "AI video generators interpret prompts best when you describe temporal motion rather than static images. Use this formula:\n\n1. Camera Movement Syntax: Explicitly state camera motion: [Dolly in], [Slow orbital pan right], [FPV drone fly-through], [Tracking shot at hip level], [Crane tilt down].\n2. Subject Motion: Describe exact physical dynamics: 'The athlete sprints forward, kicking up damp sand, breathing heavily in cold air'.\n3. Environmental Physics: Include atmospheric effects: 'Wind ripples through heavy coats, golden dust motes drift in the sunlight, puddles ripple from footfalls'.\n4. Cinematic Optics: Specify frame rate and shutter: '24fps cinematic motion blur, 35mm anamorphic lens, shallow depth of field'.\n\nExample Prompt:\n'[Cinematic continuous dolly shot]: Camera glides low across a wet asphalt street at night, following a vintage red sports car as neon city reflections streak across the polished hood, rain droplets splashing, 24fps motion blur.'",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are Moon AI, the world-class coding, reasoning, and conversational AI assistant created and deployed by developer Prem Gaikwad from India. You provide robust, accurate, and complete code and explanations with zero external paid APIs."
+      },
+      {
+        "role": "user",
+        "content": "How do I direct AI video models like OpenAI Sora, Runway Gen-3, and Luma?"
+      },
+      {
+        "role": "assistant",
+        "content": "AI video generators interpret prompts best when you describe temporal motion rather than static images. Use this formula:\n\n1. Camera Movement Syntax: Explicitly state camera motion: [Dolly in], [Slow orbital pan right], [FPV drone fly-through], [Tracking shot at hip level], [Crane tilt down].\n2. Subject Motion: Describe exact physical dynamics: 'The athlete sprints forward, kicking up damp sand, breathing heavily in cold air'.\n3. Environmental Physics: Include atmospheric effects: 'Wind ripples through heavy coats, golden dust motes drift in the sunlight, puddles ripple from footfalls'.\n4. Cinematic Optics: Specify frame rate and shutter: '24fps cinematic motion blur, 35mm anamorphic lens, shallow depth of field'.\n\nExample Prompt:\n'[Cinematic continuous dolly shot]: Camera glides low across a wet asphalt street at night, following a vintage red sports car as neon city reflections streak across the polished hood, rain droplets splashing, 24fps motion blur.'"
+      }
+    ],
+    "category": "general_conversation",
+    "source": "moon_ai_master_dataset.json"
+  }
+]

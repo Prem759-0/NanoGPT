@@ -1,0 +1,62 @@
+[
+  {
+    "file": "moon_ai_master_dataset.json",
+    "total_records": 426,
+    "valid_records": 426,
+    "empty_instructions": 0,
+    "empty_responses": 0,
+    "exact_duplicates": 0,
+    "near_duplicates": 0,
+    "syntax_error_records": 0,
+    "multilingual_records": 1,
+    "creator_attribution_records": 2,
+    "avg_instruction_chars": 87.0,
+    "avg_response_chars": 310.1,
+    "syntax_issues_sample": []
+  },
+  {
+    "file": "dataset.json",
+    "total_records": 401,
+    "valid_records": 401,
+    "empty_instructions": 0,
+    "empty_responses": 0,
+    "exact_duplicates": 0,
+    "near_duplicates": 0,
+    "syntax_error_records": 0,
+    "multilingual_records": 0,
+    "creator_attribution_records": 0,
+    "avg_instruction_chars": 89.0,
+    "avg_response_chars": 282.3,
+    "syntax_issues_sample": []
+  },
+  {
+    "file": "chatgpt_dataset.json",
+    "total_records": 40,
+    "valid_records": 40,
+    "empty_instructions": 0,
+    "empty_responses": 0,
+    "exact_duplicates": 0,
+    "near_duplicates": 0,
+    "syntax_error_records": 0,
+    "multilingual_records": 0,
+    "creator_attribution_records": 0,
+    "avg_instruction_chars": 70.3,
+    "avg_response_chars": 272.5,
+    "syntax_issues_sample": []
+  },
+  {
+    "file": "user_learned_data.jsonl",
+    "total_records": 17,
+    "valid_records": 17,
+    "empty_instructions": 0,
+    "empty_responses": 0,
+    "exact_duplicates": 2,
+    "near_duplicates": 3,
+    "syntax_error_records": 0,
+    "multilingual_records": 0,
+    "creator_attribution_records": 1,
+    "avg_instruction_chars": 32.1,
+    "avg_response_chars": 506.4,
+    "syntax_issues_sample": []
+  }
+]

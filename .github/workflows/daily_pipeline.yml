@@ -1,0 +1,46 @@
+name: Daily Autonomous AI Pipeline & Verification
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Run every night at 3:00 AM UTC
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  daily-evaluation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+          pip install fastapi httpx
+
+      - name: Run Dataset Validation & Split Preparation
+        run: |
+          python scripts/prepare_dataset.py --seed 42
+          python scripts/audit_dataset.py
+
+      - name: Run Deterministic Inference Regression Suite
+        run: |
+          python -m unittest tests/test_model_inference.py
+          python -m unittest tests/test_dataset_pipeline.py
+
+      - name: Run Benchmark Evaluation & Daily Report
+        run: |
+          python scripts/daily_pipeline.py --eval_model scratch
+
+      - name: Archive Daily Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-reports
+          path: data/reports/

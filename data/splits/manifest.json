@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2026-10-27T15:47:56.818956+00:00",
+  "random_seed": 42,
+  "total_records": 439,
+  "splits": {
+    "train": {
+      "count": 395,
+      "file": "train.json",
+      "sha256": "4d96ef1e7d4471d209cbafa409880468cec4b0ebd6b719b14f9ea7bfe73acf1f"
+    },
+    "val": {
+      "count": 21,
+      "file": "val.json",
+      "sha256": "ea7bde5295ea009527c51df4c465b76ba46da876aee20caf460cf945c773a46e"
+    },
+    "test": {
+      "count": 23,
+      "file": "test.json",
+      "sha256": "bb4f352d81666216a32f82fbb7ab0bbffa10a0c118019293352918874e395cb3"
+    }
+  },
+  "filtering_stats": {
+    "skipped_empty": 0,
+    "skipped_duplicates": 445,
+    "skipped_syntax_errors": 0
+  },
+  "category_distribution": {
+    "coding": 331,
+    "general_conversation": 104,
+    "science": 2,
+    "persona": 2
+  },
+  "sources_scanned": [
+    "moon_ai_master_dataset.json",
+    "dataset.json",
+    "chatgpt_dataset.json",
+    "user_learned_data.jsonl"
+  ]
+}
