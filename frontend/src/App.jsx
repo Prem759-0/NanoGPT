@@ -188,27 +188,55 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const [activeModel, setActiveModel] = useState('moon-sovereign-v2');
   const [modelSpecs, setModelSpecs] = useState(null);
   const [customGpuUrl, setCustomGpuUrl] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('moon_custom_gpu_url') !== null ? localStorage.getItem('moon_custom_gpu_url') : DEFAULT_SOVEREIGN_GPU_URL));
+  const [gpuStatus, setGpuStatus] = useState({
+    online: true,
+    checking: false,
+    device: 'Tesla T4',
+    vram_gb: 14.56,
+    url: DEFAULT_SOVEREIGN_GPU_URL
+  });
+  const [showGpuModal, setShowGpuModal] = useState(false);
+  const [showAdvancedDev, setShowAdvancedDev] = useState(false);
 
-  // Connect Custom Sovereign GPU (Colab + ngrok)
-  const handleConfigureCustomGpu = () => {
-    const current = (typeof localStorage !== 'undefined' && localStorage.getItem('moon_custom_gpu_url') !== null ? localStorage.getItem('moon_custom_gpu_url') : DEFAULT_SOVEREIGN_GPU_URL) || '';
-    const input = prompt(
-      'Connect Your Custom Sovereign GPU Model (Google Colab / Private Server):\\n\\nEnter your live ngrok public URL from Step 9 in Train_Super_AI_Colab.ipynb:\\n(e.g., https://xxxx.ngrok-free.app)\\n\\nLeave blank to disconnect.',
-      current
-    );
-    if (input !== null) {
-      const trimmed = input.trim();
-      if (trimmed) {
-        localStorage.setItem('moon_custom_gpu_url', trimmed);
-        setCustomGpuUrl(trimmed);
-        alert('🟢 Connected to your trained Moon AI Sovereign GPU! Every query will now be answered directly by your custom fine-tuned neural model.');
-      } else {
-        localStorage.removeItem('moon_custom_gpu_url');
-        setCustomGpuUrl('');
-        alert('ℹ️ Disconnected custom GPU.');
-      }
+  // Auto-check Colab GPU status on load & periodic ping
+  const checkGpuHealth = async (targetUrl = null) => {
+    const urlToCheck = targetUrl || customGpuUrl || DEFAULT_SOVEREIGN_GPU_URL;
+    if (!urlToCheck) {
+      setGpuStatus(prev => ({ ...prev, online: false, checking: false }));
+      return;
     }
+    setGpuStatus(prev => ({ ...prev, checking: true }));
+    try {
+      const cleanUrl = urlToCheck.trim().replace(/\/+$/, '');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(`${cleanUrl}/api/health`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        setGpuStatus({
+          online: data.status === 'ok',
+          checking: false,
+          device: data.device || 'Tesla T4',
+          vram_gb: data.vram_gb || 14.56,
+          url: cleanUrl
+        });
+        return;
+      }
+    } catch {
+      // GPU offline or sleeping
+    }
+    setGpuStatus(prev => ({ ...prev, online: false, checking: false }));
   };
+
+  useEffect(() => {
+    checkGpuHealth();
+    const interval = setInterval(() => checkGpuHealth(), 30000);
+    return () => clearInterval(interval);
+  }, [customGpuUrl]);
 
   // Grok Signature Modes: 'normal', 'fun' (witty/unhinged), 'think' (deep reasoning)
   const [grokMode, setGrokMode] = useState('normal');
@@ -1369,15 +1397,16 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
             )}
 
 
-            {/* Sovereign Colab GPU Tunnel Button */}
+            {/* Sovereign Colab GPU Status Indicator */}
             <button
               className="grok-btn-ghost"
-              onClick={handleConfigureCustomGpu}
-              title="Connect your custom trained Moon AI Colab GPU model via ngrok"
-              style={customGpuUrl ? { borderColor: '#10b981', color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' } : {}}
+              onClick={() => setShowGpuModal(true)}
+              title={gpuStatus.online ? `Colab GPU Online (${gpuStatus.device})` : 'Sovereign Engine Active'}
+              style={gpuStatus.online ? { borderColor: '#10b981', color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' } : {}}
             >
-              <Cpu size={14} color={customGpuUrl ? '#10b981' : '#a1a1aa'} />
-              <span>{customGpuUrl ? '🟢 Colab GPU Active' : '⚡ Connect Colab GPU'}</span>
+              <span className={`status-indicator-dot ${gpuStatus.online ? 'dot-online' : 'dot-offline'}`} />
+              <Cpu size={14} color={gpuStatus.online ? '#10b981' : '#a1a1aa'} />
+              <span>{gpuStatus.checking ? 'Checking GPU...' : gpuStatus.online ? '🟢 Colab GPU Active' : '⚡ Sovereign Engine'}</span>
             </button>
 
             {/* Canvas Drawer Toggle */}
@@ -1689,6 +1718,115 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
           )}
         </div>
       </main>
+
+      {/* Sovereign GPU Health & Specs Modal */}
+      {showGpuModal && (
+        <div className="gpu-modal-overlay" onClick={() => setShowGpuModal(false)}>
+          <div className="gpu-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="gpu-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Cpu size={18} color={gpuStatus.online ? '#10b981' : '#a78bfa'} />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Sovereign Infrastructure Status</h3>
+              </div>
+              <button className="grok-btn-ghost" onClick={() => setShowGpuModal(false)} style={{ padding: '4px' }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="gpu-modal-body">
+              <div
+                className="gpu-status-banner"
+                style={{
+                  background: gpuStatus.online ? 'rgba(16, 185, 129, 0.08)' : 'rgba(167, 139, 250, 0.08)',
+                  borderColor: gpuStatus.online ? 'rgba(16, 185, 129, 0.3)' : 'rgba(167, 139, 250, 0.3)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className={`status-indicator-dot ${gpuStatus.online ? 'dot-online' : 'dot-offline'}`} />
+                  <span style={{ fontWeight: 600, color: gpuStatus.online ? '#10b981' : '#a78bfa' }}>
+                    {gpuStatus.online ? '🟢 Google Colab GPU Active & Connected' : '⚡ Sovereign Autonomous Engine Active'}
+                  </span>
+                </div>
+                <p style={{ margin: '6px 0 0 0', fontSize: '0.8rem', color: '#a1a1aa' }}>
+                  {gpuStatus.online
+                    ? `Running live on NVIDIA ${gpuStatus.device} (${gpuStatus.vram_gb} GB VRAM) — Sub-second neural inference.`
+                    : 'The primary Colab GPU is sleeping or offline; requests are handled with 100% zero-downtime by the sovereign engine.'}
+                </p>
+              </div>
+
+              <div className="gpu-specs-grid">
+                <div className="gpu-spec-item">
+                  <span className="gpu-spec-label">Architecture</span>
+                  <span className="gpu-spec-value">Moon AI Sovereign (Fine-Tuned)</span>
+                </div>
+                <div className="gpu-spec-item">
+                  <span className="gpu-spec-label">Compute Device</span>
+                  <span className="gpu-spec-value">{gpuStatus.online ? `${gpuStatus.device} (CUDA)` : 'Sovereign Engine'}</span>
+                </div>
+                <div className="gpu-spec-item">
+                  <span className="gpu-spec-label">Required Keys</span>
+                  <span className="gpu-spec-value">0 Keys (100% Free)</span>
+                </div>
+                <div className="gpu-spec-item">
+                  <span className="gpu-spec-label">Chief Architect</span>
+                  <span className="gpu-spec-value">Prem Gaikwad (India 🇮🇳)</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #27272a' }}>
+                <button
+                  className="grok-btn-primary"
+                  onClick={() => checkGpuHealth()}
+                  style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                >
+                  <RefreshCw size={13} />
+                  <span>Refresh Health</span>
+                </button>
+
+                <button
+                  className="grok-btn-ghost"
+                  onClick={() => setShowAdvancedDev(!showAdvancedDev)}
+                  style={{ fontSize: '0.75rem', color: '#71717a' }}
+                >
+                  {showAdvancedDev ? 'Hide Dev Controls' : 'Developer Controls'}
+                </button>
+              </div>
+
+              {showAdvancedDev && (
+                <div style={{ marginTop: '12px', padding: '10px', background: '#121215', borderRadius: '6px', border: '1px solid #27272a' }}>
+                  <label style={{ fontSize: '0.75rem', color: '#a1a1aa', display: 'block', marginBottom: '6px' }}>
+                    Update Tunnel URL (Chief Architect Only):
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      value={customGpuUrl}
+                      onChange={e => setCustomGpuUrl(e.target.value)}
+                      placeholder="https://xxxx.ngrok-free.dev"
+                      style={{ flex: 1, padding: '6px 10px', fontSize: '0.8rem', background: '#18181b', color: '#fff', border: '1px solid #3f3f46', borderRadius: '4px' }}
+                    />
+                    <button
+                      className="grok-btn-ghost"
+                      onClick={() => {
+                        const trimmed = (customGpuUrl || '').trim();
+                        if (trimmed) {
+                          localStorage.setItem('moon_custom_gpu_url', trimmed);
+                        } else {
+                          localStorage.removeItem('moon_custom_gpu_url');
+                        }
+                        checkGpuHealth(trimmed);
+                      }}
+                      style={{ fontSize: '0.75rem' }}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
