@@ -49,6 +49,26 @@ const resolveMediaUrl = (url) => {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) return url;
   return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 };
+const isImageGenerationIntent = (prompt) => {
+  const p = (prompt || '').trim();
+  const ql = p.toLowerCase();
+  if (p.startsWith('/imagine') || p.startsWith('/image')) return true;
+  if (/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|genrate|gentrate|generte|create|make|draw|paint|render|produce|show\s+me)\s+(?:an?\s+)?(?:image|picture|photo|graphic|drawing|artwork|illustration|cartoon|render|map)\b/i.test(ql)) return true;
+  if (/^(?:please\s+)?(?:can\s+you\s+)?(?:draw|paint|sketch|illustrate)\s+(?:an?\s+)?(?:picture|image|cartoon|drawing)?\s*(?:of\s+)?/i.test(ql)) return true;
+  if (/^(?:image|picture|drawing|illustration|cartoon|artwork|map)\s+of\b/i.test(ql)) return true;
+  if (/\b(?:generate|genrate|draw|paint|render|create)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|drawing|illustration|cartoon)\b/i.test(ql)) return true;
+  return false;
+};
+
+const isVideoGenerationIntent = (prompt) => {
+  const p = (prompt || '').trim();
+  const ql = p.toLowerCase();
+  if (p.startsWith('/video')) return true;
+  if (/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|genrate|gentrate|generte|create|make|render|animate)\s+(?:an?\s+)?(?:video|clip|animation|movie|motion)\b/i.test(ql)) return true;
+  if (/^(?:video|clip|animation|motion)\s+of\b/i.test(ql)) return true;
+  return false;
+};
+
 
 // Safe API fetch helper that routes directly to Vercel same-origin and sends custom GPU tunnel if set
 const apiFetch = (path, options = {}) => {
@@ -775,10 +795,13 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
       let success = false;
 
-      // 0. Direct Custom Colab GPU Call (Real Neural Network on GPU — Zero Middleman Timeout!)
-      const customGpu = (typeof localStorage !== 'undefined' && localStorage.getItem('moon_custom_gpu_url') !== null
+      // Multimodal commands (images & videos) are synthesized directly by Moon AI Studios on Vercel
+      const isMultimodal = isImageGenerationIntent(prompt) || isVideoGenerationIntent(prompt);
+
+      // 0. Direct Custom Colab GPU Call (Real Neural Network on GPU for text reasoning & coding)
+      const customGpu = (!isMultimodal && (typeof localStorage !== 'undefined' && localStorage.getItem('moon_custom_gpu_url') !== null
         ? localStorage.getItem('moon_custom_gpu_url')
-        : DEFAULT_SOVEREIGN_GPU_URL) || '';
+        : DEFAULT_SOVEREIGN_GPU_URL)) || '';
       if (customGpu) {
         try {
           const cleanGpu = customGpu.trim().replace(/\/+$/, '');
