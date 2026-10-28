@@ -46,7 +46,7 @@ const DEFAULT_SOVEREIGN_GPU_URL = 'https://jayceon-embryological-lasandra.ngrok-
 
 const resolveMediaUrl = (url) => {
   if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) return url;
   return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
@@ -1125,24 +1125,50 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
         {/* Embedded Generated Images */}
         {imageUrls.map((imgUrl, iIdx) => {
           const resolvedImgUrl = resolveMediaUrl(imgUrl);
+          const handleOpenFull = (e) => {
+            if (e) e.preventDefault();
+            if (resolvedImgUrl.startsWith('data:image/svg+xml;base64,')) {
+              try {
+                const base64Data = resolvedImgUrl.split(',')[1];
+                const svgText = atob(base64Data);
+                const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+                const blobUrl = URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+                return;
+              } catch (err) {
+                console.error(err);
+              }
+            }
+            window.open(resolvedImgUrl, '_blank');
+          };
+
           return (
             <div key={`image-${iIdx}`} className="grok-media-container">
               <img
                 src={resolvedImgUrl}
                 alt="Generated visual"
                 className="grok-media-image"
-                onClick={() => window.open(resolvedImgUrl, '_blank')}
+                onClick={handleOpenFull}
                 title="Click to view full resolution"
               />
               <div className="grok-media-actions">
-                <a href={resolvedImgUrl} download className="grok-action-chip" target="_blank" rel="noreferrer">
+                <a
+                  href={resolvedImgUrl}
+                  download="moon_ai_visual.svg"
+                  className="grok-action-chip"
+                >
                   <Download size={12} />
                   <span>Download Image</span>
                 </a>
-                <a href={resolvedImgUrl} className="grok-action-chip" target="_blank" rel="noreferrer">
+                <button
+                  type="button"
+                  onClick={handleOpenFull}
+                  className="grok-action-chip"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', font: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                >
                   <ExternalLink size={12} />
                   <span>Full Resolution</span>
-                </a>
+                </button>
               </div>
             </div>
           );

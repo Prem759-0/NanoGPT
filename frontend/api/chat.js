@@ -268,6 +268,497 @@ function generateIndiaMapCartoonSvg(cleanPrompt) {
 }
 
 
+// Dedicated Cartoon Dog Vector Synthesizer
+function generateDogCartoonSvg(cleanPrompt) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 540" width="100%" height="100%">
+    <defs>
+      <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#38bdf8" />
+        <stop offset="60%" stop-color="#bae6fd" />
+        <stop offset="100%" stop-color="#f0fdf4" />
+      </linearGradient>
+      <linearGradient id="grassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#4ade80" />
+        <stop offset="100%" stop-color="#15803d" />
+      </linearGradient>
+      <linearGradient id="dogFur" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#fbbf24" />
+        <stop offset="50%" stop-color="#f59e0b" />
+        <stop offset="100%" stop-color="#d97706" />
+      </linearGradient>
+      <linearGradient id="earFur" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#d97706" />
+        <stop offset="100%" stop-color="#b45309" />
+      </linearGradient>
+      <linearGradient id="collarGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#ef4444" />
+        <stop offset="100%" stop-color="#b91c1c" />
+      </linearGradient>
+      <filter id="dogShadow" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.25" />
+      </filter>
+      <filter id="softGlow">
+        <feGaussianBlur stdDeviation="4" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    </defs>
+
+    <rect width="840" height="540" fill="url(#skyGrad)" rx="16" />
+
+    <circle cx="730" cy="80" r="45" fill="#fde047" opacity="0.9" filter="url(#softGlow)" />
+    <circle cx="730" cy="80" r="35" fill="#fbbf24" />
+
+    <g fill="#ffffff" opacity="0.9">
+      <ellipse cx="140" cy="70" rx="45" ry="22" />
+      <ellipse cx="175" cy="60" rx="35" ry="25" />
+      <ellipse cx="205" cy="72" rx="30" ry="18" />
+
+      <ellipse cx="610" cy="120" rx="38" ry="18" />
+      <ellipse cx="640" cy="112" rx="28" ry="20" />
+      <ellipse cx="665" cy="122" rx="24" ry="15" />
+    </g>
+
+    <path d="M 0 380 Q 220 320 440 360 T 840 370 L 840 540 L 0 540 Z" fill="url(#grassGrad)" />
+    <path d="M 0 430 Q 300 390 580 430 T 840 420 L 840 540 L 0 540 Z" fill="#166534" opacity="0.3" />
+
+    <ellipse cx="420" cy="435" rx="140" ry="24" fill="#14532d" opacity="0.4" />
+
+    <g transform="translate(420, 290)" filter="url(#dogShadow)">
+      <path d="M 90 40 Q 140 20 150 -20 Q 135 -30 115 10 Q 95 30 80 45 Z" fill="url(#earFur)" stroke="#92400e" stroke-width="2">
+        <animateTransform attributeName="transform" type="rotate" values="0 90 40; 18 90 40; -10 90 40; 0 90 40" dur="0.8s" repeatCount="indefinite" />
+      </path>
+
+      <ellipse cx="-85" cy="115" rx="30" ry="18" fill="url(#dogFur)" stroke="#92400e" stroke-width="2" />
+      <ellipse cx="85" cy="115" rx="30" ry="18" fill="url(#dogFur)" stroke="#92400e" stroke-width="2" />
+
+      <ellipse cx="0" cy="50" rx="95" ry="80" fill="url(#dogFur)" stroke="#92400e" stroke-width="2.5" />
+      <path d="M -35 20 Q 0 85 35 20 Q 20 8 0 10 Q -20 8 -35 20 Z" fill="#fffbeb" />
+
+      <rect x="-55" y="45" width="34" height="85" rx="17" fill="url(#dogFur)" stroke="#92400e" stroke-width="2" />
+      <ellipse cx="-38" cy="130" rx="24" ry="14" fill="#fef3c7" stroke="#92400e" stroke-width="2" />
+      <line x1="-45" y1="126" x2="-45" y2="136" stroke="#92400e" stroke-width="2" stroke-linecap="round" />
+      <line x1="-31" y1="126" x2="-31" y2="136" stroke="#92400e" stroke-width="2" stroke-linecap="round" />
+
+      <rect x="21" y="45" width="34" height="85" rx="17" fill="url(#dogFur)" stroke="#92400e" stroke-width="2" />
+      <ellipse cx="38" cy="130" rx="24" ry="14" fill="#fef3c7" stroke="#92400e" stroke-width="2" />
+      <line x1="31" y1="126" x2="31" y2="136" stroke="#92400e" stroke-width="2" stroke-linecap="round" />
+      <line x1="45" y1="126" x2="45" y2="136" stroke="#92400e" stroke-width="2" stroke-linecap="round" />
+
+      <rect x="-50" y="-8" width="100" height="18" rx="9" fill="url(#collarGrad)" stroke="#7f1d1d" stroke-width="1.5" />
+      <circle cx="0" cy="12" r="14" fill="#facc15" stroke="#ca8a04" stroke-width="2" />
+      <text x="0" y="16" font-family="system-ui, sans-serif" font-weight="900" font-size="9" fill="#78350f" text-anchor="middle">MOON</text>
+
+      <path d="M -70 -70 C -120 -40 -125 40 -85 55 C -65 60 -55 20 -60 -40 Z" fill="url(#earFur)" stroke="#92400e" stroke-width="2.5" />
+      <path d="M 70 -70 C 120 -40 125 40 85 55 C 65 60 55 20 60 -40 Z" fill="url(#earFur)" stroke="#92400e" stroke-width="2.5" />
+
+      <circle cx="0" cy="-65" r="72" fill="url(#dogFur)" stroke="#92400e" stroke-width="2.5" />
+
+      <ellipse cx="-22" cy="-45" rx="30" ry="22" fill="#fffbeb" stroke="#92400e" stroke-width="1" />
+      <ellipse cx="22" cy="-45" rx="30" ry="22" fill="#fffbeb" stroke="#92400e" stroke-width="1" />
+
+      <path d="M -10 -35 Q 0 -5 10 -35 Q 12 -15 8 -5 Q 0 8 -8 -5 Z" fill="#fb7185" stroke="#e11d48" stroke-width="1.5" />
+      <line x1="0" y1="-28" x2="0" y2="-8" stroke="#be123c" stroke-width="1.5" stroke-linecap="round" />
+
+      <path d="M -26 -44 Q -12 -34 0 -40 Q 12 -34 26 -44" fill="none" stroke="#78350f" stroke-width="2.5" stroke-linecap="round" />
+
+      <ellipse cx="0" cy="-52" rx="16" ry="11" fill="#0f172a" />
+      <ellipse cx="-4" cy="-55" rx="4" ry="2" fill="#ffffff" opacity="0.8" />
+
+      <ellipse cx="-32" cy="-82" rx="16" ry="20" fill="#1e293b" />
+      <circle cx="-35" cy="-87" r="6" fill="#ffffff" />
+      <circle cx="-28" cy="-77" r="3" fill="#ffffff" />
+      <path d="M -44 -108 Q -32 -115 -20 -107" fill="none" stroke="#92400e" stroke-width="3" stroke-linecap="round" />
+
+      <ellipse cx="32" cy="-82" rx="16" ry="20" fill="#1e293b" />
+      <circle cx="29" cy="-87" r="6" fill="#ffffff" />
+      <circle cx="36" cy="-77" r="3" fill="#ffffff" />
+      <path d="M 20 -107 Q 32 -115 44 -108" fill="none" stroke="#92400e" stroke-width="3" stroke-linecap="round" />
+
+      <line x1="-30" y1="-44" x2="-54" y2="-48" stroke="#92400e" stroke-width="1.5" stroke-linecap="round" />
+      <line x1="-30" y1="-38" x2="-52" y2="-36" stroke="#92400e" stroke-width="1.5" stroke-linecap="round" />
+      <line x1="30" y1="-44" x2="54" y2="-48" stroke="#92400e" stroke-width="1.5" stroke-linecap="round" />
+      <line x1="30" y1="-38" x2="52" y2="-36" stroke="#92400e" stroke-width="1.5" stroke-linecap="round" />
+    </g>
+
+    <g transform="translate(630, 470) rotate(-15)">
+      <rect x="-24" y="-7" width="48" height="14" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+      <circle cx="-24" cy="-7" r="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+      <circle cx="-24" cy="7" r="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+      <circle cx="24" cy="-7" r="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+      <circle cx="24" cy="7" r="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+    </g>
+
+    <g transform="translate(420, 505)">
+      <rect x="-300" y="-18" width="600" height="36" rx="18" fill="rgba(15, 23, 42, 0.85)" stroke="#fbbf24" stroke-width="2" />
+      <text x="0" y="4" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="13" fill="#ffffff" letter-spacing="1">
+        🐶 PLAYFUL CARTOON PUPPY • MOON AI SOVEREIGN ART STUDIO
+      </text>
+    </g>
+  </svg>`;
+}
+
+// Dedicated Cartoon Sports Car Vector Synthesizer
+function generateCarCartoonSvg(cleanPrompt) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 520" width="100%" height="100%">
+    <defs>
+      <linearGradient id="cyberSky" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#090d16" />
+        <stop offset="60%" stop-color="#1e1b4b" />
+        <stop offset="100%" stop-color="#4c1d95" />
+      </linearGradient>
+      <linearGradient id="carBodyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#dc2626" />
+        <stop offset="40%" stop-color="#ef4444" />
+        <stop offset="70%" stop-color="#f87171" />
+        <stop offset="100%" stop-color="#991b1b" />
+      </linearGradient>
+      <linearGradient id="glassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#38bdf8" />
+        <stop offset="100%" stop-color="#0284c7" />
+      </linearGradient>
+      <linearGradient id="roadGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#18181b" />
+        <stop offset="100%" stop-color="#09090b" />
+      </linearGradient>
+      <filter id="neonBeam">
+        <feGaussianBlur stdDeviation="12" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    </defs>
+
+    <rect width="840" height="520" fill="url(#cyberSky)" rx="16" />
+
+    <g fill="#090d16" opacity="0.8">
+      <rect x="60" y="160" width="45" height="150" />
+      <rect x="120" y="120" width="60" height="190" />
+      <rect x="200" y="180" width="40" height="130" />
+      <rect x="260" y="140" width="55" height="170" />
+      <rect x="520" y="110" width="65" height="200" />
+      <rect x="600" y="150" width="50" height="160" />
+      <rect x="670" y="130" width="75" height="180" />
+      <rect x="760" y="170" width="40" height="140" />
+    </g>
+
+    <circle cx="420" cy="90" r="40" fill="#fbcfe8" filter="url(#neonBeam)" opacity="0.7" />
+    <circle cx="420" cy="90" r="32" fill="#fdf2f8" />
+
+    <rect x="0" y="310" width="840" height="210" fill="url(#roadGrad)" />
+    <line x1="0" y1="310" x2="840" y2="310" stroke="#ec4899" stroke-width="3" opacity="0.8" />
+    <g stroke="#facc15" stroke-width="8" stroke-dasharray="45 35">
+      <line x1="0" y1="465" x2="840" y2="465" />
+    </g>
+
+    <polygon points="680,365 840,320 840,490 680,395" fill="rgba(254, 240, 138, 0.22)" filter="url(#neonBeam)" />
+
+    <g transform="translate(60, 20)">
+      <g transform="translate(100, 375)">
+        <polygon points="0,0 -40,-6 -70,0 -40,6" fill="#38bdf8" filter="url(#neonBeam)" />
+        <polygon points="0,0 -25,-3 -45,0 -25,3" fill="#ffffff" />
+      </g>
+
+      <path d="M 120 280 L 140 220 L 190 220 L 180 280 Z" fill="#991b1b" stroke="#7f1d1d" stroke-width="2" />
+      <rect x="110" y="215" width="90" height="12" rx="4" fill="#dc2626" stroke="#7f1d1d" stroke-width="1.5" />
+
+      <path d="
+        M 130 350
+        C 140 300 180 280 250 270
+        C 310 210 390 195 490 200
+        C 560 205 600 240 640 280
+        L 690 320
+        C 715 340 710 365 670 375
+        L 600 375
+        C 585 340 545 320 500 320
+        C 455 320 415 340 400 375
+        L 290 375
+        C 275 340 235 320 190 320
+        C 145 320 105 340 90 375
+        L 70 375
+        C 60 370 70 355 130 350 Z
+      " fill="url(#carBodyGrad)" stroke="#7f1d1d" stroke-width="4" stroke-linejoin="round" />
+
+      <path d="
+        M 270 270
+        C 320 225 380 212 470 215
+        C 530 218 565 240 600 270
+        Z
+      " fill="url(#glassGrad)" stroke="#1e293b" stroke-width="3" />
+      <path d="M 330 260 L 440 222 L 420 222 L 310 260 Z" fill="#ffffff" opacity="0.65" />
+      <path d="M 470 255 L 530 228 L 515 228 L 455 255 Z" fill="#ffffff" opacity="0.45" />
+
+      <polygon points="260,310 420,300 390,320 240,325" fill="#facc15" />
+
+      <polygon points="665,310 690,325 660,335 645,315" fill="#fef08a" stroke="#ca8a04" stroke-width="1.5" filter="url(#neonBeam)" />
+
+      <rect x="80" y="325" width="22" height="14" rx="4" fill="#ef4444" stroke="#991b1b" stroke-width="1.5" filter="url(#neonBeam)" />
+
+      <g transform="translate(500, 375)">
+        <circle cx="0" cy="0" r="44" fill="#18181b" stroke="#09090b" stroke-width="4" />
+        <circle cx="0" cy="0" r="32" fill="#27272a" />
+        <circle cx="0" cy="0" r="26" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2" />
+        <g stroke="#0f172a" stroke-width="3.5">
+          <line x1="0" y1="-24" x2="0" y2="24" />
+          <line x1="-24" y1="0" x2="24" y2="0" />
+          <line x1="-17" y1="-17" x2="17" y2="17" />
+          <line x1="-17" y1="17" x2="17" y2="-17" />
+        </g>
+        <circle cx="0" cy="0" r="9" fill="#ef4444" />
+        <circle cx="0" cy="0" r="5" fill="#f8fafc" />
+      </g>
+
+      <g transform="translate(190, 375)">
+        <circle cx="0" cy="0" r="44" fill="#18181b" stroke="#09090b" stroke-width="4" />
+        <circle cx="0" cy="0" r="32" fill="#27272a" />
+        <circle cx="0" cy="0" r="26" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2" />
+        <g stroke="#0f172a" stroke-width="3.5">
+          <line x1="0" y1="-24" x2="0" y2="24" />
+          <line x1="-24" y1="0" x2="24" y2="0" />
+          <line x1="-17" y1="-17" x2="17" y2="17" />
+          <line x1="-17" y1="17" x2="17" y2="-17" />
+        </g>
+        <circle cx="0" cy="0" r="9" fill="#ef4444" />
+        <circle cx="0" cy="0" r="5" fill="#f8fafc" />
+      </g>
+    </g>
+
+    <g stroke="rgba(255, 255, 255, 0.4)" stroke-width="2" stroke-linecap="round">
+      <line x1="40" y1="410" x2="120" y2="410" />
+      <line x1="720" y1="420" x2="790" y2="420" />
+      <line x1="260" y1="435" x2="350" y2="435" />
+    </g>
+
+    <g transform="translate(420, 492)">
+      <rect x="-300" y="-16" width="600" height="32" rx="16" fill="rgba(15, 23, 42, 0.85)" stroke="#ef4444" stroke-width="2" />
+      <text x="0" y="4" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="12" fill="#ffffff" letter-spacing="1">
+        🏎️ TURBO SPEED RACER • MOON AI SOVEREIGN ART STUDIO
+      </text>
+    </g>
+  </svg>`;
+}
+
+// Dedicated Solar System & Space Vector Synthesizer
+function generateSolarSystemSvg(cleanPrompt) {
+  let stars = '';
+  for (let i = 0; i < 90; i++) {
+    const sx = ((i * 197) % 820) + 10;
+    const sy = ((i * 311) % 480) + 10;
+    const sr = (i % 3 === 0) ? 2 : 1;
+    const op = ((i % 7) + 3) / 10;
+    stars += `<circle cx="${sx}" cy="${sy}" r="${sr}" fill="#ffffff" opacity="${op}" />`;
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 520" width="100%" height="100%">
+    <defs>
+      <linearGradient id="deepSpace" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#020617" />
+        <stop offset="50%" stop-color="#090d16" />
+        <stop offset="100%" stop-color="#05050b" />
+      </linearGradient>
+      <radialGradient id="sunGlow" cx="20%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#ffffff" />
+        <stop offset="30%" stop-color="#fef08a" />
+        <stop offset="60%" stop-color="#f59e0b" />
+        <stop offset="90%" stop-color="#ea580c" />
+        <stop offset="100%" stop-color="#7c2d12" stop-opacity="0" />
+      </radialGradient>
+      <radialGradient id="earthGrad" cx="35%" cy="35%" r="65%">
+        <stop offset="0%" stop-color="#38bdf8" />
+        <stop offset="60%" stop-color="#0284c7" />
+        <stop offset="100%" stop-color="#0f172a" />
+      </radialGradient>
+      <radialGradient id="jupiterGrad" cx="35%" cy="35%" r="65%">
+        <stop offset="0%" stop-color="#fed7aa" />
+        <stop offset="50%" stop-color="#ea580c" />
+        <stop offset="100%" stop-color="#7c2d12" />
+      </radialGradient>
+      <radialGradient id="saturnGrad" cx="35%" cy="35%" r="65%">
+        <stop offset="0%" stop-color="#fef3c7" />
+        <stop offset="70%" stop-color="#d97706" />
+        <stop offset="100%" stop-color="#78350f" />
+      </radialGradient>
+      <filter id="coronaBlur">
+        <feGaussianBlur stdDeviation="15" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    </defs>
+
+    <rect width="840" height="520" fill="url(#deepSpace)" rx="16" />
+
+    <ellipse cx="650" cy="180" rx="190" ry="110" fill="#6366f1" opacity="0.12" filter="url(#coronaBlur)" />
+    <ellipse cx="250" cy="380" rx="160" ry="90" fill="#ec4899" opacity="0.1" filter="url(#coronaBlur)" />
+
+    ${stars}
+
+    <g transform="translate(680, 70) rotate(-35)">
+      <line x1="0" y1="0" x2="-90" y2="0" stroke="url(#sunGlow)" stroke-width="2.5" stroke-linecap="round" />
+      <circle cx="0" cy="0" r="3" fill="#ffffff" filter="url(#coronaBlur)" />
+    </g>
+
+    <g stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" fill="none">
+      <ellipse cx="60" cy="260" rx="140" ry="100" />
+      <ellipse cx="60" cy="260" rx="200" ry="140" />
+      <ellipse cx="60" cy="260" rx="275" ry="180" />
+      <ellipse cx="60" cy="260" rx="355" ry="220" />
+      <ellipse cx="60" cy="260" rx="460" ry="260" stroke-dasharray="3 5" />
+      <ellipse cx="60" cy="260" rx="550" ry="300" />
+      <ellipse cx="60" cy="260" rx="660" ry="340" />
+      <ellipse cx="60" cy="260" rx="745" ry="370" />
+      <ellipse cx="60" cy="260" rx="815" ry="395" />
+    </g>
+
+    <circle cx="10" cy="260" r="115" fill="#f97316" filter="url(#coronaBlur)" opacity="0.4" />
+    <circle cx="10" cy="260" r="95" fill="url(#sunGlow)" />
+    <text x="35" y="265" font-family="system-ui, sans-serif" font-weight="900" font-size="14" fill="#ffffff">SUN</text>
+
+    <g transform="translate(195, 225)">
+      <circle cx="0" cy="0" r="7" fill="#94a3b8" stroke="#475569" stroke-width="1" />
+      <text x="0" y="19" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#94a3b8" text-anchor="middle">Mercury</text>
+    </g>
+
+    <g transform="translate(255, 290)">
+      <circle cx="0" cy="0" r="12" fill="#fbbf24" stroke="#d97706" stroke-width="1" />
+      <text x="0" y="24" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#fbbf24" text-anchor="middle">Venus</text>
+    </g>
+
+    <g transform="translate(330, 220)">
+      <circle cx="0" cy="0" r="14" fill="url(#earthGrad)" stroke="#38bdf8" stroke-width="1" />
+      <circle cx="-3" cy="-2" r="5" fill="#22c55e" opacity="0.8" />
+      <circle cx="4" cy="4" r="4" fill="#22c55e" opacity="0.8" />
+      <circle cx="19" cy="-10" r="3.5" fill="#e2e8f0" />
+      <text x="0" y="27" font-family="system-ui, sans-serif" font-size="10" font-weight="800" fill="#38bdf8" text-anchor="middle">Earth</text>
+    </g>
+
+    <g transform="translate(410, 280)">
+      <circle cx="0" cy="0" r="10" fill="#ef4444" stroke="#b91c1c" stroke-width="1" />
+      <circle cx="-1" cy="-7" r="2.5" fill="#f8fafc" opacity="0.8" />
+      <text x="0" y="22" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#f87171" text-anchor="middle">Mars</text>
+    </g>
+
+    <g transform="translate(515, 210)">
+      <circle cx="0" cy="0" r="32" fill="url(#jupiterGrad)" stroke="#c2410c" stroke-width="1.5" />
+      <ellipse cx="0" cy="-8" rx="30" ry="4" fill="#fed7aa" opacity="0.6" />
+      <ellipse cx="0" cy="6" rx="31" ry="5" fill="#fed7aa" opacity="0.6" />
+      <ellipse cx="14" cy="10" rx="6" ry="4" fill="#b91c1c" />
+      <text x="0" y="47" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#fdba74" text-anchor="middle">Jupiter</text>
+    </g>
+
+    <g transform="translate(635, 280)">
+      <ellipse cx="0" cy="0" rx="48" ry="14" fill="none" stroke="#fde68a" stroke-width="7" transform="rotate(-20)" opacity="0.8" />
+      <ellipse cx="0" cy="0" rx="40" ry="10" fill="none" stroke="#d97706" stroke-width="3" transform="rotate(-20)" opacity="0.7" />
+      <circle cx="0" cy="0" r="24" fill="url(#saturnGrad)" stroke="#b45309" stroke-width="1" />
+      <path d="M -44 14 C -20 28 20 28 44 14" fill="none" stroke="#fde68a" stroke-width="7" transform="rotate(-20)" opacity="0.9" />
+      <text x="0" y="44" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#fde68a" text-anchor="middle">Saturn</text>
+    </g>
+
+    <g transform="translate(730, 220)">
+      <circle cx="0" cy="0" r="16" fill="#67e8f9" stroke="#0891b2" stroke-width="1" />
+      <ellipse cx="0" cy="0" rx="22" ry="5" fill="none" stroke="#cffafe" stroke-width="1.5" transform="rotate(75)" opacity="0.7" />
+      <text x="0" y="28" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#67e8f9" text-anchor="middle">Uranus</text>
+    </g>
+
+    <g transform="translate(800, 290)">
+      <circle cx="0" cy="0" r="15" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1" />
+      <text x="0" y="27" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#60a5fa" text-anchor="middle">Neptune</text>
+    </g>
+
+    <g transform="translate(420, 492)">
+      <rect x="-310" y="-16" width="620" height="32" rx="16" fill="rgba(15, 23, 42, 0.9)" stroke="#38bdf8" stroke-width="2" />
+      <text x="0" y="4" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="12" fill="#ffffff" letter-spacing="1">
+        🪐 THE SOLAR SYSTEM &amp; PLANETARY ORBITS • MOON AI SOVEREIGN ART STUDIO
+      </text>
+    </g>
+  </svg>`;
+}
+
+// Dedicated Cartoon Cat Vector Synthesizer
+function generateCatCartoonSvg(cleanPrompt) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 520" width="100%" height="100%">
+    <defs>
+      <linearGradient id="cozyBg" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#fdf2f8" />
+        <stop offset="60%" stop-color="#fce7f3" />
+        <stop offset="100%" stop-color="#fbcfe8" />
+      </linearGradient>
+      <linearGradient id="catFur" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#fb923c" />
+        <stop offset="50%" stop-color="#f97316" />
+        <stop offset="100%" stop-color="#ea580c" />
+      </linearGradient>
+      <filter id="catShadow">
+        <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#831843" flood-opacity="0.2" />
+      </filter>
+    </defs>
+
+    <rect width="840" height="520" fill="url(#cozyBg)" rx="16" />
+
+    <rect x="0" y="410" width="840" height="110" fill="#fed7aa" />
+    <line x1="0" y1="410" x2="840" y2="410" stroke="#ea580c" stroke-width="3" opacity="0.6" />
+
+    <g transform="translate(620, 430)">
+      <circle cx="0" cy="0" r="28" fill="#ec4899" stroke="#be185d" stroke-width="2" />
+      <path d="M -15 -10 Q 0 15 15 -10" fill="none" stroke="#fbcfe8" stroke-width="2" />
+      <path d="M -20 0 Q 0 -18 20 0" fill="none" stroke="#fbcfe8" stroke-width="2" />
+      <path d="M 0 28 Q -80 50 -160 20 T -280 25" fill="none" stroke="#ec4899" stroke-width="2.5" stroke-linecap="round" />
+    </g>
+
+    <ellipse cx="400" cy="425" rx="120" ry="20" fill="#9a3412" opacity="0.25" />
+
+    <g transform="translate(400, 310)" filter="url(#catShadow)">
+      <path d="M 80 40 C 130 50 170 10 160 -30 C 150 -50 130 -40 135 -20 C 140 0 110 30 75 25 Z" fill="url(#catFur)" stroke="#9a3412" stroke-width="2" />
+
+      <ellipse cx="0" cy="45" rx="85" ry="70" fill="url(#catFur)" stroke="#9a3412" stroke-width="2.5" />
+      <ellipse cx="0" cy="50" rx="45" ry="45" fill="#fff7ed" />
+
+      <ellipse cx="-40" cy="105" rx="22" ry="14" fill="#fff7ed" stroke="#9a3412" stroke-width="2" />
+      <ellipse cx="40" cy="105" rx="22" ry="14" fill="#fff7ed" stroke="#9a3412" stroke-width="2" />
+
+      <circle cx="0" cy="-50" r="65" fill="url(#catFur)" stroke="#9a3412" stroke-width="2.5" />
+
+      <polygon points="-55,-85 -25,-125 -5,-80" fill="url(#catFur)" stroke="#9a3412" stroke-width="2.5" />
+      <polygon points="-45,-88 -25,-115 -12,-85" fill="#f472b6" />
+
+      <polygon points="55,-85 25,-125 5,-80" fill="url(#catFur)" stroke="#9a3412" stroke-width="2.5" />
+      <polygon points="45,-88 25,-115 12,-85" fill="#f472b6" />
+
+      <ellipse cx="-26" cy="-55" rx="14" ry="18" fill="#10b981" stroke="#047857" stroke-width="1.5" />
+      <ellipse cx="-26" cy="-55" rx="5" ry="14" fill="#0f172a" />
+      <circle cx="-29" cy="-60" r="4" fill="#ffffff" />
+
+      <ellipse cx="26" cy="-55" rx="14" ry="18" fill="#10b981" stroke="#047857" stroke-width="1.5" />
+      <ellipse cx="26" cy="-55" rx="5" ry="14" fill="#0f172a" />
+      <circle cx="23" cy="-60" r="4" fill="#ffffff" />
+
+      <polygon points="-6,-38 6,-38 0,-30" fill="#f43f5e" />
+
+      <path d="M -15 -28 Q -8 -22 0 -28 Q 8 -22 15 -28" fill="none" stroke="#78350f" stroke-width="2" stroke-linecap="round" />
+
+      <g stroke="#78350f" stroke-width="1.5" stroke-linecap="round">
+        <line x1="-20" y1="-32" x2="-58" y2="-40" />
+        <line x1="-20" y1="-28" x2="-62" y2="-28" />
+        <line x1="-20" y1="-24" x2="-56" y2="-16" />
+        <line x1="20" y1="-32" x2="58" y2="-40" />
+        <line x1="20" y1="-28" x2="62" y2="-28" />
+        <line x1="20" y1="-24" x2="56" y2="-16" />
+      </g>
+    </g>
+
+    <g transform="translate(420, 492)">
+      <rect x="-300" y="-16" width="600" height="32" rx="16" fill="rgba(15, 23, 42, 0.85)" stroke="#ec4899" stroke-width="2" />
+      <text x="0" y="4" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="12" fill="#ffffff" letter-spacing="1">
+        🐱 PLAYFUL CARTOON KITTEN • MOON AI SOVEREIGN ART STUDIO
+      </text>
+    </g>
+  </svg>`;
+}
+
 function handleImageGeneration(prompt) {
   const cleanPrompt = (prompt || '')
     .replace(/^\/(?:imagine|image)\s*/i, '')
@@ -279,13 +770,31 @@ function handleImageGeneration(prompt) {
   const isIndiaMap = (ql.includes('india') || ql.includes('bharat') || ql.includes('hindustan')) &&
     (ql.includes('map') || ql.includes('state') || ql.includes('border') || ql.includes('geography') || ql.includes('country') || ql.includes('cartoon') || ql.includes('style'));
 
+  const isDog = ql.includes('dog') || ql.includes('puppy') || ql.includes('canine') || ql.includes('hound');
+  const isCar = ql.includes('car') || ql.includes('racing') || ql.includes('automobile') || ql.includes('vehicle') || ql.includes('ferrari') || ql.includes('lamborghini') || ql.includes('sports car');
+  const isSolarSystem = ql.includes('solar system') || ql.includes('planet') || ql.includes('orbit') || (ql.includes('sun') && ql.includes('space')) || (ql.includes('earth') && ql.includes('space'));
+  const isCat = ql.includes('cat') || ql.includes('kitten') || ql.includes('feline') || ql.includes('kitty');
+
   let svg = '';
   let themeName = 'Cinematic Quantum';
 
   if (isIndiaMap) {
     svg = generateIndiaMapCartoonSvg(cleanPrompt);
     themeName = 'Cartoon Bharat Geographic Edition';
+  } else if (isDog) {
+    svg = generateDogCartoonSvg(cleanPrompt);
+    themeName = 'Playful Cartoon Puppy Edition';
+  } else if (isCar) {
+    svg = generateCarCartoonSvg(cleanPrompt);
+    themeName = 'Turbo Speed Racing Edition';
+  } else if (isSolarSystem) {
+    svg = generateSolarSystemSvg(cleanPrompt);
+    themeName = 'Planetary Solar System Edition';
+  } else if (isCat) {
+    svg = generateCatCartoonSvg(cleanPrompt);
+    themeName = 'Playful Cartoon Kitten Edition';
   } else {
+
     // Dynamic aesthetic profile based on prompt semantics
     let primaryColor = '#38bdf8';
     let secondaryColor = '#818cf8';
