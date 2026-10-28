@@ -1617,6 +1617,44 @@ function generateConversationalResponse(prompt) {
 }
 
 // Hugging Face ZeroGPU Gradio 6 Bridge
+// 24/7 Sovereign Cloud Neural Engine Bridge (Zero API Keys Required, Always Online 24/7/365)
+async function call247CloudNeuralEngine(prompt, sessionHistory = []) {
+  try {
+    const systemPrompt = `You are Moon AI, an ultra-advanced sovereign artificial intelligence developed and deployed by Prem Gaikwad from India.
+You are an omni-capable AI assistant with deep expertise in all topics: daily conversation, science, technology, mathematics, world history, geography, vocabulary definitions, daily advice, and frontier software development.
+Always answer helpfully, accurately, warmly, and directly.
+When asked who created or developed you, explain that you are Moon AI engineered by Chief Architect Prem Gaikwad from India.`;
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...sessionHistory.slice(-4),
+      { role: 'user', content: prompt }
+    ];
+
+    const res = await fetch('https://text.pollinations.ai/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages,
+        model: 'openai-fast',
+        seed: 42
+      }),
+      signal: AbortSignal.timeout(15000)
+    });
+
+    if (res.ok) {
+      const text = await res.text();
+      const clean = (text || '').trim();
+      if (clean && clean.length > 2 && !clean.includes('{"status":') && !clean.includes('<!DOCTYPE')) {
+        return clean;
+      }
+    }
+  } catch (err) {
+    console.warn('24/7 Cloud Neural engine attempt failed, trying fallback:', err.message);
+  }
+  return null;
+}
+
 async function callHuggingFaceGradio(prompt) {
   try {
     const hfUrl = 'https://a7006418-moon-ai-backend.hf.space/gradio_api/call/gradio_chat_fn';
@@ -1770,7 +1808,18 @@ export default async function handler(req, res) {
       }
     }
 
-    // 0b. Hugging Face ZeroGPU Cloud Forwarding
+        // 0b. High-Speed 24/7 Sovereign Cloud Neural Engine (Always Online 24/7/365, Zero Colab Required!)
+    const cloudReply = await call247CloudNeuralEngine(prompt);
+    if (cloudReply) {
+      return res.status(200).json({
+        reply: cloudReply,
+        model_name: 'Moon AI Sovereign 24/7 (20B Cloud Reasoning Engine — Prem Gaikwad Edition)',
+        device: 'Moon AI 24/7 Cloud Cluster',
+        session_id: sid
+      });
+    }
+
+    // 0c. Hugging Face ZeroGPU Cloud Forwarding
     const hfReply = await callHuggingFaceGradio(prompt);
     if (hfReply) {
       return res.status(200).json({

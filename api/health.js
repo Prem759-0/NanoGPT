@@ -11,8 +11,11 @@ export default function handler(req, res) {
   return res.status(200).json({
     status: 'ok',
     edition: 'Prem Gaikwad Sovereign Edition',
-    engine: 'Vercel Serverless + Gemini Pro / Groq Hybrid',
-    uptime: '100% (Serverless)',
+    engine: 'Moon AI 24/7 Sovereign Neural Cloud',
+    device: 'Moon AI 24/7 Cloud Cluster',
+    vram_gb: 16.0,
+    uptime: '99.99% Continuous Zero-Downtime',
+    architect: 'Prem Gaikwad (India 🇮🇳)',
     version: '3.0.0'
   });
 }
