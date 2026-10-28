@@ -91,11 +91,11 @@ const DEFAULT_MODELS = [
 // Direct ZeroGPU generator using Gradio 6's verified native API endpoint
 const callGradioChatFn = async (prompt) => {
   const hfBase = API_BASE.includes('hf.space') ? API_BASE : 'https://a7006418-moon-ai-backend.hf.space';
-  const postUrl = `${hfBase}/gradio_api/call/v2/gradio_chat_fn`;
+  const postUrl = `${hfBase}/gradio_api/call/gradio_chat_fn`;
   const postRes = await fetch(postUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: prompt })
+    body: JSON.stringify({ data: [prompt, []] })
   });
 
   if (!postRes.ok) {

@@ -128,6 +128,8 @@ class Database:
             if not cur.fetchone():
                 cur.execute(f"INSERT INTO sessions (id, user_id, title) VALUES ({p}, {p}, {p})", (session_id, user_id, content[:24]))
             cur.execute(f"INSERT INTO messages (session_id, role, content) VALUES ({p}, {p}, {p})", (session_id, role, content))
+            if not self.is_postgres:
+                conn.commit()
 
     def get_messages(self, session_id: str, limit: int = 16) -> List[Dict[str, str]]:
         with self._get_connection() as conn:
@@ -511,8 +513,13 @@ def chat(req: ChatRequest):
             )
         }
     ]
+    has_current_msg = False
     for h in history_msgs:
         formatted_msgs.append({"role": h["role"], "content": h["content"]})
+        if h["role"] == "user" and h["content"] == msg:
+            has_current_msg = True
+    if not has_current_msg:
+        formatted_msgs.append({"role": "user", "content": msg})
 
     try:
         reply = generate_ai_response(formatted_msgs, max_new_tokens=req.max_new_tokens or 400, temperature=req.temperature or 0.7)

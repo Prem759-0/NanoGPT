@@ -9,6 +9,9 @@ __pycache__/
 *.pyc
 *.gguf
 *.db
+*.db-wal
+*.db-shm
+data/user_learned_data.jsonl
 input.txt
 env/
 venv/

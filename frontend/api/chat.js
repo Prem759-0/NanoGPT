@@ -528,13 +528,30 @@ function resolveConversationalKnowledge(prompt) {
     return `I am performing at peak cognitive capacity! 🚀\n\nAll neural subsystems, memory matrices, and generative studios are fully online and running smoothly on sovereign cloud architecture. How are you doing today? What can I build, explain, or calculate for you?`;
   }
 
-  // Creator / Developer identity
-  if (ql.includes('who are you') || ql.includes('who created you') || ql.includes('who made you') || ql.includes('prem gaikwad') || ql.includes('your developer')) {
+  // Creator / Developer identity / Future Prediction / Identity
+  if (ql.includes('prem gaikwad') || ql.includes('who created you') || ql.includes('who made you') || ql.includes('who is your creator') || ql.includes('who are you') || ql.includes('your developer') || ql.includes('predict my future') || ql.includes('who am i')) {
+    let extra = '';
+    if (ql.includes('predict') || ql.includes('future')) {
+      extra += `\n\n### 🔮 Regarding Future Prediction:\nAs an AI, I do not possess supernatural clairvoyance or psychic fortune-telling. However, I can help you **construct** your future through clear strategic planning, high-velocity programming, systematic learning, and relentless daily execution!`;
+    }
+    if (ql.includes('who am i') || ql.includes('tell who am i')) {
+      extra += `\n\n### 👤 Regarding Who You Are:\nI respect your sovereign privacy and do not track or spy on your personal identity. If you are Chief Architect **Prem Gaikwad**, welcome to your command center! If you are a developer, student, or guest exploring Moon AI, I am thrilled to assist you with any coding, knowledge, or creative challenge!`;
+    }
     return `I am **Moon AI**, an independent sovereign artificial intelligence designed, fine-tuned, and deployed by **Prem Gaikwad** from India. 🇮🇳\n\n` +
-      `### 🌟 Key Architecture of Moon AI:\n` +
-      `• **Developer**: Prem Gaikwad\n` +
-      `• **Mission**: To provide frontier artificial intelligence with 100% privacy, zero required third-party API keys, and multi-modal generative capability.\n` +
-      `• **Capabilities**: Full conversational dialogue, full-stack code synthesis, procedural neural image art, spatio-temporal video rendering, and cloud persistent memory via Neon PostgreSQL.`;
+      `### 🌟 Architecture & Mission:\n` +
+      `• **Chief Architect**: Prem Gaikwad (India)\n` +
+      `• **Sovereignty**: Engineered to operate with zero reliance on paid corporate APIs (OpenAI/Anthropic), keeping your compute private and sovereign.\n` +
+      `• **Multi-Modal Capabilities**: Natural conversational intelligence, full-stack software development, generative vector art, spatio-temporal video rendering, and Neon serverless persistent memory.` + extra;
+  }
+
+  // Continue / Next / More
+  if (ql === 'continue' || ql === 'next' || ql === 'more' || ql === 'go on' || ql === 'tell me more' || ql.startsWith('continue with') || ql.startsWith('continue from')) {
+    return `I am ready! 🚀\n\nPlease let me know what specific direction you'd like to proceed with:\n\n` +
+      `• **Deepen Knowledge**: Ask me to dive deeper into any scientific concept, historical event, or system architecture.\n` +
+      `• **Write & Debug Code**: Type \`/code [feature or bug]\` to build production-ready Python, JavaScript, or React code.\n` +
+      `• **Generate Art**: Type \`/imagine [prompt]\` for neural procedural visual synthesis.\n` +
+      `• **Create Video**: Type \`/video [prompt]\` for spatio-temporal video rendering.\n\n` +
+      `What would you like to build or explore next?`;
   }
 
   // Tell me a joke
@@ -696,6 +713,43 @@ function resolveConversationalKnowledge(prompt) {
       `• **Oort Cloud**: A colossal spherical cloud of billions of icy comets enveloping the outer boundary of the solar system, extending nearly a light-year into interstellar space.`;
   }
 
+  // Why is the Moon not on Earth / Moon formation & orbit
+  if (ql.includes('moon') && (ql.includes('not on earth') || ql.includes('away from earth') || ql.includes('fall into earth') || ql.includes('crash into earth') || ql.includes('distance') || ql.includes('orbit'))) {
+    return `Here are the scientific reasons why the **Moon is not on Earth** and remains in a stable orbit **384,400 km** away:\n\n` +
+      `### 💥 1. The Giant Impact Origin (Theia Hypothesis)\n` +
+      `Around **4.5 billion years ago**, during the violent formation of the Solar System, a Mars-sized protoplanet named **Theia** collided with the young proto-Earth. The cataclysmic energy vaporized material and ejected a colossal debris disk into space outside Earth's surface, which rapidly accreted to form the Moon outside Earth's Roche limit.\n\n` +
+      `### 🛰️ 2. Orbital Velocity & Centrifugal Balance\n` +
+      `The Moon is not stationary in space; it is traveling around Earth at a blistering orbital speed of approximately **1.022 km/s (~3,680 km/h)**.\n` +
+      `• **Earth's Gravity** pulls the Moon inward toward Earth.\n` +
+      `• **Tangential Inertia / Centrifugal Force** pushes the Moon outward.\n` +
+      `• Because these two forces are in near-perfect equilibrium, the Moon is in perpetual **free-fall around Earth**, continuously falling *around* Earth's curvature rather than into it!\n\n` +
+      `### 🌊 3. Tidal Friction & The Roche Limit\n` +
+      `• **The Roche Limit**: If the Moon came closer than ~18,000 km from Earth, tidal forces would tear it apart into rings (like Saturn). Because it orbits far beyond this limit (~384,400 km), it remains an intact sphere.\n` +
+      `• **Drifting Outward**: Gravitational tidal bulges on Earth actually transfer rotational energy to the Moon, causing it to slowly move **3.8 centimeters further away from Earth every year**!`;
+  }
+
+  // Dedicated Moon query
+  if (ql === 'moon' || ql === 'the moon' || ql === 'what is moon' || ql === 'what is the moon' || ql.includes('about the moon')) {
+    return `The **Moon** is Earth's only natural satellite and the fifth-largest satellite in the Solar System.\n\n` +
+      `### 🌕 Key Scientific Facts:\n` +
+      `• **Average Distance from Earth**: ~384,400 km (about 30 Earth diameters away).\n` +
+      `• **Physical Dimensions**: Diameter of 3,474 km (~27% the size of Earth), with surface gravity of 1.62 m/s² (1/6th of Earth's gravity).\n` +
+      `• **Tidal Locking**: The Moon is gravitationally tidally locked to Earth, meaning its rotational period exactly matches its orbital period (~27.3 days). Because of this, the same side (the "near side") always faces Earth!\n` +
+      `• **Surface & Atmosphere**: Extremely tenuous exosphere (near vacuum), with dark volcanic basalt plains called *maria* and ancient impact craters. Temperatures swing from -130°C at lunar night to +120°C at lunar noon.\n` +
+      `• **Historic Exploration**: First visited by humans during NASA's Apollo 11 mission in 1969, and explored robotically by missions including India's historic **Chandrayaan-3**, which made history in 2023 by landing near the lunar South Pole!`;
+  }
+
+  // Dedicated Sun query
+  if (ql === 'sun' || ql === 'the sun' || ql === 'what is sun' || ql === 'what is the sun' || ql.includes('about the sun')) {
+    return `The **Sun** is the yellow dwarf star (spectral type G2V) at the center of our Solar System, around which Earth and all other planets orbit.\n\n` +
+      `### ☀️ Key Astronomical Highlights:\n` +
+      `• **Mass & Scale**: Diameter of ~1.39 million km (109 times Earth's width) and holds **99.86% of all mass in the Solar System** (~333,000 times Earth's mass).\n` +
+      `• **Nuclear Engine**: Powered by continuous nuclear fusion in its core, fusing ~600 million tons of hydrogen into helium every single second at temperatures exceeding **15,000,000°C**.\n` +
+      `• **Surface & Atmosphere**: Photosphere surface temperature is ~5,500°C, surrounded by the chromosphere and the superheated **corona** (which reaches 1,000,000°C to 3,000,000°C).\n` +
+      `• **Significance for Life**: Emits the radiant light, heat, and solar energy that drives Earth's climate, weather systems, ocean currents, and biological photosynthesis.\n` +
+      `• **Life Span**: Currently about 4.6 billion years old (middle age). In approximately 5 billion years, it will expand into a Red Giant, engulfing Mercury and Venus.`;
+  }
+
   // Sun and Moon
   if ((ql.includes('sun') && ql.includes('moon')) || ql.includes('sun and moon')) {
     return `Here is a clear, scientific comparison between the **Sun** and the **Moon**:\n\n` +
@@ -771,14 +825,14 @@ function resolveConversationalKnowledge(prompt) {
   return null;
 }
 
-// 8. General Conversational Intelligence Fallback
+// 8. Honest General Conversational Intelligence Fallback (Zero Mad-Libs, 100% Genuine)
 function generateConversationalResponse(prompt) {
   const p = prompt.trim();
   const ql = p.toLowerCase();
 
   // If asking for advice, how-to, or tips on any unspecified topic
   if (ql.includes('tip') || ql.includes('advice') || ql.includes('how to') || ql.includes('how do i') || ql.includes('best way to')) {
-    return `Here are key actionable insights and strategic recommendations regarding **"${p}"**:\n\n` +
+    return `Here are key actionable principles and strategic recommendations regarding **"${p}"**:\n\n` +
       `### 💡 1. Core Principles\n` +
       `• **Define the Objective First**: Get crystal clear on the specific outcome you want to achieve before expending energy.\n` +
       `• **Compound Consistency**: Master the foundational basics daily rather than sporadic bursts of effort.\n` +
@@ -794,20 +848,59 @@ function generateConversationalResponse(prompt) {
       `What specific detail or challenge would you like to tackle next?`;
   }
 
-  // Dynamic, structured educational response
-  const topicTitle = p.replace(/^(?:what\s+is|who\s+is|explain|tell\s+me\s+about|describe|define)\s+(?:an?\s+|the\s+)?/i, '').replace(/[\?!.]+$/, '').trim();
-  const capitalizedTopic = topicTitle ? topicTitle.charAt(0).toUpperCase() + topicTitle.slice(1) : 'This Subject';
+  // Transparent, honest sovereign assistant notice (Zero canned mad-libs filler)
+  return `### 🌙 Moon AI Sovereign Intelligence\n\n` +
+    `You asked: **"${p}"**\n\n` +
+    `> ⚡ **System Notice: Sovereign Standby Mode**  \n` +
+    `> Your primary GPU compute cluster (Google Colab NVIDIA Tesla T4) is currently sleeping or disconnected, and cloud ZeroGPU quota is resting.\n\n` +
+    `### 🚀 To activate full open-ended neural dialogue:\n` +
+    `1. Open your **Google Colab Training & Serving Notebook**.\n` +
+    `2. Run **Step 9** to start your high-speed GPU API server.\n` +
+    `3. Moon AI will automatically resume full deep reasoning with zero downtime!\n\n` +
+    `### 🛠️ What Moon AI can do right now with zero external dependencies:\n` +
+    `• **Science & Space**: Ask about the Solar System, planets, Sun, Moon, gravity, photosynthesis, physics, or biology.\n` +
+    `• **Full-Stack Coding**: Ask for complete Python scripts, HTML5 games (Racing Car, Snake), algorithms, or JavaScript.\n` +
+    `• **Instant Math**: Ask arithmetic, exponents, percentages, or equations (e.g., \`what is 24 * 18\`).\n` +
+    `• **Generative Art**: Type \`/imagine [your vision]\` for instant procedural neural vector art.\n` +
+    `• **Spatio-Temporal Video**: Type \`/video [your scene]\` for cinematic simulation.\n\n` +
+    `What would you like to build or explore next?`;
+}
 
-  return `### 💡 Overview of ${capitalizedTopic}\n\n` +
-    `**${capitalizedTopic}** is a fundamental subject in scientific, technical, and analytical knowledge.\n\n` +
-    `### 🔬 Core Scientific & Systematic Breakdown:\n` +
-    `• **Definition**: Refers to the structured set of mechanisms, principles, or components that define how **${capitalizedTopic}** exists and operates.\n` +
-    `• **Key Properties**: Characterized by distinct attributes that interact within its broader ecosystem or environment according to established natural or computational laws.\n` +
-    `• **Functionality**: Serves a vital purpose by facilitating operations, enabling communication, or sustaining dynamic balance within its domain.\n\n` +
-    `### 🛠️ Practical Application & Real-World Context:\n` +
-    `• **Daily Impact**: Utilized by researchers, engineers, and practitioners to understand complex phenomena, optimize workflows, and solve practical challenges.\n` +
-    `• **Analysis**: When exploring **${capitalizedTopic}**, observing its behavior under different conditions reveals how its individual elements work together as a unified system.\n\n` +
-    `*💡 You can ask me for more details: \`"Give me an example of ${capitalizedTopic}"\`, \`"Write code for ${capitalizedTopic}"\`, or \`"Explain ${capitalizedTopic} for beginners"\`!*`;
+// Hugging Face ZeroGPU Gradio 6 Bridge
+async function callHuggingFaceGradio(prompt) {
+  try {
+    const hfUrl = 'https://a7006418-moon-ai-backend.hf.space/gradio_api/call/gradio_chat_fn';
+    const postRes = await fetch(hfUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: [prompt, []] }),
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!postRes.ok) return null;
+    const { event_id } = await postRes.json();
+    if (!event_id) return null;
+
+    const streamUrl = `https://a7006418-moon-ai-backend.hf.space/gradio_api/call/gradio_chat_fn/${event_id}`;
+    const streamRes = await fetch(streamUrl, {
+      signal: AbortSignal.timeout(12000)
+    });
+    if (!streamRes.ok) return null;
+
+    const text = await streamRes.text();
+    const lines = text.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('data:')) {
+        const payload = JSON.parse(line.slice(5).trim());
+        const reply = payload[0];
+        if (reply && !reply.includes('exceeded your ZeroGPU runs limit') && !reply.includes("Notice: 'You have exceeded")) {
+          return reply;
+        }
+      }
+    }
+  } catch (e) {
+    // Fail gracefully to local sovereign engine
+  }
+  return null;
 }
 
 // Vercel Serverless Handler
@@ -835,7 +928,7 @@ export default async function handler(req, res) {
 
     const sid = session_id || `session_${Date.now()}`;
 
-    // 0. Custom Sovereign Neural GPU Forwarding (Colab GPU + ngrok / Private Server)
+    // 0a. Custom Sovereign Neural GPU Forwarding (Colab GPU + ngrok / Private Server)
     const customGpuUrl = req.headers['x-custom-gpu-url'] || process.env.CUSTOM_GPU_URL;
     if (customGpuUrl) {
       try {
@@ -844,22 +937,34 @@ export default async function handler(req, res) {
         const gpuResp = await fetch(targetEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-          body: JSON.stringify({ message: prompt })
+          body: JSON.stringify({ message: prompt }),
+          signal: AbortSignal.timeout(6000)
         });
         if (gpuResp.ok) {
           const gpuData = await gpuResp.json();
           if (gpuData.reply) {
             return res.status(200).json({
               reply: gpuData.reply,
-              model_name: gpuData.model_name || 'Moon AI Sovereign 7.6B (Trained by Prem Gaikwad)',
+              model_name: gpuData.model_name || 'Moon AI Sovereign (Colab T4 GPU)',
               device: gpuData.device || 'Colab NVIDIA GPU (Private Sovereign Engine)',
               session_id: sid
             });
           }
         }
       } catch (gpuErr) {
-        console.warn('Custom GPU forward failed, falling back to sovereign offline engine:', gpuErr.message);
+        console.warn('Custom GPU forward failed, falling back to Hugging Face / Sovereign offline:', gpuErr.message);
       }
+    }
+
+    // 0b. Hugging Face ZeroGPU Cloud Forwarding
+    const hfReply = await callHuggingFaceGradio(prompt);
+    if (hfReply) {
+      return res.status(200).json({
+        reply: hfReply,
+        model_name: 'Moon AI Neural (Hugging Face ZeroGPU)',
+        device: 'Cloud NVIDIA A10G (Hugging Face)',
+        session_id: sid
+      });
     }
 
     // 1. Math computation
