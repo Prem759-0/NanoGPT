@@ -938,7 +938,7 @@ export default async function handler(req, res) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
           body: JSON.stringify({ message: prompt }),
-          signal: AbortSignal.timeout(6000)
+          signal: AbortSignal.timeout(35000)
         });
         if (gpuResp.ok) {
           const gpuData = await gpuResp.json();
