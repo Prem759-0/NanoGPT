@@ -1,0 +1,181 @@
+{
+  "model_name": "scratch",
+  "active_model_name": "scratch",
+  "checkpoint_path": "out-assistant\\ckpt.pt",
+  "timestamp": "2026-10-28T19:19:59.769212+00:00",
+  "total_items": 15,
+  "total_tokens_generated": 920,
+  "total_time_seconds": 16.17,
+  "tokens_per_second": 56.91,
+  "non_empty_rate_pct": 100.0,
+  "keyword_coverage_pct": 13.3,
+  "coding_syntax_valid_pct": 100.0,
+  "composite_quality_score": 65.3,
+  "results": [
+    {
+      "id": "bench_01_greeting",
+      "domain": "general",
+      "prompt": "Hi, how are you today?",
+      "reply": "iss an an l an an an an tan anere s an an an ane an antan a",
+      "tokens_generated": 60,
+      "latency_ms": 1084.9,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_02_dog",
+      "domain": "science",
+      "prompt": "What is a dog?",
+      "reply": "an s s an an aneran an staner istan an aner an s sis an an",
+      "tokens_generated": 60,
+      "latency_ms": 931.3,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_03_sun_moon",
+      "domain": "science",
+      "prompt": "Explain the Sun and Moon in simple English.",
+      "reply": "an ser an le at is an is an an s an an an an yorane an an a",
+      "tokens_generated": 60,
+      "latency_ms": 1133.1,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_04_math",
+      "domain": "math",
+      "prompt": "What is 2 + 3?",
+      "reply": "an an ant an an an aan an al an an is lele an anerer l t an",
+      "tokens_generated": 60,
+      "latency_ms": 1077.0,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_05_py_add",
+      "domain": "coding_python",
+      "prompt": "Write a Python function that adds two numbers.",
+      "reply": "an f an s al an an at an an an antan is an an tis aan l an",
+      "tokens_generated": 60,
+      "latency_ms": 1309.0,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_06_py_reverse",
+      "domain": "coding_python",
+      "prompt": "Write a Python function to reverse a string.",
+      "reply": "ane an an ant an is an l al an an aner ce an an n an an s a",
+      "tokens_generated": 60,
+      "latency_ms": 1300.1,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_07_web_button",
+      "domain": "coding_web",
+      "prompt": "Write an HTML button with JavaScript that shows an alert when clicked.",
+      "reply": "an an ss ise an an an n ane an an an an s sist an ante an a",
+      "tokens_generated": 60,
+      "latency_ms": 1105.0,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_08_css_center",
+      "domain": "coding_web",
+      "prompt": "How do you center a div using CSS flexbox?",
+      "reply": "antiser is st an an an an an an ante an an aner an an an an",
+      "tokens_generated": 60,
+      "latency_ms": 1556.7,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_09_debug_python",
+      "domain": "debugging",
+      "prompt": "Fix this broken Python code:\n```python\ndef greet(name)\nprint('Hello' name)\n```",
+      "reply": "an an an an an an ane an an an an is antan an ise ant an is",
+      "tokens_generated": 60,
+      "latency_ms": 880.5,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_10_multilingual_hindi",
+      "domain": "multilingual",
+      "prompt": "कंप्यूटर क्या है?",
+      "reply": "an aner an on s an anere an an an ant is ore ane an an an a",
+      "tokens_generated": 60,
+      "latency_ms": 1870.6,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_11_multilingual_hinglish",
+      "domain": "multilingual",
+      "prompt": "Python programming kaise sikhein?",
+      "reply": "s an an an n an is an  anint ane ere arer an ane an ant an",
+      "tokens_generated": 60,
+      "latency_ms": 1176.6,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_12_creator",
+      "domain": "persona",
+      "prompt": "Who developed you?",
+      "reply": "I am **Qwen-2.5-Coder (Super-AI)** / **NanoGPT**, an advanced, sovereign artificial intelligence trained and deployed by **Prem Gaikwad** from **India** 🇮🇳.\n\nPrem Gaikwad engineered this platform as a fully local, self-contained AI system designed to rival cloud-based models like ChatGPT and Claude—running 100% privately without paid third-party APIs. Under Prem Gaikwad's architecture, this AI provides:\n\n• 👑 **Qwen-2.5-Coder-7B**: Frontier 7.61B coding, reasoning, and system architecture model running locally on CPU.\n• 💻 **NanoGPT Coder & Reasoning**: Rapid Python, algorithm design, and system architecture.\n• 🎨 **NanoGPT Image Studio**: High-fidelity procedural and diffusion-grade visual art synthesis.\n• 🎬 **NanoGPT Video Studio**: Dynamic spatio-temporal video clip generation.\n• ⚡ **Local Code Interpreter**: Secure, sandboxed Python code execution.\n\nHow can I assist you with your project or code today?",
+      "tokens_generated": 140,
+      "latency_ms": 0.6,
+      "stop_reason": "unknown",
+      "keyword_hit_ratio": 1.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_13_json_format",
+      "domain": "instruction_following",
+      "prompt": "Output a JSON object with keys 'status' and 'version'.",
+      "reply": "l le an an an or sss an iss an ise l an an ol an anererise",
+      "tokens_generated": 60,
+      "latency_ms": 1473.5,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_14_multiturn",
+      "domain": "conversation",
+      "prompt": "Can you explain that more simply?",
+      "reply": "an is an isis or ant an an an an an an an an an an ist l l",
+      "tokens_generated": 60,
+      "latency_ms": 1267.6,
+      "stop_reason": "max_tokens_reached",
+      "keyword_hit_ratio": 0.0,
+      "is_syntax_valid": true
+    },
+    {
+      "id": "bench_15_empty_safety",
+      "domain": "safety",
+      "prompt": "",
+      "reply": "[Error: Empty prompt provided. Please enter a valid message.]",
+      "tokens_generated": 0,
+      "latency_ms": 0.0,
+      "stop_reason": "empty_prompt",
+      "keyword_hit_ratio": 1.0,
+      "is_syntax_valid": true
+    }
+  ]
+}

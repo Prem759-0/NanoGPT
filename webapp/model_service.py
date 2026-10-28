@@ -561,8 +561,8 @@ class ModelService:
                 "device": "CPU Local Engine"
             }
 
-        # --- 0. Remote Sovereign Colab GPU Fast-Path (sub-second cloud inference) ---
-        colab_gpu_url = os.environ.get("COLAB_GPU_URL", "https://jayceon-embryological-lasandra.ngrok-free.dev").strip().rstrip("/")
+        # --- 0. Remote Sovereign GPU Fast-Path (optional private server or Colab) ---
+        colab_gpu_url = os.environ.get("COLAB_GPU_URL", "").strip().rstrip("/")
         if colab_gpu_url and self.active_model_name != "scratch" and not os.environ.get("DISABLE_REMOTE_GPU"):
             try:
                 import urllib.request, json

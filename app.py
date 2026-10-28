@@ -375,13 +375,20 @@ class ChatRequest(BaseModel):
 @_routes_app.get("/api/health")
 def health():
     import torch
-    dev = "NVIDIA A100 GPU (ZeroGPU Free)" if torch.cuda.is_available() else "Hugging Face Cloud Engine"
+    is_cuda = torch.cuda.is_available()
+    dev = "Hugging Face Cloud (ZeroGPU On-Demand)" if SPACES_AVAILABLE else ("CUDA" if is_cuda else "CPU Cloud")
     return JSONResponse({
-        "status": "ok",
+        "status": "operational",
+        "service": "Moon AI Sovereign Backend",
+        "backend": "Hugging Face Spaces",
         "model_status": "READY (24/7 CLOUD)",
         "device": dev,
+        "spaces_available": SPACES_AVAILABLE,
+        "gpu_allocated": is_cuda,
         "torch_available": True,
-        "torch_version": torch.__version__
+        "torch_version": torch.__version__,
+        "architect": "Prem Gaikwad (India 🇮🇳)",
+        "version": "3.1.0"
     }, headers=CORS_HEADERS)
 
 @_routes_app.get("/api/models")

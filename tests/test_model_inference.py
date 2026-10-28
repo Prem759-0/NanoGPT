@@ -25,7 +25,66 @@ class TestModelInference(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ["DEBUG_INFERENCE"] = "1"
+        os.environ["DISABLE_REMOTE_GPU"] = "1"
         cls.service = ModelService(base_dir=PROJECT_ROOT)
+        cls._created_test_checkpoint = False
+        cls.test_ckpt_dir = None
+
+        # If no checkpoint exists on disk (e.g. fresh GitHub Actions checkout),
+        # create a deterministic lightweight test checkpoint and metadata
+        if not cls.service.find_checkpoint():
+            import tempfile
+            import pickle
+            import torch
+            from model import GPTConfig, GPT
+
+            cls.test_ckpt_dir = tempfile.mkdtemp(prefix="nanogpt_ci_test_")
+            ckpt_path = os.path.join(cls.test_ckpt_dir, "ckpt.pt")
+            meta_path = os.path.join(cls.test_ckpt_dir, "meta.pkl")
+
+            vocab = [chr(i) for i in range(32, 127)] + ["\n", "\t"]
+            meta = {
+                "vocab_size": 97,
+                "itos": {i: ch for i, ch in enumerate(vocab[:97])},
+                "stoi": {ch: i for i, ch in enumerate(vocab[:97])},
+            }
+            with open(meta_path, "wb") as f:
+                pickle.dump(meta, f)
+
+            gptconf = GPTConfig(
+                block_size=128,
+                vocab_size=97,
+                n_layer=1,
+                n_head=1,
+                n_embd=16,
+                dropout=0.0,
+                bias=False
+            )
+            dummy_model = GPT(gptconf)
+            torch.save({
+                "model": dummy_model.state_dict(),
+                "model_args": {
+                    "block_size": 128,
+                    "vocab_size": 97,
+                    "n_layer": 1,
+                    "n_head": 1,
+                    "n_embd": 16,
+                    "dropout": 0.0,
+                    "bias": False
+                },
+                "iter_num": 10,
+                "best_val_loss": 2.0,
+                "config": {"dataset": "assistant_chat"}
+            }, ckpt_path)
+
+            cls._created_test_checkpoint = True
+            cls.service = ModelService(base_dir=PROJECT_ROOT, preferred_checkpoint=ckpt_path)
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls._created_test_checkpoint and cls.test_ckpt_dir and os.path.exists(cls.test_ckpt_dir):
+            import shutil
+            shutil.rmtree(cls.test_ckpt_dir, ignore_errors=True)
 
     def test_01_deterministic_scratch_loading(self):
         """Verify scratch model loads correctly with valid vocab and metadata."""

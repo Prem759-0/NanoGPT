@@ -46,17 +46,17 @@
   },
   {
     "file": "user_learned_data.jsonl",
-    "total_records": 17,
-    "valid_records": 17,
+    "total_records": 23,
+    "valid_records": 23,
     "empty_instructions": 0,
     "empty_responses": 0,
-    "exact_duplicates": 2,
-    "near_duplicates": 3,
+    "exact_duplicates": 8,
+    "near_duplicates": 9,
     "syntax_error_records": 0,
     "multilingual_records": 0,
     "creator_attribution_records": 1,
-    "avg_instruction_chars": 32.1,
-    "avg_response_chars": 506.4,
+    "avg_instruction_chars": 25.0,
+    "avg_response_chars": 408.7,
     "syntax_issues_sample": []
   }
 ]

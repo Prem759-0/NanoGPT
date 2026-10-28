@@ -853,6 +853,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
             headers: { 'Content-Type': 'application/json', 'X-User-Id': activeUserId },
             body: JSON.stringify({
               message: outgoingMessage,
+              messages: messages.slice(-8).map(m => ({ role: m.role, content: m.text || m.content || '' })),
               session_id: activeSessionId,
               user_id: activeUserId,
               max_new_tokens: tokenBudget,
@@ -867,6 +868,9 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
             if (data.reply) {
               replyText = data.reply;
               if (data.model_name) meta.model_name = data.model_name;
+              if (data.provider) meta.provider = data.provider;
+              if (data.latency_ms) meta.latency_ms = data.latency_ms;
+              if (data.device) meta.device = data.device;
               if (data.tokens_generated) meta.tokens = data.tokens_generated;
               if (data.device) meta.device = data.device;
               if (data.session_id && data.session_id !== activeSessionId) {

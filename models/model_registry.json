@@ -15,6 +15,15 @@
       "reasons": [
         "Candidate score (65.3) regressed compared to current best (75.0)."
       ]
+    },
+    {
+      "candidate_name": "scratch",
+      "evaluated_at": "2026-10-28T19:19:59.812686+00:00",
+      "status": "REJECTED",
+      "score": 65.3,
+      "reasons": [
+        "Candidate score (65.3) regressed compared to current best (75.0)."
+      ]
     }
   ]
 }

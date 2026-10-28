@@ -165,7 +165,36 @@ def run_evaluation(model_name: str, max_tokens: int = 150) -> Dict[str, Any]:
     service = ModelService(base_dir=PROJECT_ROOT)
     success = service.load_model(model_name)
     if not success:
-        return {"error": f"Failed to load model '{model_name}': {service.error_message}"}
+        err_msg = f"Failed to load model '{model_name}': {service.error_message}"
+        print(f"⚠️ {err_msg}")
+        summary = {
+            "model_name": model_name,
+            "active_model_name": "none",
+            "checkpoint_path": "none",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "total_items": len(BENCHMARK_PROMPTS),
+            "total_tokens_generated": 0,
+            "total_time_seconds": 0.0,
+            "tokens_per_second": 0.0,
+            "non_empty_rate_pct": 0.0,
+            "keyword_coverage_pct": 0.0,
+            "coding_syntax_valid_pct": 0.0,
+            "composite_quality_score": 0.0,
+            "error": err_msg,
+            "results": []
+        }
+        report_dir = os.path.join(PROJECT_ROOT, "data", "reports")
+        os.makedirs(report_dir, exist_ok=True)
+        report_file = os.path.join(report_dir, f"eval_{model_name}_{int(time.time())}.json")
+        with open(report_file, "w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2, ensure_ascii=False)
+        md_file = os.path.join(report_dir, f"eval_{model_name}_latest.md")
+        with open(md_file, "w", encoding="utf-8") as f:
+            f.write(f"# Benchmark Evaluation Report: {model_name}\n\n")
+            f.write(f"- **Status**: Model Load Inactive\n")
+            f.write(f"- **Reason**: `{err_msg}`\n")
+            f.write(f"- **Composite Quality Score**: **0.0 / 100**\n")
+        return summary
 
     results = []
     total_tokens = 0

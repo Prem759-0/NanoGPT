@@ -9,3 +9,5 @@ spaces
 psycopg[binary]>=3.1.0
 pillow>=10.0.0
 numpy>=1.26.0
+tiktoken>=0.7.0
+

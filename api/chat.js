@@ -1623,11 +1623,12 @@ async function call247CloudNeuralEngine(prompt, sessionHistory = []) {
     const systemPrompt = `You are Moon AI, an ultra-advanced sovereign artificial intelligence developed and deployed by Prem Gaikwad from India.
 You are an omni-capable AI assistant with deep expertise in all topics: daily conversation, science, technology, mathematics, world history, geography, vocabulary definitions, daily advice, and frontier software development.
 Always answer helpfully, accurately, warmly, and directly.
-When asked who created or developed you, explain that you are Moon AI engineered by Chief Architect Prem Gaikwad from India.`;
+When asked who created or developed you, explain that you are Moon AI engineered by Chief Architect Prem Gaikwad from India.
+Never output ASCII art or text drawings when asked to draw or generate an image. Provide rich, descriptive creative concepts or code instead.`;
 
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...sessionHistory.slice(-4),
+      ...sessionHistory.slice(-6),
       { role: 'user', content: prompt }
     ];
 
@@ -1707,8 +1708,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message, session_id } = req.body || {};
-    const prompt = (message || '').trim();
+    const startTime = Date.now();
+    const { message, messages, session_id, user_id, max_new_tokens, temperature } = req.body || {};
+    let prompt = (message || '').trim();
+    let sessionHistory = [];
+    if (Array.isArray(messages) && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (!prompt && lastMsg && lastMsg.role === 'user') {
+        prompt = (lastMsg.content || '').trim();
+      }
+      sessionHistory = messages.slice(0, -1).map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: typeof m.content === 'string' ? m.content : ''
+      }));
+    }
 
     if (!prompt) {
       return res.status(400).json({ error: 'Message cannot be empty' });
@@ -1809,12 +1822,14 @@ export default async function handler(req, res) {
     }
 
         // 0b. High-Speed 24/7 Sovereign Cloud Neural Engine (Always Online 24/7/365, Zero Colab Required!)
-    const cloudReply = await call247CloudNeuralEngine(prompt);
+    const cloudReply = await call247CloudNeuralEngine(prompt, sessionHistory);
     if (cloudReply) {
       return res.status(200).json({
         reply: cloudReply,
         model_name: 'Moon AI Sovereign 24/7 (20B Cloud Reasoning Engine — Prem Gaikwad Edition)',
+        provider: 'moon-cloud-neural-cluster',
         device: 'Moon AI 24/7 Cloud Cluster',
+        latency_ms: Date.now() - startTime,
         session_id: sid
       });
     }
@@ -1825,7 +1840,9 @@ export default async function handler(req, res) {
       return res.status(200).json({
         reply: hfReply,
         model_name: 'Moon AI Neural (Hugging Face ZeroGPU)',
+        provider: 'huggingface-spaces-zerogpu',
         device: 'Cloud NVIDIA A10G (Hugging Face)',
+        latency_ms: Date.now() - startTime,
         session_id: sid
       });
     }
