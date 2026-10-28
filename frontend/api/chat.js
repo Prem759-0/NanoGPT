@@ -37,122 +37,361 @@ function calculateMath(prompt) {
 }
 
 // 2. Sovereign In-House Image Generation Engine (100% Scratch, Zero External APIs)
-function handleImageGeneration(prompt) {
-  const cleanPrompt = prompt
-    .replace(/^\/(?:imagine|image)\s*/i, '')
-    .replace(/^(?:generate|create|make|draw|show|paint|render)\s+(?:an?\s+)?image\s+(?:of\s+)?/i, '')
-    .trim() || 'A breathtaking cybernetic horizon in deep space';
+// Intent Detectors for Multimodal Commands
+function isImageGenerationIntent(prompt) {
+  const p = (prompt || '').trim();
+  const ql = p.toLowerCase();
+  if (p.startsWith('/imagine') || p.startsWith('/image')) return true;
+  if (/^(?:please\s+)?(?:generate|genrate|gentrate|generte|create|make|draw|paint|render|produce|show\s+me)\s+(?:an?\s+)?(?:image|picture|photo|graphic|drawing|artwork|illustration|cartoon|render|map)\b/i.test(ql)) return true;
+  if (/^(?:image|picture|drawing|illustration|cartoon|artwork|map)\s+of\b/i.test(ql)) return true;
+  if (/\b(?:generate|genrate|draw|paint|render|create)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|drawing|illustration|cartoon)\b/i.test(ql)) return true;
+  return false;
+}
 
-  const ql = cleanPrompt.toLowerCase();
+function isVideoGenerationIntent(prompt) {
+  const p = (prompt || '').trim();
+  const ql = p.toLowerCase();
+  if (p.startsWith('/video')) return true;
+  if (/^(?:please\s+)?(?:generate|genrate|gentrate|generte|create|make|render|animate)\s+(?:an?\s+)?(?:video|clip|animation|movie|motion)\b/i.test(ql)) return true;
+  if (/^(?:video|clip|animation|motion)\s+of\b/i.test(ql)) return true;
+  return false;
+}
 
-  // Dynamic aesthetic profile based on prompt semantics
-  let primaryColor = '#38bdf8';
-  let secondaryColor = '#818cf8';
-  let accentColor = '#ec4899';
-  let bgGradientStart = '#030712';
-  let bgGradientEnd = '#0f172a';
-  let themeName = 'Cinematic Quantum';
-
-  if (ql.includes('cyber') || ql.includes('neon') || ql.includes('future') || ql.includes('robot')) {
-    primaryColor = '#06b6d4';
-    secondaryColor = '#ec4899';
-    accentColor = '#f59e0b';
-    bgGradientStart = '#05050b';
-    bgGradientEnd = '#180828';
-    themeName = 'Cyberpunk Neon Matrix';
-  } else if (ql.includes('sun') || ql.includes('sunset') || ql.includes('fire') || ql.includes('gold')) {
-    primaryColor = '#f59e0b';
-    secondaryColor = '#ef4444';
-    accentColor = '#fbbf24';
-    bgGradientStart = '#180a05';
-    bgGradientEnd = '#2b0906';
-    themeName = 'Solar Flare & Gold';
-  } else if (ql.includes('nature') || ql.includes('forest') || ql.includes('earth') || ql.includes('tree')) {
-    primaryColor = '#10b981';
-    secondaryColor = '#3b82f6';
-    accentColor = '#84cc16';
-    bgGradientStart = '#021a0f';
-    bgGradientEnd = '#062d1c';
-    themeName = 'Emerald Bio-Cosmos';
-  } else if (ql.includes('india') || ql.includes('map') || ql.includes('flag')) {
-    primaryColor = '#f97316';
-    secondaryColor = '#ffffff';
-    accentColor = '#16a34a';
-    bgGradientStart = '#0c0a09';
-    bgGradientEnd = '#1c1917';
-    themeName = 'Sovereign Tricolor Architecture';
-  }
-
-  // Deterministic procedural star nodes from prompt characters
-  let nodes = '';
-  for (let i = 0; i < 40; i++) {
-    const x = ((i * 137 + cleanPrompt.length * 17) % 800) + 20;
-    const y = ((i * 241 + cleanPrompt.length * 31) % 450) + 20;
-    const r = (i % 3) + 1.5;
-    const opacity = ((i % 5) + 3) / 10;
-    nodes += `<circle cx="${x}" cy="${y}" r="${r}" fill="#ffffff" opacity="${opacity}" />`;
-  }
-
-  // Sovereign In-House Procedural Vector Artwork
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 500" width="100%" height="100%">
+// Dedicated Sovereign Cartoon India Map Vector Synthesizer
+function generateIndiaMapCartoonSvg(cleanPrompt) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 680" width="100%" height="100%">
     <defs>
-      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="${bgGradientStart}" />
-        <stop offset="100%" stop-color="${bgGradientEnd}" />
+      <linearGradient id="oceanBg" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#bae6fd" />
+        <stop offset="30%" stop-color="#7dd3fc" />
+        <stop offset="70%" stop-color="#38bdf8" />
+        <stop offset="100%" stop-color="#0284c7" />
       </linearGradient>
-      <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.9" />
-        <stop offset="50%" stop-color="${secondaryColor}" stop-opacity="0.8" />
-        <stop offset="100%" stop-color="${accentColor}" stop-opacity="0.9" />
+
+      <linearGradient id="indiaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#fb923c" />
+        <stop offset="35%" stop-color="#fed7aa" />
+        <stop offset="65%" stop-color="#bbf7d0" />
+        <stop offset="100%" stop-color="#4ade80" />
       </linearGradient>
-      <filter id="blurFilter">
-        <feGaussianBlur stdDeviation="35" result="blur" />
+
+      <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+        <feDropShadow dx="3" dy="6" stdDeviation="6" flood-color="#0369a1" flood-opacity="0.35" />
       </filter>
-      <filter id="neonGlow">
-        <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+
+      <filter id="softGlow">
+        <feGaussianBlur stdDeviation="4" result="blur" />
         <feMerge>
-          <feMergeNode in="coloredBlur"/>
-          <feMergeNode in="SourceGraphic"/>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
         </feMerge>
       </filter>
     </defs>
-    
-    <rect width="840" height="500" fill="url(#bg)" rx="16" />
-    <circle cx="200" cy="180" r="140" fill="${primaryColor}" opacity="0.18" filter="url(#blurFilter)" />
-    <circle cx="640" cy="320" r="160" fill="${secondaryColor}" opacity="0.18" filter="url(#blurFilter)" />
-    <circle cx="420" cy="250" r="110" fill="${accentColor}" opacity="0.15" filter="url(#blurFilter)" />
 
-    ${nodes}
+    <!-- Ocean Background -->
+    <rect width="900" height="680" fill="url(#oceanBg)" rx="20" />
 
-    <g stroke="rgba(255,255,255,0.06)" stroke-width="1">
-      <line x1="0" y1="360" x2="840" y2="360" />
-      <line x1="0" y1="400" x2="840" y2="400" />
-      <line x1="0" y1="440" x2="840" y2="440" />
-      <line x1="420" y1="320" x2="100" y2="500" />
-      <line x1="420" y1="320" x2="260" y2="500" />
-      <line x1="420" y1="320" x2="420" y2="500" />
-      <line x1="420" y1="320" x2="580" y2="500" />
-      <line x1="420" y1="320" x2="740" y2="500" />
+    <!-- Wave ripples -->
+    <g stroke="rgba(255,255,255,0.45)" stroke-width="2.5" fill="none" stroke-linecap="round">
+      <path d="M 120 380 Q 140 372 160 380 T 200 380" />
+      <path d="M 80 440 Q 100 432 120 440 T 160 440" />
+      <path d="M 140 520 Q 160 512 180 520 T 220 520" />
+      <path d="M 680 400 Q 700 392 720 400 T 760 400" />
+      <path d="M 720 460 Q 740 452 760 460 T 800 460" />
+      <path d="M 420 620 Q 440 612 460 620 T 500 620" />
     </g>
 
-    <g filter="url(#neonGlow)">
-      <polygon points="420,130 540,240 420,350 300,240" fill="none" stroke="url(#glow)" stroke-width="3" />
-      <polygon points="420,160 505,240 420,320 335,240" fill="none" stroke="${primaryColor}" stroke-width="1.5" opacity="0.7" />
-      <circle cx="420" cy="240" r="28" fill="url(#glow)" />
-      <circle cx="420" cy="240" r="14" fill="#ffffff" />
+    <!-- Sun in Top Right -->
+    <g transform="translate(800, 90)">
+      <circle cx="0" cy="0" r="42" fill="#fbbf24" filter="url(#softGlow)" />
+      <circle cx="0" cy="0" r="34" fill="#f59e0b" />
+      <circle cx="-10" cy="-6" r="4" fill="#78350f" />
+      <circle cx="10" cy="-6" r="4" fill="#78350f" />
+      <path d="M -12 10 Q 0 20 12 10" stroke="#78350f" stroke-width="3" fill="none" stroke-linecap="round" />
+      <g stroke="#f59e0b" stroke-width="4" stroke-linecap="round">
+        <line x1="0" y1="-52" x2="0" y2="-64" />
+        <line x1="0" y1="52" x2="0" y2="64" />
+        <line x1="-52" y1="0" x2="-64" y2="0" />
+        <line x1="52" y1="0" x2="64" y2="0" />
+        <line x1="-38" y1="-38" x2="-46" y2="-46" />
+        <line x1="38" y1="38" x2="46" y2="46" />
+        <line x1="38" y1="-38" x2="46" y2="-46" />
+        <line x1="-38" y1="38" x2="-46" y2="46" />
+      </g>
     </g>
 
-    <circle cx="420" cy="240" r="150" fill="none" stroke="url(#glow)" stroke-width="1.5" stroke-dasharray="12 8" opacity="0.6" />
-    <circle cx="420" cy="240" r="185" fill="none" stroke="${secondaryColor}" stroke-width="1" stroke-dasharray="6 14" opacity="0.4" />
+    <!-- Fluffy Clouds -->
+    <g fill="#ffffff" opacity="0.92">
+      <g transform="translate(100, 80)">
+        <ellipse cx="40" cy="30" rx="35" ry="22" />
+        <ellipse cx="70" cy="22" rx="28" ry="22" />
+        <ellipse cx="95" cy="32" rx="25" ry="18" />
+      </g>
+      <g transform="translate(620, 150)">
+        <ellipse cx="40" cy="30" rx="30" ry="18" />
+        <ellipse cx="65" cy="24" rx="24" ry="18" />
+        <ellipse cx="85" cy="32" rx="22" ry="16" />
+      </g>
+    </g>
 
-    <rect x="30" y="420" width="780" height="52" rx="10" fill="rgba(10, 15, 28, 0.75)" stroke="rgba(255,255,255,0.12)" />
-    <text x="50" y="445" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">
-      🌙 MOON AI SOVEREIGN ART STUDIO: ${cleanPrompt.slice(0, 52)}${cleanPrompt.length > 52 ? '...' : ''}
-    </text>
-    <text x="50" y="462" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#94a3b8">
-      Style: ${themeName} • Engine: 100% In-House Neural Shader • Chief Architect: Prem Gaikwad (India 🇮🇳)
-    </text>
+    <!-- Friendly Dolphin in Arabian Sea -->
+    <g transform="translate(160, 460) scale(0.7)">
+      <path d="M 0 0 C 20 -30 60 -30 80 -10 C 90 0 100 -5 110 -15 C 105 10 90 25 70 20 C 40 15 20 30 0 0 Z" fill="#0284c7" />
+      <polygon points="50,-25 65,-45 70,-20" fill="#0284c7" />
+      <polygon points="105,-15 125,-25 118,-5" fill="#0284c7" />
+      <circle cx="20" cy="-8" r="3" fill="#ffffff" />
+      <circle cx="19" cy="-8" r="1.5" fill="#0f172a" />
+    </g>
+
+    <!-- Sailboat in Bay of Bengal -->
+    <g transform="translate(710, 470) scale(0.85)">
+      <path d="M 0 20 L 60 20 L 50 35 L 10 35 Z" fill="#b45309" stroke="#78350f" stroke-width="2" />
+      <polygon points="30,18 30,-25 55,18" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+      <polygon points="26,18 26,-15 8,18" fill="#f87171" stroke="#ef4444" stroke-width="1.5" />
+      <line x1="28" y1="20" x2="28" y2="-28" stroke="#78350f" stroke-width="2.5" />
+    </g>
+
+    <!-- MAIN INDIA LANDMASS (Stylized Cartoon Geography) -->
+    <polygon points="
+      440,75 465,55 495,75 515,105 505,135 490,165 425,175 375,215 365,255 325,275
+      315,315 345,335 365,325 375,355 385,395 405,445 425,495 450,545 475,505 505,445
+      535,395 565,355 565,325 570,295 615,315 655,275 665,295 655,345 625,375 595,345
+      525,275 485,235 465,205 440,135
+    " fill="url(#indiaGrad)" stroke="#ea580c" stroke-width="5" stroke-linejoin="round" filter="url(#shadow)" />
+
+    <!-- Inner Decorative Land Border -->
+    <polygon points="
+      440,85 465,68 490,85 508,110 498,135 485,160 425,170 380,210 370,250 335,270
+      325,310 350,325 370,320 380,350 390,390 410,440 430,490 450,535 470,500 500,440
+      528,390 555,350 558,322 565,298 610,315 645,280 655,300 645,340 620,365 590,340
+      520,275 485,240 465,210 442,140
+    " fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="6 6" opacity="0.75" />
+
+    <!-- Mountain Peaks: The Himalayas -->
+    <g fill="#f8fafc" stroke="#64748b" stroke-width="2" stroke-linejoin="round">
+      <polygon points="440,115 455,90 470,115" />
+      <polygon points="465,115 480,85 495,115" />
+      <polygon points="490,120 505,95 520,120" />
+      <polygon points="590,295 605,275 620,295" />
+      <polygon points="615,290 630,268 645,290" />
+    </g>
+
+    <!-- Sacred Ganges & Major River curves -->
+    <path d="M 470 170 Q 500 230 520 270 T 560 350" fill="none" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" />
+
+    <!-- Thar Desert Dune Lines in Rajasthan -->
+    <g stroke="#f59e0b" stroke-width="2.5" fill="none" stroke-linecap="round">
+      <path d="M 380 230 Q 395 225 410 230" />
+      <path d="M 370 250 Q 385 245 400 250" />
+    </g>
+
+    <!-- Palm Trees in South India / Kerala -->
+    <g transform="translate(415, 490) scale(0.8)">
+      <path d="M 10 25 Q 12 10 10 0" stroke="#78350f" stroke-width="3" fill="none" />
+      <path d="M 10 0 Q 0 -10 -10 -5" stroke="#16a34a" stroke-width="3" fill="none" />
+      <path d="M 10 0 Q 20 -10 30 -5" stroke="#16a34a" stroke-width="3" fill="none" />
+      <path d="M 10 0 Q 10 -15 10 -20" stroke="#16a34a" stroke-width="3" fill="none" />
+    </g>
+
+    <!-- Geographic Ocean Labels -->
+    <g font-family="system-ui, sans-serif" font-weight="800" font-size="14" fill="#0369a1" letter-spacing="2">
+      <text x="180" y="340" text-anchor="middle">ARABIAN SEA</text>
+      <text x="730" y="340" text-anchor="middle">BAY OF BENGAL</text>
+      <text x="450" y="615" text-anchor="middle">INDIAN OCEAN</text>
+    </g>
+
+    <!-- City Pins & Badges -->
+    <g transform="translate(450, 190)">
+      <circle cx="0" cy="0" r="14" fill="#ef4444" filter="url(#softGlow)" />
+      <circle cx="0" cy="0" r="8" fill="#ffffff" />
+      <circle cx="0" cy="0" r="4" fill="#ef4444" />
+      <rect x="18" y="-14" width="135" height="26" rx="13" fill="#ffffff" stroke="#ef4444" stroke-width="2" />
+      <text x="28" y="4" font-family="system-ui, sans-serif" font-weight="800" font-size="11" fill="#b91c1c">⭐ NEW DELHI (CAPITAL)</text>
+    </g>
+
+    <g transform="translate(390, 395)">
+      <circle cx="0" cy="0" r="10" fill="#3b82f6" />
+      <circle cx="0" cy="0" r="5" fill="#ffffff" />
+      <rect x="-85" y="-12" width="75" height="22" rx="11" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="-75" y="3" font-family="system-ui, sans-serif" font-weight="700" font-size="10" fill="#1e40af">🏙️ Mumbai</text>
+    </g>
+
+    <g transform="translate(435, 470)">
+      <circle cx="0" cy="0" r="10" fill="#10b981" />
+      <circle cx="0" cy="0" r="5" fill="#ffffff" />
+      <rect x="16" y="-11" width="85" height="22" rx="11" fill="#ffffff" stroke="#10b981" stroke-width="1.5" />
+      <text x="24" y="4" font-family="system-ui, sans-serif" font-weight="700" font-size="10" fill="#065f46">💻 Bengaluru</text>
+    </g>
+
+    <g transform="translate(560, 345)">
+      <circle cx="0" cy="0" r="10" fill="#8b5cf6" />
+      <circle cx="0" cy="0" r="5" fill="#ffffff" />
+      <rect x="16" y="-11" width="75" height="22" rx="11" fill="#ffffff" stroke="#8b5cf6" stroke-width="1.5" />
+      <text x="24" y="4" font-family="system-ui, sans-serif" font-weight="700" font-size="10" fill="#5b21b6">🏛️ Kolkata</text>
+    </g>
+
+    <g transform="translate(475, 485)">
+      <circle cx="0" cy="0" r="9" fill="#f59e0b" />
+      <circle cx="0" cy="0" r="4" fill="#ffffff" />
+      <rect x="14" y="-10" width="70" height="20" rx="10" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5" />
+      <text x="22" y="4" font-family="system-ui, sans-serif" font-weight="700" font-size="9" fill="#92400e">🌊 Chennai</text>
+    </g>
+
+    <g transform="translate(450, 550)">
+      <circle cx="0" cy="0" r="6" fill="#ef4444" />
+      <text x="12" y="4" font-family="system-ui, sans-serif" font-weight="700" font-size="10" fill="#78350f">📍 Kanyakumari</text>
+    </g>
+
+    <!-- Cartoon Compass Rose in Upper Left -->
+    <g transform="translate(100, 190) scale(0.9)">
+      <circle cx="0" cy="0" r="32" fill="#ffffff" stroke="#0284c7" stroke-width="3" filter="url(#softGlow)" />
+      <polygon points="0,-28 6,-6 28,0 6,6 0,28 -6,6 -28,0 -6,-6" fill="#0284c7" />
+      <polygon points="0,-28 0,0 6,-6" fill="#ef4444" />
+      <polygon points="0,0 28,0 6,6" fill="#38bdf8" />
+      <text x="0" y="-32" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="12" fill="#b91c1c">N</text>
+      <text x="0" y="42" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="800" font-size="10" fill="#0369a1">S</text>
+      <text x="36" y="4" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="800" font-size="10" fill="#0369a1">E</text>
+      <text x="-36" y="4" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="800" font-size="10" fill="#0369a1">W</text>
+    </g>
+
+    <!-- Bottom Decorative Title Ribbon -->
+    <g transform="translate(450, 645)">
+      <rect x="-350" y="-22" width="700" height="42" rx="21" fill="#0f172a" stroke="#f59e0b" stroke-width="2.5" filter="url(#shadow)" />
+      <text x="0" y="-2" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="14" fill="#ffffff" letter-spacing="1.5">
+        🇮🇳 BHARAT • REPUBLIC OF INDIA (CARTOON EDITION) 🇮🇳
+      </text>
+      <text x="0" y="14" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="600" font-size="10" fill="#cbd5e1">
+        Synthesized by Moon AI Sovereign Art Studio • Chief Architect: Prem Gaikwad (India)
+      </text>
+    </g>
   </svg>`;
+}
+
+
+function handleImageGeneration(prompt) {
+  const cleanPrompt = (prompt || '')
+    .replace(/^\/(?:imagine|image)\s*/i, '')
+    .replace(/^(?:please\s+)?(?:generate|genrate|gentrate|generte|create|make|draw|show|paint|render|produce)\s+(?:an?\s+)?(?:image|picture|photo|graphic|drawing|artwork|illustration|cartoon|render|map)\s+(?:of|for|about\s+)?/i, '')
+    .replace(/^(?:image|picture|drawing|illustration|cartoon|artwork|map)\s+of\s+/i, '')
+    .trim() || 'A breathtaking cybernetic horizon in deep space';
+
+  const ql = cleanPrompt.toLowerCase();
+  const isIndiaMap = (ql.includes('india') || ql.includes('bharat') || ql.includes('hindustan')) &&
+    (ql.includes('map') || ql.includes('state') || ql.includes('border') || ql.includes('geography') || ql.includes('country') || ql.includes('cartoon') || ql.includes('style'));
+
+  let svg = '';
+  let themeName = 'Cinematic Quantum';
+
+  if (isIndiaMap) {
+    svg = generateIndiaMapCartoonSvg(cleanPrompt);
+    themeName = 'Cartoon Bharat Geographic Edition';
+  } else {
+    // Dynamic aesthetic profile based on prompt semantics
+    let primaryColor = '#38bdf8';
+    let secondaryColor = '#818cf8';
+    let accentColor = '#ec4899';
+    let bgGradientStart = '#030712';
+    let bgGradientEnd = '#0f172a';
+
+    if (ql.includes('cyber') || ql.includes('neon') || ql.includes('future') || ql.includes('robot')) {
+      primaryColor = '#06b6d4';
+      secondaryColor = '#ec4899';
+      accentColor = '#f59e0b';
+      bgGradientStart = '#05050b';
+      bgGradientEnd = '#180828';
+      themeName = 'Cyberpunk Neon Matrix';
+    } else if (ql.includes('sun') || ql.includes('sunset') || ql.includes('fire') || ql.includes('gold')) {
+      primaryColor = '#f59e0b';
+      secondaryColor = '#ef4444';
+      accentColor = '#fbbf24';
+      bgGradientStart = '#180a05';
+      bgGradientEnd = '#2b0906';
+      themeName = 'Solar Flare & Gold';
+    } else if (ql.includes('nature') || ql.includes('forest') || ql.includes('earth') || ql.includes('tree')) {
+      primaryColor = '#10b981';
+      secondaryColor = '#3b82f6';
+      accentColor = '#84cc16';
+      bgGradientStart = '#021a0f';
+      bgGradientEnd = '#062d1c';
+      themeName = 'Emerald Bio-Cosmos';
+    } else if (ql.includes('space') || ql.includes('galaxy') || ql.includes('star') || ql.includes('planet')) {
+      primaryColor = '#a855f7';
+      secondaryColor = '#38bdf8';
+      accentColor = '#f43f5e';
+      bgGradientStart = '#020617';
+      bgGradientEnd = '#0f172a';
+      themeName = 'Cosmic Starlight Infinity';
+    }
+
+    let nodes = '';
+    for (let i = 0; i < 40; i++) {
+      const x = ((i * 137 + cleanPrompt.length * 17) % 800) + 20;
+      const y = ((i * 241 + cleanPrompt.length * 31) % 450) + 20;
+      const r = (i % 3) + 1.5;
+      const opacity = ((i % 5) + 3) / 10;
+      nodes += `<circle cx="${x}" cy="${y}" r="${r}" fill="#ffffff" opacity="${opacity}" />`;
+    }
+
+    svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 500" width="100%" height="100%">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${bgGradientStart}" />
+          <stop offset="100%" stop-color="${bgGradientEnd}" />
+        </linearGradient>
+        <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.9" />
+          <stop offset="50%" stop-color="${secondaryColor}" stop-opacity="0.8" />
+          <stop offset="100%" stop-color="${accentColor}" stop-opacity="0.9" />
+        </linearGradient>
+        <filter id="blurFilter">
+          <feGaussianBlur stdDeviation="35" result="blur" />
+        </filter>
+        <filter id="neonGlow">
+          <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      
+      <rect width="840" height="500" fill="url(#bg)" rx="16" />
+      <circle cx="200" cy="180" r="140" fill="${primaryColor}" opacity="0.18" filter="url(#blurFilter)" />
+      <circle cx="640" cy="320" r="160" fill="${secondaryColor}" opacity="0.18" filter="url(#blurFilter)" />
+      <circle cx="420" cy="250" r="110" fill="${accentColor}" opacity="0.15" filter="url(#blurFilter)" />
+
+      ${nodes}
+
+      <g stroke="rgba(255,255,255,0.06)" stroke-width="1">
+        <line x1="0" y1="360" x2="840" y2="360" />
+        <line x1="0" y1="400" x2="840" y2="400" />
+        <line x1="0" y1="440" x2="840" y2="440" />
+        <line x1="420" y1="320" x2="100" y2="500" />
+        <line x1="420" y1="320" x2="260" y2="500" />
+        <line x1="420" y1="320" x2="420" y2="500" />
+        <line x1="420" y1="320" x2="580" y2="500" />
+        <line x1="420" y1="320" x2="740" y2="500" />
+      </g>
+
+      <g filter="url(#neonGlow)">
+        <polygon points="420,130 540,240 420,350 300,240" fill="none" stroke="url(#glow)" stroke-width="3" />
+        <polygon points="420,160 505,240 420,320 335,240" fill="none" stroke="${primaryColor}" stroke-width="1.5" opacity="0.7" />
+        <circle cx="420" cy="240" r="28" fill="url(#glow)" />
+        <circle cx="420" cy="240" r="14" fill="#ffffff" />
+      </g>
+
+      <circle cx="420" cy="240" r="150" fill="none" stroke="url(#glow)" stroke-width="1.5" stroke-dasharray="12 8" opacity="0.6" />
+      <circle cx="420" cy="240" r="185" fill="none" stroke="${secondaryColor}" stroke-width="1" stroke-dasharray="6 14" opacity="0.4" />
+
+      <rect x="30" y="420" width="780" height="52" rx="10" fill="rgba(10, 15, 28, 0.75)" stroke="rgba(255,255,255,0.12)" />
+      <text x="50" y="445" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">
+        🌙 MOON AI SOVEREIGN ART STUDIO: ${cleanPrompt.slice(0, 52)}${cleanPrompt.length > 52 ? '...' : ''}
+      </text>
+      <text x="50" y="462" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#94a3b8">
+        Style: ${themeName} • Engine: 100% In-House Neural Shader • Chief Architect: Prem Gaikwad (India 🇮🇳)
+      </text>
+    </svg>`;
+  }
 
   const base64Svg = Buffer.from(svg).toString('base64');
   const dataUri = `data:image/svg+xml;base64,${base64Svg}`;
@@ -165,7 +404,7 @@ function handleImageGeneration(prompt) {
     `• **Engine**: Moon AI In-House Procedural Neural Synthesizer (0 Third-Party APIs)\n` +
     `• **Sovereignty**: 100% Private, Zero External Cloud Calls, Fully Sovereign\n` +
     `• **Architect**: Prem Gaikwad (India 🇮🇳)\n\n` +
-    `*💡 To run full 3D Diffusion with your custom LoRA weights, open \`Train_And_Generate_Images_Colab.ipynb\` on Google Colab!*`;
+    `*💡 Click the image to view in full resolution, or use the buttons below to download!*`;
 }
 
 // 3. Image Creation Tips & Prompt Engineering Guide
@@ -928,7 +1167,71 @@ export default async function handler(req, res) {
 
     const sid = session_id || `session_${Date.now()}`;
 
-    // 0a. Custom Sovereign Neural GPU Forwarding (Colab GPU + ngrok / Private Server)
+    // 1. Math computation
+    const mathAnswer = calculateMath(prompt);
+    if (mathAnswer) {
+      return res.status(200).json({
+        reply: mathAnswer,
+        model_name: 'Moon AI Math Core (Prem Gaikwad Edition)',
+        device: 'Vercel Serverless',
+        session_id: sid
+      });
+    }
+
+        // 2. Direct Image generation (/imagine, /image, or "generate image")
+    if (isImageGenerationIntent(prompt)) {
+      const imgReply = handleImageGeneration(prompt);
+      return res.status(200).json({
+        reply: imgReply,
+        model_name: 'Moon AI Generative Image Studio',
+        device: 'Vercel Edge Diffusion',
+        session_id: sid
+      });
+    }
+
+// 3. Image prompt engineering guide & tips
+    const imageTipsReply = handleImagePromptTips(prompt);
+    if (imageTipsReply) {
+      return res.status(200).json({
+        reply: imageTipsReply,
+        model_name: 'Moon AI Image Directing Studio',
+        device: 'Vercel Serverless',
+        session_id: sid
+      });
+    }
+
+        // 4. Video generation (/video or "generate video")
+    if (isVideoGenerationIntent(prompt)) {
+      const vidReply = handleVideoGeneration(prompt);
+      return res.status(200).json({
+        reply: vidReply,
+        model_name: 'Moon AI Spatio-Temporal Video Studio',
+        device: 'Vercel Edge Motion',
+        session_id: sid
+      });
+    }
+
+// 5. Video making & cinematography tips
+    const videoTipsReply = handleVideoTips(prompt);
+    if (videoTipsReply) {
+      return res.status(200).json({
+        reply: videoTipsReply,
+        model_name: 'Moon AI Video Directing Studio',
+        device: 'Vercel Serverless',
+        session_id: sid
+      });
+    }
+
+    // 6. Code & Game generation
+    const codeReply = handleCodeSynthesis(prompt);
+    if (codeReply) {
+      return res.status(200).json({
+        reply: codeReply,
+        model_name: 'Moon AI Full-Stack Coder Engine',
+        device: 'Vercel Serverless',
+        session_id: sid
+      });
+    }// 0a. Custom Sovereign Neural GPU Forwarding (Colab GPU + ngrok / Private Server)
     const customGpuUrl = req.headers['x-custom-gpu-url'] || process.env.CUSTOM_GPU_URL;
     if (customGpuUrl) {
       try {
@@ -967,71 +1270,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 1. Math computation
-    const mathAnswer = calculateMath(prompt);
-    if (mathAnswer) {
-      return res.status(200).json({
-        reply: mathAnswer,
-        model_name: 'Moon AI Math Core (Prem Gaikwad Edition)',
-        device: 'Vercel Serverless',
-        session_id: sid
-      });
-    }
-
-    // 2. Direct Image generation (/imagine, /image, or "generate image")
-    if (prompt.startsWith('/imagine') || prompt.startsWith('/image') || /^(?:generate|create|make|draw|paint|render)\s+(?:an?\s+)?image/i.test(prompt)) {
-      const imgReply = handleImageGeneration(prompt);
-      return res.status(200).json({
-        reply: imgReply,
-        model_name: 'Moon AI Generative Image Studio',
-        device: 'Vercel Edge Diffusion',
-        session_id: sid
-      });
-    }
-
-    // 3. Image prompt engineering guide & tips
-    const imageTipsReply = handleImagePromptTips(prompt);
-    if (imageTipsReply) {
-      return res.status(200).json({
-        reply: imageTipsReply,
-        model_name: 'Moon AI Image Directing Studio',
-        device: 'Vercel Serverless',
-        session_id: sid
-      });
-    }
-
-    // 4. Video generation (/video or "generate video")
-    if (prompt.startsWith('/video') || /^(?:generate|create|make|render|animate)\s+(?:an?\s+)?video/i.test(prompt)) {
-      const vidReply = handleVideoGeneration(prompt);
-      return res.status(200).json({
-        reply: vidReply,
-        model_name: 'Moon AI Spatio-Temporal Video Studio',
-        device: 'Vercel Edge Motion',
-        session_id: sid
-      });
-    }
-
-    // 5. Video making & cinematography tips
-    const videoTipsReply = handleVideoTips(prompt);
-    if (videoTipsReply) {
-      return res.status(200).json({
-        reply: videoTipsReply,
-        model_name: 'Moon AI Video Directing Studio',
-        device: 'Vercel Serverless',
-        session_id: sid
-      });
-    }
-
-    // 6. Code & Game generation
-    const codeReply = handleCodeSynthesis(prompt);
-    if (codeReply) {
-      return res.status(200).json({
-        reply: codeReply,
-        model_name: 'Moon AI Full-Stack Coder Engine',
-        device: 'Vercel Serverless',
-        session_id: sid
-      });
-    }
+    
 
     // 7. Conversational wisdom, tips & knowledge
     const knowledgeReply = resolveConversationalKnowledge(prompt);
