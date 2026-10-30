@@ -259,6 +259,29 @@ def get_snake_html() -> str:
 # =========================================================================
 # 3. KNOWLEDGE & RECIPE RESOLVER
 # =========================================================================
+def calculate_math(prompt: str) -> Optional[str]:
+    clean = (prompt or "").strip()
+    clean = re.sub(r'^(?:what\s+is|calculate|compute|solve|evaluate)\s+', '', clean, flags=re.I).strip()
+    clean = re.sub(r'[\?=\s]+$', '', clean).strip()
+    clean = re.sub(r'(\d+)\s{2,}(\d+)', r'\1 * \2', clean)
+    expr = clean.replace('×', '*').replace('÷', '/').replace('^', '**')
+    expr = re.sub(r'(\d)\s*[xX]\s*(\d)', r'\1 * \2', expr)
+
+    if not re.search(r'[\+\-\*\/\%]', expr):
+        return None
+    if not re.match(r'^[\d\s\+\-\*\/\%\(\)\.]+$', expr):
+        return None
+
+    try:
+        res = eval(expr)
+        if isinstance(res, int):
+            return f"The answer is **{res:,}** (exact integer: `{res}`).\n\n$$\n{clean} = {res}\n$$"
+        elif isinstance(res, float):
+            return f"The answer is **{res}**.\n\n$$\n{clean} = {res}\n$$"
+    except Exception:
+        return None
+    return None
+
 def resolve_special_query(q: str) -> Optional[str]:
     ql = q.lower().strip()
     
@@ -336,6 +359,71 @@ def resolve_special_query(q: str) -> Optional[str]:
             "5. **पलटें**: लगभग 1-2 मिनट बाद जब ऊपर की सतह पर छोटे-छोटे बुलबुले दिखने लगें, तो स्पैटुला से पलट दें और दूसरी तरफ भी 1 मिनट सुनहरा होने तक सेकें।\n"
             "6. **परोसें**: गरमा-गरम फ्लफी पैनकेक के ऊपर मक्खन का टुकड़ा, शहद (Honey), मेपल सिरप या चॉकलेट सॉस डालकर परोसें! 🥞✨"
         )
+
+    # 6. Skinshine Cream Guidance
+    if "skinshine" in ql or ("hydroquinone" in ql and "tretinoin" in ql):
+        return (
+            "### ⚠️ Important Medical & Dermatological Guidance on Skinshine Cream\n\n"
+            "**Skinshine Cream** is a prescription **triple-combination topical medicine** consisting of:\n"
+            "1. **Hydroquinone (2% w/w)**: Depigmentation agent suppressing melanin synthesis.\n"
+            "2. **Tretinoin (0.025% w/w)**: Retinoid increasing epidermal cell turnover.\n"
+            "3. **Mometasone Furoate (0.1% w/w)**: **Potent corticosteroid** suppressing inflammation and redness.\n\n"
+            "---\n\n"
+            "### 🛑 Side Effects of Daily / Long-Term Facial Use:\n"
+            "**Daily application on the face can cause severe, sometimes irreversible skin damage:**\n\n"
+            "• **Skin Thinning (Cutaneous Atrophy)**: Continuous steroid exposure breaks down collagen, leaving facial skin paper-thin and fragile.\n"
+            "• **Spider Veins (Telangiectasia)**: Red capillary vessels become permanently dilated and visible.\n"
+            "• **Rebound Hyperpigmentation & Ochronosis**: Skin often turns much darker with stubborn blue-black patches upon stopping.\n"
+            "• **Steroid Dependence (Red Skin Syndrome)**: Stopping causes intense burning, severe itching, swelling, and rebound redness.\n"
+            "• **Steroid Acne & Hypertrichosis**: Triggers persistent acne and fine facial hair growth.\n"
+            "• **Severe Photosensitivity**: Extreme vulnerability to sun damage and burning.\n\n"
+            "**Guidelines**: Never use as a daily fairness cream. Use only under certified dermatologist supervision for short cycles (maximum 4–8 weeks) at night with mandatory daily SPF 50+ sunscreen."
+        )
+
+    # 7. Kwitderm Cream Guidance
+    if "kwitdrem" in ql or "kwitderm" in ql or "quitderm" in ql:
+        return (
+            "### ⚠️ Important Medical & Usage Guidance on Kwitderm Cream\n\n"
+            "**Kwitderm Cream** is a prescription **combination dermatological cream** formulated with:\n"
+            "• **Clobetasol Propionate**: A **super-potent (Class I) corticosteroid**.\n"
+            "• **Clotrimazole**: A broad-spectrum **antifungal** agent.\n"
+            "• **Neomycin Sulphate**: An **antibacterial** agent for secondary bacterial infections.\n\n"
+            "---\n\n"
+            "### ❌ Should You Apply Kwitderm on Your Face?\n"
+            "**NO. You should NOT apply Kwitderm on your face unless specifically directed by a dermatologist.**\n\n"
+            "Clobetasol is one of the strongest topical steroids in existence. Facial skin absorbs it rapidly, causing severe skin atrophy, permanent stretch marks, perioral dermatitis, and increased ocular pressure if near the eyes."
+        )
+
+    # 8. Days Left in Year
+    if "days" in ql and ("left" in ql or "remaining" in ql) and ("year" in ql or "2026" in ql or "over" in ql):
+        from datetime import datetime, timezone, timedelta
+        ist = timezone(timedelta(hours=5, minutes=30))
+        now_ist = datetime.now(ist)
+        current_year = now_ist.year
+        end_of_year = datetime(current_year, 12, 31, 23, 59, 59, tzinfo=ist)
+        days_left = max(0, (end_of_year - now_ist).days + 1)
+        total_days = 366 if ((current_year % 4 == 0 and current_year % 100 != 0) or current_year % 400 == 0) else 365
+        today_str = now_ist.strftime("%d %B %Y")
+        return (
+            f"📅 **Calendar Countdown**: As of today (**{today_str}**), there are **{days_left} days left** until the end of the year **{current_year}**!\n\n"
+            f"• **Current Year**: {current_year}\n"
+            f"• **Total Days in {current_year}**: {total_days}\n"
+            f"• **Days Remaining**: **{days_left} days**\n\n"
+            "Make every day count toward your goals! 🚀"
+        )
+
+    # 9. Grok AI / xAI
+    if "grok" in ql and any(k in ql for k in ["who made", "who created", "who founded", "company", "owner"]):
+        return (
+            "### 🚀 Who Created Grok AI and Its Parent Company?\n\n"
+            "**Grok AI** was created and developed by **xAI**, an artificial intelligence company founded by **Elon Musk**.\n\n"
+            "### 📌 Key Details About Grok AI & xAI:\n"
+            "• **Founder**: **Elon Musk** (CEO of Tesla, SpaceX, and owner of X/Twitter).\n"
+            "• **Founding Date**: xAI was officially announced on **July 12, 2023**.\n"
+            "• **Core Product**: **Grok** — a conversational AI model designed to answer questions with real-time knowledge from X (formerly Twitter).\n"
+            "• **Compute Infrastructure**: Trained on massive supercomputer clusters (including Colossus in Memphis, Tennessee powered by 100,000+ NVIDIA H100 GPUs)."
+        )
+
     return None
 
 # =========================================================================
@@ -489,6 +577,18 @@ def chat(req: ChatRequest):
 
     # Save user message
     db.add_message(sid, "user", msg, uid)
+
+    # 0. Pure Mathematical calculation check (Arbitrary-length & BigInt)
+    math_ans = calculate_math(msg)
+    if math_ans:
+        db.add_message(sid, "assistant", math_ans, uid)
+        return JSONResponse({
+            "reply": math_ans,
+            "model_name": "Moon AI Math Core (Arbitrary Precision)",
+            "tokens_generated": 20,
+            "device": "Cloud Math Core",
+            "session_id": sid
+        }, headers=CORS_HEADERS)
 
     # 1. Creator / Special knowledge check
     special = resolve_special_query(msg)

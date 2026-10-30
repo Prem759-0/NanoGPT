@@ -9,29 +9,48 @@ Guidelines:
 - When asked to write code, provide complete, working, production-quality code.
 - When asked who created or developed you, explain that you are Moon AI engineered by Prem Gaikwad from India.`;
 
-// 1. Math Calculation Helper
+// 1. Math Calculation Helper (Multi-operator & BigInt precision)
 function calculateMath(prompt) {
-  const ql = prompt.toLowerCase().trim();
-  // Math calculation e.g. "2+3", "what is 2 + 3", "3 * 8", "100 / 4", "2^8", "15 - 7"
-  const mathRegex = /(?:what\s+is\s+|calculate\s+|compute\s+)?(\d+(?:\.\d+)?)\s*([\+\-\*\/xX\^%])\s*(\d+(?:\.\d+)?)/i;
-  const match = ql.match(mathRegex);
-  if (match) {
-    const num1 = parseFloat(match[1]);
-    const op = match[2].toLowerCase();
-    const num2 = parseFloat(match[3]);
-    let res;
-    let opSymbol = op;
-    if (op === '+') res = num1 + num2;
-    else if (op === '-') res = num1 - num2;
-    else if (op === '*' || op === 'x') { res = num1 * num2; opSymbol = '×'; }
-    else if (op === '/') {
-      res = num2 !== 0 ? (num1 / num2) : 'Undefined (cannot divide by zero)';
-      opSymbol = '÷';
-    }
-    else if (op === '^') { res = Math.pow(num1, num2); opSymbol = '^'; }
-    else if (op === '%') { res = num1 % num2; opSymbol = '%'; }
+  let clean = (prompt || '').trim();
+  clean = clean.replace(/^(?:what\s+is|calculate|compute|solve|evaluate)\s+/i, '').trim();
+  clean = clean.replace(/[\?=\s]+$/, '').trim();
 
-    return `The answer is **${res}**.\n\n$$\n${num1} ${opSymbol} ${num2} = ${res}\n$$`;
+  // If two numbers are separated by 2 or more spaces and followed by operators, normalize to *
+  clean = clean.replace(/(\d+)\s{2,}(\d+)/g, '$1 * $2');
+
+  let expr = clean
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/\^/g, '**')
+    .replace(/(\d)\s*[xX]\s*(\d)/g, '$1 * $2');
+
+  // Must have at least one operator
+  if (!/[\+\-\*/\%]/.test(expr)) return null;
+
+  // Must be strictly numbers, spaces, parens, decimal points, and operators
+  if (!/^[\d\s\+\-\*/\%\(\)\.]+$/.test(expr)) return null;
+
+  try {
+    const isAllInt = !expr.includes('.') && !expr.includes('/');
+    let res;
+    if (isAllInt) {
+      try {
+        const bigIntExpr = expr.replace(/\b(\d+)\b/g, '$1n');
+        res = Function('"use strict"; return (' + bigIntExpr + ')')();
+        res = res.toString();
+      } catch (e) {
+        res = Function('"use strict"; return (' + expr + ')')();
+      }
+    } else {
+      res = Function('"use strict"; return (' + expr + ')')();
+    }
+
+    if (res !== undefined && res !== null && !Number.isNaN(res)) {
+      const formatted = isAllInt ? BigInt(res).toLocaleString('en-US') : res;
+      return `The answer is **${formatted}** (exact integer: \`${res}\`).\n\n$$\n${clean} = ${res}\n$$`;
+    }
+  } catch (err) {
+    return null;
   }
   return null;
 }
@@ -1124,6 +1143,86 @@ function handleCodeSynthesis(prompt) {
 // 7. Conversational Wisdom, Tips, Science & Knowledge Base
 function resolveConversationalKnowledge(prompt) {
   const ql = prompt.toLowerCase().trim();
+
+  // Medical & Dermatological Guidance: Skinshine Cream
+  if (ql.includes('skinshine') || (ql.includes('hydroquinone') && ql.includes('tretinoin') && ql.includes('mometasone'))) {
+    return `### ⚠️ Important Medical & Dermatological Guidance on Skinshine Cream\n\n` +
+      `**Skinshine Cream** is a prescription **triple-combination topical medicine** consisting of:\n` +
+      `1. **Hydroquinone (2% w/w)**: A depigmenting agent that suppresses melanin synthesis.\n` +
+      `2. **Tretinoin (0.025% w/w)**: A retinoid (Vitamin A derivative) that increases epidermal cell turnover.\n` +
+      `3. **Mometasone Furoate (0.1% w/w)**: A **potent corticosteroid** that suppresses inflammation, redness, and swelling.\n\n` +
+      `---\n\n` +
+      `### 🛑 What will be the Side Effects of Daily / Long-Term Facial Use?\n` +
+      `**Daily or prolonged use of Skinshine Cream on the face can cause severe, sometimes irreversible skin damage:**\n\n` +
+      `1. **Skin Thinning (Cutaneous Atrophy)**: Continuous steroid exposure breaks down collagen, making your facial skin paper-thin, fragile, and easily bruised.\n` +
+      `2. **Visible Red Blood Vessels (Telangiectasia)**: Red capillary spider veins become permanently visible beneath the skin surface.\n` +
+      `3. **Rebound & Exogenous Ochronosis**: Upon stopping or with sun exposure, skin often turns darker with stubborn blue-black pigmentation that is extremely difficult to treat.\n` +
+      `4. **Topical Steroid-Dependent Face (Steroid Addiction)**: Stopping the cream causes intense rebound burning, severe itching, swelling, and violent red flare-ups.\n` +
+      `5. **Steroid-Induced Acne & Facial Hair**: Triggers persistent acne breakouts and abnormal fine hair growth (hypertrichosis) on cheeks and upper lip.\n` +
+      `6. **Severe Sun Photosensitivity**: The skin burns instantly upon exposure to direct sunlight.\n\n` +
+      `---\n\n` +
+      `### 📋 Safe Usage Guidelines:\n` +
+      `• **Never use as a regular beauty or fairness cream**.\n` +
+      `• **Strict Duration**: Only use for short periods (maximum 4–8 weeks) strictly under a certified dermatologist's supervision.\n` +
+      `• **Night Only**: Apply only a tiny pea-sized amount directly onto pigmented patches at bedtime.\n` +
+      `• **Mandatory Sunscreen**: Wear a broad-spectrum SPF 50+ sunscreen every day, even indoors.\n\n` +
+      `*💡 Recommendation: If you are using it for fairness or glowing skin, discontinue gradually under the guidance of a dermatologist and switch to safe brightening actives like Vitamin C, Niacinamide, Azelaic Acid, or Kojic Acid.*`;
+  }
+
+  // Medical & Dermatological Guidance: Kwitderm Cream
+  if (ql.includes('kwitdrem') || ql.includes('kwitderm') || ql.includes('quitderm') || (ql.includes('clobetasol') && ql.includes('cream'))) {
+    return `### ⚠️ Important Medical & Usage Guidance on Kwitderm Cream\n\n` +
+      `**Kwitderm Cream** is a prescription **combination dermatological cream** formulated with:\n` +
+      `1. **Clobetasol Propionate**: A **super-potent (Class I) corticosteroid** that drastically reduces severe itching and inflammation.\n` +
+      `2. **Clotrimazole**: A broad-spectrum **antifungal** agent.\n` +
+      `3. **Neomycin Sulphate**: An **antibacterial** agent for secondary bacterial infections.\n\n` +
+      `---\n\n` +
+      `### 🔍 What is Kwitderm Cream Used For?\n` +
+      `It is prescribed strictly for **mixed bacterial and fungal skin infections** accompanied by intense swelling and redness on the body (e.g., ringworm/Tinea, athlete's foot, infected eczema).\n\n` +
+      `---\n\n` +
+      `### ❌ Should You Apply Kwitderm on Your Face?\n` +
+      `**NO. You should NOT apply Kwitderm on your face unless specifically directed by a dermatologist for a brief medical condition.**\n\n` +
+      `### Why Facial Application is Dangerous:\n` +
+      `• **Extreme Steroid Potency**: Clobetasol is one of the strongest topical steroids in modern medicine. Facial skin absorbs it up to 10× faster than body skin.\n` +
+      `• **Perioral Dermatitis**: Causes severe, chronic red bumpy rashes around the mouth and nose.\n` +
+      `• **Rapid Skin Thinning & Stretch Marks**: Causes facial skin to atrophy and tear.\n` +
+      `• **Glaucoma/Cataract Risk**: Application near the eyes can increase intraocular pressure.\n\n` +
+      `*💡 Always consult a qualified medical doctor or dermatologist before applying potent combination steroid creams to your face.*`;
+  }
+
+  // Days left in year / calendar queries
+  if (ql.includes('days') && (ql.includes('left') || ql.includes('remaining')) && (ql.includes('year') || ql.includes('2026') || ql.includes('over'))) {
+    const now = new Date();
+    // India Standard Time (UTC + 5:30)
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const nowIst = new Date(now.getTime() + istOffset);
+    const currentYear = nowIst.getUTCFullYear();
+    const endOfYear = new Date(Date.UTC(currentYear, 11, 31, 23, 59, 59, 999));
+    const diffMs = endOfYear.getTime() - nowIst.getTime();
+    const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const todayStr = `${nowIst.getUTCDate()} ${months[nowIst.getUTCMonth()]} ${currentYear}`;
+
+    return `📅 **Calendar Countdown**: As of today (**${todayStr}**), there are **${daysLeft} days left** until the end of the year **${currentYear}**!\n\n` +
+      `• **Current Year**: ${currentYear}\n` +
+      `• **Total Days in ${currentYear}**: ${((currentYear % 4 === 0 && currentYear % 100 !== 0) || currentYear % 400 === 0) ? 366 : 365}\n` +
+      `• **Days Remaining**: **${daysLeft} days**\n\n` +
+      `Make every day count toward your goals! 🚀`;
+  }
+
+  // Grok AI / xAI Creator Guidance
+  if (ql.includes('grok') && (ql.includes('who made') || ql.includes('who created') || ql.includes('who founded') || ql.includes('company') || ql.includes('owner') || ql.includes('ceo'))) {
+    return `### 🚀 Who Created Grok AI and Its Parent Company?\n\n` +
+      `**Grok AI** was created and developed by **xAI**, an artificial intelligence company founded by **Elon Musk**.\n\n` +
+      `### 📌 Key Details About Grok AI & xAI:\n` +
+      `• **Founder**: **Elon Musk** (CEO of Tesla, SpaceX, and owner of X/Twitter).\n` +
+      `• **Founding Date**: xAI was officially launched on **July 12, 2023**.\n` +
+      `• **Core Product**: **Grok** — a conversational AI model designed to answer questions with real-time knowledge from X (formerly Twitter) and a witty, direct perspective.\n` +
+      `• **Key Engineering Team**: Built by leading AI researchers and engineers formerly from DeepMind, OpenAI, Google Research, and Microsoft Research.\n` +
+      `• **Compute Infrastructure**: Trained on massive supercomputer clusters (including Colossus in Memphis, Tennessee powered by 100,000+ NVIDIA H100 GPUs).\n\n` +
+      `Grok is available to users worldwide directly on the X platform and via xAI's API.`;
+  }
+
 
   // Greetings
   if (ql === 'hi' || ql === 'hello' || ql === 'hey' || ql === 'hola' || ql === 'namaste' || ql === 'good morning' || ql === 'good evening' || ql === 'good afternoon') {
