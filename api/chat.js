@@ -58,12 +58,13 @@ function calculateMath(prompt) {
 // 2. Sovereign In-House Image Generation Engine (100% Scratch, Zero External APIs)
 // Intent Detectors for Multimodal Commands
 function isImageGenerationIntent(prompt) {
-  const p = (prompt || '').trim();
+  let p = (prompt || '').trim();
+  p = p.replace(/^\[Grok.*?\]:\s*/i, '').trim();
   const ql = p.toLowerCase();
   if (p.startsWith('/imagine') || p.startsWith('/image')) return true;
-  if (/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|genrate|gentrate|generte|create|make|draw|paint|render|produce|show\s+me)\s+(?:an?\s+)?(?:image|picture|photo|graphic|drawing|artwork|illustration|cartoon|render|map)\b/i.test(ql)) return true;
-  if (/^(?:please\s+)?(?:can\s+you\s+)?(?:draw|paint|sketch|illustrate)\s+(?:an?\s+)?(?:picture|image|cartoon|drawing)?\s*(?:of\s+)?/i.test(ql)) return true;
-  if (/^(?:image|picture|drawing|illustration|cartoon|artwork|map)\s+of\b/i.test(ql)) return true;
+  if (/\b(?:generate|genrate|gentrate|generte|create|make|draw|paint|render|produce|show\s+me)\s+(?:an?\s+)?(?:image|picture|photo|graphic|drawing|artwork|illustration|cartoon|render|map)\b/i.test(ql)) return true;
+  if (/\b(?:draw|paint|sketch|illustrate)\s+(?:an?\s+)?(?:picture|image|cartoon|drawing)?\s*(?:of\s+)?/i.test(ql)) return true;
+  if (/\b(?:image|picture|drawing|illustration|cartoon|artwork|map)\s+of\b/i.test(ql)) return true;
   if (/\b(?:generate|genrate|draw|paint|render|create)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|drawing|illustration|cartoon)\b/i.test(ql)) return true;
   return false;
 }
@@ -781,6 +782,7 @@ function generateCatCartoonSvg(cleanPrompt) {
 
 function handleImageGeneration(prompt) {
   const cleanPrompt = (prompt || '')
+    .replace(/^\[Grok.*?\]:\s*/i, '')
     .replace(/^\/(?:imagine|image)\s*/i, '')
     .replace(/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|genrate|gentrate|generte|create|make|draw|show|paint|render|produce)\s+(?:an?\s+)?(?:image|picture|photo|graphic|drawing|artwork|illustration|cartoon|render|map)\s*(?:of|for|about\s+)?/i, '')
     .replace(/^(?:please\s+)?(?:can\s+you\s+)?(?:draw|paint|sketch|illustrate)\s*(?:an?\s+)?(?:picture|image|cartoon|drawing)?\s*(?:of\s+)?/i, '')

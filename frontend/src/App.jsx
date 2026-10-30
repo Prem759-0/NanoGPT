@@ -50,12 +50,13 @@ const resolveMediaUrl = (url) => {
   return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 const isImageGenerationIntent = (prompt) => {
-  const p = (prompt || '').trim();
+  let p = (prompt || '').trim();
+  p = p.replace(/^\[Grok.*?\]:\s*/i, '').trim();
   const ql = p.toLowerCase();
   if (p.startsWith('/imagine') || p.startsWith('/image')) return true;
-  if (/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|genrate|gentrate|generte|create|make|draw|paint|render|produce|show\s+me)\s+(?:an?\s+)?(?:image|picture|photo|graphic|drawing|artwork|illustration|cartoon|render|map)\b/i.test(ql)) return true;
-  if (/^(?:please\s+)?(?:can\s+you\s+)?(?:draw|paint|sketch|illustrate)\s+(?:an?\s+)?(?:picture|image|cartoon|drawing)?\s*(?:of\s+)?/i.test(ql)) return true;
-  if (/^(?:image|picture|drawing|illustration|cartoon|artwork|map)\s+of\b/i.test(ql)) return true;
+  if (/\b(?:generate|genrate|gentrate|generte|create|make|draw|paint|render|produce|show\s+me)\s+(?:an?\s+)?(?:image|picture|photo|graphic|drawing|artwork|illustration|cartoon|render|map)\b/i.test(ql)) return true;
+  if (/\b(?:draw|paint|sketch|illustrate)\s+(?:an?\s+)?(?:picture|image|cartoon|drawing)?\s*(?:of\s+)?/i.test(ql)) return true;
+  if (/\b(?:image|picture|drawing|illustration|cartoon|artwork|map)\s+of\b/i.test(ql)) return true;
   if (/\b(?:generate|genrate|draw|paint|render|create)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|drawing|illustration|cartoon)\b/i.test(ql)) return true;
   return false;
 };
@@ -794,12 +795,17 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     const isCodeQuery = prompt.toLowerCase().includes('game') || prompt.toLowerCase().includes('code') || prompt.toLowerCase().includes('write') || prompt.startsWith('/code');
     const tokenBudget = isCodeQuery ? 400 : 160;
 
-    // Grok Mode Persona Injection
+    // Multimodal commands (images & videos) are synthesized directly by Moon AI Studios on Vercel
+    const isMultimodal = isImageGenerationIntent(prompt) || isVideoGenerationIntent(prompt);
+
+    // Grok Mode Persona Injection (only for pure text/reasoning queries, never multimodal)
     let outgoingMessage = prompt;
-    if (grokMode === 'fun' && !prompt.startsWith('/')) {
-      outgoingMessage = `[Grok Fun Mode: Be witty, razor-sharp, unfiltered, and creative]: ${prompt}`;
-    } else if (grokMode === 'think' && !prompt.startsWith('/')) {
-      outgoingMessage = `[Grok Deep Think Mode: Provide comprehensive architectural reasoning and step-by-step logic]: ${prompt}`;
+    if (!isMultimodal) {
+      if (grokMode === 'fun' && !prompt.startsWith('/')) {
+        outgoingMessage = `[Grok Fun Mode: Be witty, razor-sharp, unfiltered, and creative]: ${prompt}`;
+      } else if (grokMode === 'think' && !prompt.startsWith('/')) {
+        outgoingMessage = `[Grok Deep Think Mode: Provide comprehensive architectural reasoning and step-by-step logic]: ${prompt}`;
+      }
     }
 
     try {
@@ -812,8 +818,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
       let success = false;
 
-      // Multimodal commands (images & videos) are synthesized directly by Moon AI Studios on Vercel
-      const isMultimodal = isImageGenerationIntent(prompt) || isVideoGenerationIntent(prompt);
+
 
       // 0. Direct Custom Colab GPU Call (Real Neural Network on GPU for text reasoning & coding)
       const customGpu = (!isMultimodal && (typeof localStorage !== 'undefined' && localStorage.getItem('moon_custom_gpu_url') !== null
