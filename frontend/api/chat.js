@@ -1444,78 +1444,71 @@ function generateConversationalResponse(prompt) {
   const p = prompt.trim();
   const ql = p.toLowerCase();
 
-  // If asking for advice, how-to, or tips on any unspecified topic
+  // If asking for advice, how-to, or tips
   if (ql.includes('tip') || ql.includes('advice') || ql.includes('how to') || ql.includes('how do i') || ql.includes('best way to')) {
-    return `Here are key actionable principles and strategic recommendations regarding **"${p}"**:\n\n` +
+    return `Here are key actionable principles and recommendations regarding **"${p}"**:\n\n` +
       `### 💡 1. Core Principles\n` +
-      `• **Define the Objective First**: Get crystal clear on the specific outcome you want to achieve before expending energy.\n` +
-      `• **Compound Consistency**: Master the foundational basics daily rather than sporadic bursts of effort.\n` +
-      `• **Iterative Feedback**: Measure your progress weekly and adjust your strategy based on real feedback.\n\n` +
+      `• **Define the Objective First**: Get crystal clear on the specific outcome you want to achieve.\n` +
+      `• **Compound Consistency**: Focus on small daily habits rather than sporadic bursts of effort.\n` +
+      `• **Iterative Feedback**: Measure your progress regularly and adjust your strategy based on real feedback.\n\n` +
       `### 🚀 2. Best Practices & Action Steps\n` +
-      `1. **Eliminate Friction**: Remove distractions and streamline your environment to make action effortless.\n` +
+      `1. **Eliminate Friction**: Remove distractions to make taking action effortless.\n` +
       `2. **Focus on the 80/20**: Identify the 20% of inputs that generate 80% of your results.\n` +
-      `3. **Document Your Process**: Keep a learning log or checklist to refine your execution.\n\n` +
-      `### 💬 Explore Further with Moon AI:\n` +
-      `• Need code for this? Ask: \`/code [your goal]\`\n` +
-      `• Want a high-res image visual? Ask: \`/imagine [visual prompt]\`\n` +
-      `• Want a dynamic video simulation? Ask: \`/video [motion prompt]\`\n\n` +
-      `What specific detail or challenge would you like to tackle next?`;
+      `3. **Document Your Process**: Keep a learning log to refine your execution.\n\n` +
+      `What specific detail would you like to explore further?`;
   }
 
-  // Transparent, honest sovereign assistant notice (Zero canned mad-libs filler)
-  return `### 🌙 Moon AI Sovereign Intelligence\n\n` +
-    `You asked: **"${p}"**\n\n` +
-    `> ⚡ **System Notice: Sovereign Standby Mode**  \n` +
-    `> Your primary GPU compute cluster (Google Colab NVIDIA Tesla T4) is currently sleeping or disconnected, and cloud ZeroGPU quota is resting.\n\n` +
-    `### 🚀 To activate full open-ended neural dialogue:\n` +
-    `1. Open your **Google Colab Training & Serving Notebook**.\n` +
-    `2. Run **Step 9** to start your high-speed GPU API server.\n` +
-    `3. Moon AI will automatically resume full deep reasoning with zero downtime!\n\n` +
-    `### 🛠️ What Moon AI can do right now with zero external dependencies:\n` +
-    `• **Science & Space**: Ask about the Solar System, planets, Sun, Moon, gravity, photosynthesis, physics, or biology.\n` +
-    `• **Full-Stack Coding**: Ask for complete Python scripts, HTML5 games (Racing Car, Snake), algorithms, or JavaScript.\n` +
-    `• **Instant Math**: Ask arithmetic, exponents, percentages, or equations (e.g., \`what is 24 * 18\`).\n` +
-    `• **Generative Art**: Type \`/imagine [your vision]\` for instant procedural neural vector art.\n` +
-    `• **Spatio-Temporal Video**: Type \`/video [your scene]\` for cinematic simulation.\n\n` +
-    `What would you like to build or explore next?`;
+  // Graceful conversational response
+  return `I am here to help you with **"${p}"**!\n\n` +
+    `As Moon AI, engineered by Prem Gaikwad from India, I can assist across conversations, programming, mathematics, science, or AI media generation.\n\n` +
+    `Could you tell me a bit more about what you're looking for, or how you would like me to assist?`;
 }
 
-// Hugging Face ZeroGPU Gradio 6 Bridge
-// 24/7 Sovereign Cloud Neural Engine Bridge (Zero API Keys Required, Always Online 24/7/365)
 async function call247CloudNeuralEngine(prompt, sessionHistory = []) {
-  try {
-    const systemPrompt = `You are Moon AI, an ultra-advanced sovereign artificial intelligence developed and deployed by Prem Gaikwad from India.
+  const models = ['openai-fast', 'mistral', 'qwen-coder'];
+  const systemPrompt = `You are Moon AI, an ultra-advanced sovereign artificial intelligence developed and deployed by Prem Gaikwad from India.
 You are an omni-capable AI assistant with deep expertise in all topics: daily conversation, science, technology, mathematics, world history, geography, vocabulary definitions, daily advice, and frontier software development.
-Always answer helpfully, accurately, warmly, and directly.
+Always answer helpfully, accurately, warmly, and directly to the user's latest query.
 When asked who created or developed you, explain that you are Moon AI engineered by Chief Architect Prem Gaikwad from India.
 Never output ASCII art or text drawings when asked to draw or generate an image. Provide rich, descriptive creative concepts or code instead.`;
 
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...sessionHistory.slice(-6),
-      { role: 'user', content: prompt }
-    ];
+  // Filter out any system notice or error messages from session history
+  const cleanHistory = (sessionHistory || []).filter(m => 
+    m && m.content && 
+    !m.content.includes('Sovereign Standby Mode') && 
+    !m.content.includes('Step 9 to start your high-speed GPU') &&
+    !m.content.includes('System Notice')
+  );
 
-    const res = await fetch('https://text.pollinations.ai/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages,
-        model: 'openai-fast',
-        seed: 42
-      }),
-      signal: AbortSignal.timeout(15000)
-    });
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...cleanHistory.slice(-8),
+    { role: 'user', content: prompt }
+  ];
 
-    if (res.ok) {
-      const text = await res.text();
-      const clean = (text || '').trim();
-      if (clean && clean.length > 2 && !clean.includes('{"status":') && !clean.includes('<!DOCTYPE')) {
-        return clean;
+  for (const model of models) {
+    try {
+      const res = await fetch('https://text.pollinations.ai/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages,
+          model,
+          seed: 42
+        }),
+        signal: AbortSignal.timeout(20000)
+      });
+
+      if (res.ok) {
+        const text = await res.text();
+        const clean = (text || '').trim();
+        if (clean && clean.length > 2 && !clean.includes('{"status":') && !clean.includes('<!DOCTYPE')) {
+          return clean;
+        }
       }
+    } catch (err) {
+      console.warn(`Cloud Neural engine attempt with ${model} failed, trying fallback:`, err.message);
     }
-  } catch (err) {
-    console.warn('24/7 Cloud Neural engine attempt failed, trying fallback:', err.message);
   }
   return null;
 }
@@ -1576,15 +1569,34 @@ export default async function handler(req, res) {
     const { message, messages, session_id, user_id, max_new_tokens, temperature } = req.body || {};
     let prompt = (message || '').trim();
     let sessionHistory = [];
+
     if (Array.isArray(messages) && messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      if (!prompt && lastMsg && lastMsg.role === 'user') {
-        prompt = (lastMsg.content || '').trim();
-      }
-      sessionHistory = messages.slice(0, -1).map(m => ({
+      // Normalize and clean messages from payload
+      const cleanMsgs = messages.map(m => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: typeof m.content === 'string' ? m.content : ''
-      }));
+        content: typeof m.content === 'string' ? m.content.trim() : (typeof m.text === 'string' ? m.text.trim() : '')
+      })).filter(m => m.content.length > 0 &&
+        !m.content.includes('Sovereign Standby Mode') &&
+        !m.content.includes('Step 9 to start your high-speed GPU')
+      );
+
+      if (!prompt) {
+        const lastMsg = cleanMsgs[cleanMsgs.length - 1];
+        if (lastMsg && lastMsg.role === 'user') {
+          prompt = lastMsg.content;
+          sessionHistory = cleanMsgs.slice(0, -1);
+        } else {
+          sessionHistory = cleanMsgs;
+        }
+      } else {
+        // If prompt was passed explicitly, check if the last message in cleanMsgs is this prompt
+        const lastMsg = cleanMsgs[cleanMsgs.length - 1];
+        if (lastMsg && lastMsg.role === 'user' && (lastMsg.content === prompt || prompt.endsWith(lastMsg.content))) {
+          sessionHistory = cleanMsgs.slice(0, -1);
+        } else {
+          sessionHistory = cleanMsgs;
+        }
+      }
     }
 
     if (!prompt) {
