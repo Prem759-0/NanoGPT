@@ -10,28 +10,28 @@ export default function handler(req, res) {
 
   const models = [
     {
-      id: 'moon-gemini-pro',
-      name: '🌙 Moon AI Sovereign (Google Gemini Pro Engine — By Prem Gaikwad)',
-      type: 'cloud_frontier',
-      description: 'Ultra-fast frontier intelligence with 1M context window and deep coding capability.',
+      id: 'moon-sovereign-neural',
+      name: '🌙 Moon AI Sovereign (Open Neural Cluster — By Prem Gaikwad)',
+      type: 'cloud_neural',
+      description: 'Conversational reasoning, Python coding, and multi-turn sovereign intelligence.',
       active: true,
-      parameters: 'Frontier Scale',
+      parameters: '7.6B Base / Open Neural Bridge',
       available: true
     },
     {
-      id: 'moon-groq-llama',
-      name: '⚡ Moon AI Turbo (Llama 3.3 70B via Groq)',
-      type: 'cloud_turbo',
-      description: 'Sub-second conversational and coding engine running on LPUs.',
-      active: false,
-      parameters: '70B',
+      id: 'moon-image-studio',
+      name: '🎨 Moon AI Image Studio (AI Diffusion)',
+      type: 'cloud_multimodal',
+      description: 'Real AI text-to-image synthesis via GPU diffusion cluster.',
+      active: true,
+      parameters: 'FLUX / SD Diffusion',
       available: true
     },
     {
       id: 'moon-zerogpu-qwen',
-      name: '💻 Moon AI Open (ZeroGPU Cloud)',
-      type: 'cloud_open',
-      description: 'Hugging Face Space ZeroGPU fallback engine.',
+      name: '💻 Moon AI ZeroGPU (Hugging Face Spaces)',
+      type: 'cloud_zerogpu',
+      description: 'Hugging Face Space ZeroGPU Qwen2.5-7B-Instruct engine.',
       active: false,
       parameters: '7.61B',
       available: true

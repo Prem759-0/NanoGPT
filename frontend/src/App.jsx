@@ -1198,7 +1198,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
               <div className="grok-media-actions">
                 <a
                   href={resolvedImgUrl}
-                  download="moon_ai_visual.svg"
+                  download={resolvedImgUrl.includes(".svg") ? "moon_ai_vector.svg" : "moon_ai_image.jpg"} target="_blank" rel="noopener noreferrer"
                   className="grok-action-chip"
                 >
                   <Download size={12} />

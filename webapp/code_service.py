@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import subprocess
@@ -11,18 +12,28 @@ class SecurityException(Exception):
 class CodeService:
     """
     Subprocess-based sandbox for running Python code safely with timeout and AST security inspection.
-    Similar to ChatGPT Advanced Data Analysis / Code Interpreter.
     """
 
-    BLOCKED_MODULES = {"shutil", "socket", "ctypes", "winreg"}
-    BLOCKED_CALLS = {"system", "rmtree", "kill", "remove", "unlink"}
+    BLOCKED_MODULES = {
+        "os", "sys", "subprocess", "shutil", "socket", "ctypes", "winreg",
+        "urllib", "requests", "http", "pathlib", "pty", "multiprocessing",
+        "threading", "signal", "posix", "nt"
+    }
+    BLOCKED_CALLS = {
+        "system", "rmtree", "kill", "remove", "unlink", "popen", "spawn",
+        "exec", "eval", "compile", "__import__", "open", "input"
+    }
 
-    def __init__(self, python_executable: str = sys.executable, timeout_seconds: float = 10.0):
+    def __init__(self, python_executable: str = sys.executable, timeout_seconds: float = 5.0):
         self.python_executable = python_executable
         self.timeout_seconds = timeout_seconds
 
     def check_security(self, code: str) -> None:
         """Inspects code AST to detect dangerous host operating system calls."""
+        # Check enabled flag
+        if os.environ.get("MOON_ENABLE_SANDBOX", "1").lower() in ("0", "false", "no"):
+            raise SecurityException("Code execution is disabled on this server instance (MOON_ENABLE_SANDBOX=0).")
+
         try:
             tree = ast.parse(code)
         except SyntaxError:
@@ -32,11 +43,14 @@ class CodeService:
             # Check imports
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    if alias.name in self.BLOCKED_MODULES:
-                        raise SecurityException(f"Importing '{alias.name}' is prohibited in the local sandbox.")
+                    root_mod = alias.name.split(".")[0]
+                    if root_mod in self.BLOCKED_MODULES:
+                        raise SecurityException(f"Importing '{alias.name}' is prohibited in the sandbox.")
             elif isinstance(node, ast.ImportFrom):
-                if node.module in self.BLOCKED_MODULES:
-                    raise SecurityException(f"Importing from '{node.module}' is prohibited in the local sandbox.")
+                if node.module:
+                    root_mod = node.module.split(".")[0]
+                    if root_mod in self.BLOCKED_MODULES:
+                        raise SecurityException(f"Importing from '{node.module}' is prohibited in the sandbox.")
 
             # Check function calls
             elif isinstance(node, ast.Call):
@@ -47,7 +61,7 @@ class CodeService:
                     func_name = node.func.attr
 
                 if func_name in self.BLOCKED_CALLS:
-                    raise SecurityException(f"Executing system call '{func_name}()' is prohibited in the local sandbox.")
+                    raise SecurityException(f"Executing call '{func_name}()' is prohibited in the sandbox.")
 
     def execute_code(self, code: str) -> Dict[str, Any]:
         t0 = time.time()
@@ -63,13 +77,20 @@ class CodeService:
                 "execution_time_ms": 0.0
             }
 
-        # 2. Subprocess Execution with Timeout
+        # 2. Subprocess Execution with Timeout and Sanitized Environment
         try:
+            # Strip sensitive environment variables (API keys, DB URLs, tokens)
+            sanitized_env = {
+                "SYSTEMROOT": os.environ.get("SYSTEMROOT", "C:\\Windows"),
+                "PATH": os.environ.get("PATH", ""),
+                "PYTHONIOENCODING": "utf-8"
+            }
             process = subprocess.run(
                 [self.python_executable, "-c", code],
                 capture_output=True,
                 text=True,
-                timeout=self.timeout_seconds
+                timeout=self.timeout_seconds,
+                env=sanitized_env
             )
             elapsed_ms = (time.time() - t0) * 1000
             

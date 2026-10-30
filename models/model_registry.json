@@ -24,6 +24,17 @@
       "reasons": [
         "Candidate score (65.3) regressed compared to current best (75.0)."
       ]
+    },
+    {
+      "candidate_name": "scratch",
+      "evaluated_at": "2026-10-30T17:37:33.226848+00:00",
+      "status": "REJECTED",
+      "score": 10.5,
+      "reasons": [
+        "Coding syntax validity (0.0%) is below 100% threshold.",
+        "Composite score (10.5) is below minimum floor (60.0).",
+        "Candidate score (10.5) regressed compared to current best (75.0)."
+      ]
     }
   ]
 }
