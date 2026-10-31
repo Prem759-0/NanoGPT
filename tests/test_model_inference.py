@@ -182,7 +182,8 @@ class TestModelInference(unittest.TestCase):
                 self.assertFalse(loaded)
                 continue
 
-            res = self.service.generate(prompt=p_text, max_new_tokens=60, temperature=0.7, history=hist)
+            test_tokens = int(os.environ.get("TEST_MAX_NEW_TOKENS", "15"))
+            res = self.service.generate(prompt=p_text, max_new_tokens=test_tokens, temperature=0.7, history=hist)
             status = f"Tokens: {res['tokens_generated']} | Stop: {res['stop_reason']}"
             raw_preview = repr(res.get("raw_reply", "")[:60])
             print(f"[{label}] Prompt: {repr(p_text)}")

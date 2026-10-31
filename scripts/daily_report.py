@@ -101,7 +101,7 @@ def generate_daily_report() -> str:
         md.append(f"- **Tokens / Sec**: {latest_eval.get('tokens_per_second')}")
         md.append(f"- **Non-Empty Output Rate**: {latest_eval.get('non_empty_rate_pct')}%")
         md.append(f"- **Keyword Coverage**: {latest_eval.get('keyword_coverage_pct')}%")
-        md.append(f"- **Code Syntax Accuracy**: {latest_eval.get('coding_syntax_valid_pct')}%")
+        md.append(f"- **Code Syntax Accuracy**: {latest_eval.get('code_syntax_pct', latest_eval.get('coding_syntax_valid_pct', 0.0))}%")
         md.append(f"- **Composite Benchmark Score**: **{latest_eval.get('composite_quality_score')} / 100**")
     else:
         md.append("No automated evaluation runs recorded today.")

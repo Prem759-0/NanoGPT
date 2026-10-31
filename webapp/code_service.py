@@ -24,7 +24,7 @@ class CodeService:
         "exec", "eval", "compile", "__import__", "open", "input"
     }
 
-    def __init__(self, python_executable: str = sys.executable, timeout_seconds: float = 5.0):
+    def __init__(self, python_executable: str = sys.executable, timeout_seconds: float = 15.0):
         self.python_executable = python_executable
         self.timeout_seconds = timeout_seconds
 

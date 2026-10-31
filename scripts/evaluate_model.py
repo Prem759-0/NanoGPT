@@ -250,6 +250,39 @@ def detect_repetition_degeneracy(reply: str) -> float:
 # Main Evaluation Engine
 # =========================================================================
 
+def create_empty_summary(
+    model_name: str,
+    total_items: int = 0,
+    active_model_name: str = "none",
+    checkpoint_path: str = "none",
+    error_message: Optional[str] = None
+) -> Dict[str, Any]:
+    """Creates a standardized evaluation summary conforming to the complete benchmark schema."""
+    return {
+        "model_name": model_name,
+        "active_model_name": active_model_name,
+        "checkpoint_path": checkpoint_path,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "total_items": total_items,
+        "verifiable_tasks_total": 0,
+        "verifiable_tasks_passed": 0,
+        "solution_correctness_pct": 0.0,
+        "code_syntax_pct": 0.0,
+        "coding_syntax_valid_pct": 0.0,
+        "keyword_coverage_pct": 0.0,
+        "coherence_pct": 0.0,
+        "non_empty_rate_pct": 0.0,
+        "empty_count": total_items,
+        "error_count": total_items if error_message else 0,
+        "tokens_per_second": 0.0,
+        "total_tokens_generated": 0,
+        "total_time_seconds": 0.0,
+        "composite_quality_score": 0.0,
+        "status": "FAILED" if error_message else "COMPLETED",
+        "error": error_message,
+        "results": []
+    }
+
 def run_evaluation(model_name: str, max_tokens: int = 60, benchmark_path: Optional[str] = None) -> Dict[str, Any]:
     """Runs the verified benchmark suite against the requested model."""
     benchmark_items = load_benchmark(benchmark_path)
@@ -258,25 +291,13 @@ def run_evaluation(model_name: str, max_tokens: int = 60, benchmark_path: Option
     if not success:
         err_msg = f"Failed to load model '{model_name}': {service.error_message}"
         print(f"⚠️ {err_msg}")
-        summary = {
-            "model_name": model_name,
-            "active_model_name": "none",
-            "checkpoint_path": "none",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "total_items": len(benchmark_items),
-            "total_tokens_generated": 0,
-            "total_time_seconds": 0.0,
-            "tokens_per_second": 0.0,
-            "non_empty_rate_pct": 0.0,
-            "solution_correctness_pct": 0.0,
-            "code_syntax_pct": 0.0,
-            "keyword_coverage_pct": 0.0,
-            "composite_quality_score": 0.0,
-            "empty_count": len(benchmark_items),
-            "error_count": len(benchmark_items),
-            "error": err_msg,
-            "results": []
-        }
+        summary = create_empty_summary(
+            model_name=model_name,
+            total_items=len(benchmark_items),
+            active_model_name="none",
+            checkpoint_path="none",
+            error_message=err_msg
+        )
         _save_reports(model_name, summary)
         return summary
 
@@ -430,7 +451,7 @@ def run_evaluation(model_name: str, max_tokens: int = 60, benchmark_path: Option
             "diagnostic": diag_msg
         })
 
-    num_items = len(benchmark_items)
+    num_items = max(1, len(benchmark_items))
     tokens_per_sec = round(total_tokens / max(0.001, total_time_s), 2)
     non_empty_rate = round((passed_non_empty / num_items) * 100, 1)
 
@@ -495,7 +516,7 @@ def run_evaluation(model_name: str, max_tokens: int = 60, benchmark_path: Option
     return summary
 
 def _save_reports(model_name: str, summary: Dict[str, Any]):
-    """Saves both timestamped JSON and latest Markdown evaluation reports."""
+    """Saves both timestamped JSON and latest Markdown evaluation reports with defensive schema checks."""
     report_dir = os.path.join(PROJECT_ROOT, "data", "reports")
     os.makedirs(report_dir, exist_ok=True)
 
@@ -508,25 +529,33 @@ def _save_reports(model_name: str, summary: Dict[str, Any]):
     md_file = os.path.join(report_dir, f"eval_{model_name}_latest.md")
     with open(md_file, "w", encoding="utf-8") as f:
         f.write(f"# Benchmark Evaluation Report: {model_name}\n\n")
-        f.write(f"- **Evaluated Model**: `{model_name}` ({summary.get('active_model_name', 'N/A')})\n")
-        f.write(f"- **Timestamp**: {summary['timestamp']}\n")
-        f.write(f"- **Checkpoint**: `{summary.get('checkpoint_path', 'N/A')}`\n")
-        f.write(f"- **Total Items Evaluated**: {summary['total_items']}\n\n")
+        f.write(f"- **Evaluated Model**: `{model_name}` ({summary.get('active_model_name', 'none')})\n")
+        f.write(f"- **Timestamp**: {summary.get('timestamp', 'N/A')}\n")
+        f.write(f"- **Checkpoint**: `{summary.get('checkpoint_path', 'none')}`\n")
+        f.write(f"- **Total Items Evaluated**: {summary.get('total_items', 0)}\n\n")
+        if summary.get("error"):
+            f.write(f"- **Status**: ❌ FAILED (`{summary['error']}`)\n\n")
+        else:
+            f.write(f"- **Status**: ✅ COMPLETED\n\n")
         f.write("## Core Quality Metrics\n\n")
-        f.write(f"- **Solution Correctness**: **{summary['solution_correctness_pct']}%** ({summary.get('verifiable_tasks_passed', 0)}/{summary.get('verifiable_tasks_total', 0)} math/code/JSON tasks passed)\n")
-        f.write(f"- **Python Code Syntax Validity**: **{summary['code_syntax_pct']}%**\n")
-        f.write(f"- **Keyword & Concept Coverage**: **{summary['keyword_coverage_pct']}%**\n")
-        f.write(f"- **Coherence (Non-Degenerate)**: **{summary['coherence_pct']}%**\n")
-        f.write(f"- **Non-Empty Output Rate**: **{summary['non_empty_rate_pct']}%** (Empty: {summary.get('empty_count', 0)}, Errors: {summary.get('error_count', 0)})\n")
-        f.write(f"- **Tokens / Second**: {summary['tokens_per_second']}\n")
-        f.write(f"- **Composite Quality Score**: **{summary['composite_quality_score']} / 100**\n\n")
+        f.write(f"- **Solution Correctness**: **{summary.get('solution_correctness_pct', 0.0)}%** ({summary.get('verifiable_tasks_passed', 0)}/{summary.get('verifiable_tasks_total', 0)} math/code/JSON tasks passed)\n")
+        f.write(f"- **Python Code Syntax Validity**: **{summary.get('code_syntax_pct', 0.0)}%**\n")
+        f.write(f"- **Keyword & Concept Coverage**: **{summary.get('keyword_coverage_pct', 0.0)}%**\n")
+        f.write(f"- **Coherence (Non-Degenerate)**: **{summary.get('coherence_pct', 0.0)}%**\n")
+        f.write(f"- **Non-Empty Output Rate**: **{summary.get('non_empty_rate_pct', 0.0)}%** (Empty: {summary.get('empty_count', 0)}, Errors: {summary.get('error_count', 0)})\n")
+        f.write(f"- **Tokens / Second**: {summary.get('tokens_per_second', 0.0)}\n")
+        f.write(f"- **Composite Quality Score**: **{summary.get('composite_quality_score', 0.0)} / 100**\n\n")
 
         f.write("## Per-Item Results Sample\n\n")
-        f.write("| ID | Domain | Correct | Syntax | Keywords | Output Preview |\n")
-        f.write("|---|---|---|---|---|---|\n")
-        for r in summary.get("results", [])[:30]:
-            clean_p = r["reply"][:40].replace("\n", " ").replace("|", "/")
-            f.write(f"| {r['id']} | {r['domain']} | {'✅' if r['correct'] else '❌'} | {'✅' if r['syntax_valid'] else '❌'} | {int(r['keyword_hit_ratio']*100)}% | `{clean_p}` |\n")
+        results = summary.get("results", [])
+        if results:
+            f.write("| ID | Domain | Correct | Syntax | Keywords | Output Preview |\n")
+            f.write("|---|---|---|---|---|---|\n")
+            for r in results[:30]:
+                clean_p = (r.get("reply", "")[:40]).replace("\n", " ").replace("|", "/")
+                f.write(f"| {r.get('id', '')} | {r.get('domain', '')} | {'✅' if r.get('correct') else '❌'} | {'✅' if r.get('syntax_valid') else '❌'} | {int(r.get('keyword_hit_ratio', 0.0)*100)}% | `{clean_p}` |\n")
+        else:
+            f.write("*No evaluation items executed (model failed to load or empty benchmark).*\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Moon AI Objective Benchmark Evaluation.")

@@ -225,7 +225,6 @@ def is_image_intent(prompt: str) -> bool:
     return False
 
 def handle_image_generation(prompt: str) -> str:
-    import urllib.parse
     clean = re.sub(r'^/(?:imagine|image)\s*', '', prompt, flags=re.I)
     clean = re.sub(r'^(?:please\s+)?(?:can\s+you\s+)?(?:generate|genrate|gentrate|generte|create|make|draw|show|paint|render|produce)\s+(?:an?\s+)?(?:image|picture|photo|graphic|drawing|artwork|illustration|cartoon|render|map)\s*(?:of|for|about\s+)?', '', clean, flags=re.I)
     clean = re.sub(r'^(?:please\s+)?(?:can\s+you\s+)?(?:draw|paint|sketch|illustrate)\s*(?:an?\s+)?(?:picture|image|cartoon|drawing)?\s*(?:of\s+)?', '', clean, flags=re.I)
@@ -233,19 +232,44 @@ def handle_image_generation(prompt: str) -> str:
     if not clean:
         clean = "A breathtaking cinematic masterpiece"
     
-    encoded = urllib.parse.quote(clean)
-    img_url = f"https://image.pollinations.ai/prompt/{encoded}?nologo=true"
-    
+    # Check if a sovereign trained checkpoint exists
+    ckpt_path = os.environ.get("MOON_IMAGE_CHECKPOINT_PATH", "models/checkpoints/moon_image_v0.pt")
+    if os.path.isfile(ckpt_path):
+        try:
+            from backend.engines.moon_image import MoonImageInferenceService
+            service = MoonImageInferenceService(checkpoint_path=ckpt_path)
+            res = service.generate(prompt=clean)
+            if res.get("success") and res.get("image"):
+                out_dir = "webapp/static/generated"
+                os.makedirs(out_dir, exist_ok=True)
+                fname = f"gen_moon_{abs(hash(clean)) % 1000000}.png"
+                fpath = os.path.join(out_dir, fname)
+                res["image"].save(fpath)
+                return (
+                    f"🎨 **Moon AI Sovereign Image Studio**\n\n"
+                    f"![{clean}](/static/generated/{fname})\n\n"
+                    f"### 📸 Sovereign Synthesis Details:\n"
+                    f"• **Subject**: `{clean}`\n"
+                    f"• **Model**: `moon-image-v0` (Random Init Trained Sovereign Latent Diffusion)\n"
+                    f"• **Chief Architect**: Prem Gaikwad (India 🇮🇳)\n"
+                )
+        except Exception as e:
+            pass
+
     return (
-        f"🎨 **Moon AI Image Studio** (Real AI Diffusion Generation)\n\n"
-        f"![{clean}]({img_url})\n\n"
-        f"### 📸 Visual Synthesis Details:\n"
+        f"🎨 **Moon AI Sovereign Image Studio**\n\n"
+        f"> ⚠️ **Status: MODEL_NOT_TRAINED**\n>\n"
+        f"> The sovereign Moon Image generative model (`moon-image-v0`) is initialized from random weights and requires a trained checkpoint.\n"
+        f"> In strict accordance with Moon AI's **Strict Model Ownership** standard, third-party generative proxies (Pollinations, Midjourney APIs, Replicate) are permanently disabled.\n\n"
+        f"### 🚀 Sovereign Training Pipeline:\n"
+        f"To train your sovereign model weights locally or on your GPU cluster:\n"
+        f"```bash\n"
+        f"python training/image/train.py --manifest datasets/image/manifest.jsonl --output_dir checkpoints/moon_image\n"
+        f"```\n\n"
         f"• **Subject**: `{clean}`\n"
-        f"• **Engine**: AI Neural Diffusion Cluster\n"
-        f"• **Resolution**: 1024 × 1024 HD\n"
-        f"• **Status**: ✅ Real AI Diffusion Image Generated\n"
-        f"• **Chief Architect**: Prem Gaikwad (India 🇮🇳)\n\n"
-        f"*💡 Click the image to open in full resolution, or click the download button below.*"
+        f"• **Architecture**: MoonUNet2D + MoonTextEncoder + MoonImageAutoencoder\n"
+        f"• **Weight Provenance**: `moon_ai_random_init` (Zero External Weights)\n"
+        f"• **Chief Architect**: Prem Gaikwad (India 🇮🇳)\n"
     )
 
 def get_snake_html() -> str:

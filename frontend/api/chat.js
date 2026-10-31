@@ -789,19 +789,19 @@ function handleImageGeneration(prompt) {
     .replace(/^(?:image|picture|drawing|illustration|cartoon|artwork|map)\s+of\s+/i, '')
     .trim() || 'A breathtaking cybernetic horizon in deep space';
 
-  const encodedPrompt = encodeURIComponent(cleanPrompt);
-  // Real AI Diffusion Image via open GPU cluster
-  const imageUrl = 'https://image.pollinations.ai/prompt/' + encodedPrompt + '?nologo=true';
-
-  return '🎨 **Moon AI Image Studio** (Real AI Diffusion Generation)\n\n' +
-    '![' + cleanPrompt + '](' + imageUrl + ')\n\n' +
-    '### 📸 Visual Synthesis Details:\n' +
-    '• **Subject**: ' + cleanPrompt + '\n' +
-    '• **Engine**: AI Neural Diffusion Cluster\n' +
-    '• **Resolution**: 1024 × 1024 HD\n' +
-    '• **Status**: ✅ Real AI Diffusion Image Generated\n' +
-    '• **Chief Architect**: Prem Gaikwad (India 🇮🇳)\n\n' +
-    '*💡 Click the image to open in full resolution, or click the download button below.*';
+  return '🎨 **Moon AI Sovereign Image Studio**\n\n' +
+    '> ⚠️ **Status: MODEL_NOT_TRAINED**\n>\n' +
+    '> The sovereign Moon Image model (`moon-image-v0`) is initialized from random weights and requires a trained checkpoint.\n' +
+    '> In strict accordance with Moon AI\'s **Strict Model Ownership** standard, third-party generative proxies (Pollinations, Midjourney APIs, Replicate) are permanently disabled.\n\n' +
+    '### 🚀 Sovereign Training Pipeline:\n' +
+    'To train your sovereign model weights locally or on your GPU cluster:\n' +
+    '```bash\n' +
+    'python training/image/train.py --manifest datasets/image/manifest.jsonl --output_dir checkpoints/moon_image\n' +
+    '```\n\n' +
+    '• **Subject**: `' + cleanPrompt + '`\n' +
+    '• **Architecture**: MoonUNet2D + MoonTextEncoder + MoonImageAutoencoder\n' +
+    '• **Weight Provenance**: `moon_ai_random_init` (Zero Pretrained Weights)\n' +
+    '• **Chief Architect**: Prem Gaikwad (India 🇮🇳)';
 }
 
 function handleImagePromptTips(prompt) {
@@ -838,60 +838,24 @@ function handleVideoGeneration(prompt) {
   const cleanPrompt = prompt
     .replace(/^\/video\s*/i, '')
     .replace(/^(?:generate|create|make|render|animate)\s+(?:an?\s+)?video\s+(?:of\s+)?/i, '')
-    .trim();
-  const finalPrompt = cleanPrompt || 'a cinematic drone flight over glowing neon skyscrapers in the rain';
+    .trim() || 'a cinematic drone flight over glowing neon skyscrapers in the rain';
 
-  return `🎬 Here is your synthesized dynamic video simulation for **"${finalPrompt}"**:\n\n` +
-    `\`\`\`html\n` +
-    `<!DOCTYPE html>\n<html>\n<head>\n` +
-    `<style>\n` +
-    `  body { margin:0; background:#05050a; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; color:#fff; }\n` +
-    `  #viewport { position:relative; width:640px; height:360px; border:2px solid #38bdf8; border-radius:12px; box-shadow:0 0 30px rgba(56,189,248,0.3); overflow:hidden; background:#000; }\n` +
-    `  canvas { width:100%; height:100%; display:block; }\n` +
-    `  .overlay { position:absolute; bottom:12px; left:16px; font-size:12px; color:#38bdf8; background:rgba(0,0,0,0.6); padding:4px 8px; border-radius:4px; pointer-events:none; }\n` +
-    `</style>\n</head>\n<body>\n` +
-    `<div id="viewport">\n` +
-    `  <canvas id="c" width="640" height="360"></canvas>\n` +
-    `  <div class="overlay">▶ Spatio-Temporal Simulation: ${finalPrompt.slice(0, 45)}... (60 FPS)</div>\n` +
-    `</div>\n` +
-    `<script>\n` +
-    `  const c = document.getElementById('c'), ctx = c.getContext('2d');\n` +
-    `  let t = 0;\n` +
-    `  const particles = Array.from({length: 80}, () => ({ x: Math.random()*640, y: Math.random()*360, z: Math.random()*3+1, hue: Math.random()*60 + 180 }));\n` +
-    `  function render() {\n` +
-    `    t += 0.03;\n` +
-    `    ctx.fillStyle = 'rgba(5, 5, 12, 0.25)';\n` +
-    `    ctx.fillRect(0, 0, 640, 360);\n` +
-    `    const grad = ctx.createLinearGradient(0, 180, 0, 360);\n` +
-    `    grad.addColorStop(0, 'rgba(56, 189, 248, 0.15)'); grad.addColorStop(1, 'rgba(168, 85, 247, 0.4)');\n` +
-    `    ctx.fillStyle = grad; ctx.fillRect(0, 180, 640, 180);\n` +
-    `    ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)'; ctx.lineWidth = 1;\n` +
-    `    for(let x = 0; x <= 640; x += 40) {\n` +
-    `      ctx.beginPath(); ctx.moveTo(x, 180); ctx.lineTo((x - 320) * 3 + 320, 360); ctx.stroke();\n` +
-    `    }\n` +
-    `    const gridOffset = (t * 60) % 30;\n` +
-    `    for(let y = 180 + gridOffset; y <= 360; y += 25) {\n` +
-    `      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(640, y); ctx.stroke();\n` +
-    `    }\n` +
-    `    particles.forEach(p => {\n` +
-    `      p.y -= p.z * 0.8; if(p.y < 0) p.y = 360;\n` +
-    `      ctx.fillStyle = \`hsl(\${p.hue}, 100%, 70%)\`;\n` +
-    `      ctx.beginPath(); ctx.arc(p.x, p.y, p.z, 0, Math.PI*2); ctx.fill();\n` +
-    `    });\n` +
-    `    requestAnimationFrame(render);\n` +
-    `  }\n` +
-    `  render();\n` +
-    `</script>\n` +
-    `</body>\n</html>\n\`\`\`\n\n` +
-    `### 🎞️ 4-Part Cinematic Video Storyboard:\n` +
-    `1. **Scene 1 (0:00 - 0:03)**: Extreme wide establishing shot of *"${finalPrompt}"*. Slow orbital pan right.\n` +
-    `2. **Scene 2 (0:03 - 0:07)**: Dynamic tracking dolly-in through the center axis, revealing depth and environmental reflections.\n` +
-    `3. **Scene 3 (0:07 - 0:11)**: Low-angle hero perspective with volumetric anamorphic lens flare.\n` +
-    `4. **Scene 4 (0:11 - 0:15)**: Ascending tilt shot pulling back to reveal the expansive horizon, fading out.\n\n` +
-    `*💡 Click **Live Preview** in the Canvas drawer above to interact with the full 60 FPS motion clip!*`;
+  return `🎬 **Moon AI Sovereign Video Studio**\n\n` +
+    `> ⚠️ **Status: MODEL_NOT_TRAINED**\n>\n` +
+    `> The sovereign Moon Video model (\`moon-video-v0\`) is initialized from random weights and requires a trained checkpoint.\n` +
+    `> In strict accordance with Moon AI's **Strict Model Ownership** standard, third-party video generation APIs (Kling, Runway, Luma, Pollinations) are not used.\n\n` +
+    `### 🚀 Sovereign Training Pipeline:\n` +
+    `To train your sovereign video model weights, run:\n` +
+    `\`\`\`bash\n` +
+    `python training/video/train.py --manifest datasets/video/manifest.jsonl --output_dir checkpoints/moon_video\n` +
+    `\`\`\`\n\n` +
+    `• **Subject**: \`${cleanPrompt}\`\n` +
+    `• **Architecture**: MoonUNet3D (Spatial Cross-Attention + 1D Temporal Self-Attention)\n` +
+    `• **Conditioning**: Learned Text Encoder + 8-DoF Camera Motion Conditioning\n` +
+    `• **Weight Provenance**: \`moon_ai_random_init\` (Zero Pretrained Weights)\n` +
+    `• **Chief Architect**: Prem Gaikwad (India 🇮🇳)`;
 }
 
-// 5. Video Making & Production Tips for People
 function handleVideoTips(prompt) {
   const ql = prompt.toLowerCase();
   const isVideoTips = (ql.includes('video') || ql.includes('youtube') || ql.includes('reels') || ql.includes('tiktok') || ql.includes('cinematography')) &&
@@ -1566,51 +1530,8 @@ function generateConversationalResponse(prompt) {
 }
 
 async function call247CloudNeuralEngine(prompt, sessionHistory = []) {
-  const models = ['openai-fast', 'mistral', 'qwen-coder'];
-  const systemPrompt = `You are Moon AI, an ultra-advanced sovereign artificial intelligence developed and deployed by Prem Gaikwad from India.
-You are an omni-capable AI assistant with deep expertise in all topics: daily conversation, science, technology, mathematics, world history, geography, vocabulary definitions, daily advice, and frontier software development.
-Always answer helpfully, accurately, warmly, and directly to the user's latest query.
-When asked who created or developed you, explain that you are Moon AI engineered by Chief Architect Prem Gaikwad from India.
-Never output ASCII art or text drawings when asked to draw or generate an image. Provide rich, descriptive creative concepts or code instead.`;
-
-  // Filter out any system notice or error messages from session history
-  const cleanHistory = (sessionHistory || []).filter(m => 
-    m && m.content && 
-    !m.content.includes('Sovereign Standby Mode') && 
-    !m.content.includes('Step 9 to start your high-speed GPU') &&
-    !m.content.includes('System Notice')
-  );
-
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    ...cleanHistory.slice(-8),
-    { role: 'user', content: prompt }
-  ];
-
-  for (const model of models) {
-    try {
-      const res = await fetch('https://text.pollinations.ai/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages,
-          model,
-          seed: 42
-        }),
-        signal: AbortSignal.timeout(20000)
-      });
-
-      if (res.ok) {
-        const text = await res.text();
-        const clean = (text || '').trim();
-        if (clean && clean.length > 2 && !clean.includes('{"status":') && !clean.includes('<!DOCTYPE')) {
-          return clean;
-        }
-      }
-    } catch (err) {
-      console.warn(`Cloud Neural engine attempt with ${model} failed, trying fallback:`, err.message);
-    }
-  }
+  // Strict Model Ownership: Zero third-party inference.
+  // Pollinations text generation has been permanently purged.
   return null;
 }
 

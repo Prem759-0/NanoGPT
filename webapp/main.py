@@ -309,7 +309,7 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"media": "image", "url": img_res["image_url"]})
         return ChatResponse(
             reply=reply,
-            model_name="Image Studio (Higgsfield & Midjourney Engine)",
+            model_name="Moon Image Sovereign Studio (moon-image-v0)",
             prompt_length=len(clean_msg),
             tokens_generated=35,
             device="CPU Local Visualizer",
@@ -332,7 +332,7 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"media": "video", "url": vid_res["video_url"]})
         return ChatResponse(
             reply=reply,
-            model_name="Video Studio (Kling & Runway Engine)",
+            model_name="Moon Video Sovereign Studio (moon-video-v0)",
             prompt_length=len(clean_msg),
             tokens_generated=40,
             device="CPU Video Encoder",
@@ -487,24 +487,22 @@ def chat(request: ChatRequest, req: Request):
     ]
     if any(re.search(p, msg_low) for p in video_inquiry_patterns):
         reply = (
-            "🎬 **Yes! NanoGPT Lab has a complete AI Video Generation Studio (Kling & Runway Caliber)!**\n\n"
-            "You have two powerful video engines available:\n\n"
-            "### 1. ⚡ Local In-App Video Studio (Runs Right Here in Browser):\n"
-            "• **Real Subject Motion**: Generates high-definition cinematic motion clips of real subjects (dogs, cars, lions, cities, nature).\n"
-            "• **Real MP4 Video**: Encoded directly into standard **H.264 MP4** format (15 FPS) with smooth 2.5D spatio-temporal dolly zoom & camera panning in just ~5 seconds on your CPU.\n"
-            "• **Try It Now**: Simply type:\n"
-            "  - `/video a running dog in the park`\n"
-            "  - `generate video of a sports car`\n"
-            "  - Or click the **🎬 Video Studio** button on the left sidebar!\n\n"
-            "### 2. 🚀 Cloud Video Diffusion Studio (Google Colab GPU):\n"
-            "• For heavy, frame-by-frame generative diffusion with full 3D physics (Kling AI / Runway Gen-3 caliber), open **`Generate_AI_Video_Colab.ipynb`** in Google Colab.\n"
-            "• Runs on free NVIDIA Tesla T4 GPUs (15GB VRAM) using text-to-video diffusion pipelines.\n\n"
-            "Would you like me to generate a video clip for you right now? Just type `/video [what you want to see]`!"
+            "🎬 **Moon Video Sovereign Spatio-Temporal Studio (moon-video-v0)**\n\n"
+            "Moon Video is built on a sovereign Spatiotemporal UNet3D architecture with 8-DoF camera motion conditioning.\n\n"
+            "### 1. ⚡ Local In-App Video Studio:\n"
+            "• **Motion Conditioning**: Pan, tilt, zoom, dolly, orbit, and crane camera trajectories.\n"
+            "• **Format**: Real standard **H.264 MP4** or animated sequence encoded locally.\n"
+            "• **Try It Now**: Type `/video a drone shot over mountains`\n\n"
+            "### 2. 🚀 Sovereign Training Pipeline:\n"
+            "• To train the sovereign spatio-temporal model weights:\n"
+            "  `python training/video/train.py --manifest datasets/video/manifest.jsonl --output_dir checkpoints/moon_video`\n"
+            "• **Weight Provenance**: `moon_ai_random_init` (Zero third-party hosted APIs or pretrained weights).\n"
+            "• **Chief Architect**: Prem Gaikwad (India 🇮🇳)"
         )
         db.add_message(session_id, "assistant", reply, meta={"feature": "video_info"})
         return ChatResponse(
             reply=reply,
-            model_name="NanoGPT Video Director",
+            model_name="Moon Video Sovereign Studio (moon-video-v0)",
             prompt_length=len(clean_msg),
             tokens_generated=190,
             device="CPU Local Engine",

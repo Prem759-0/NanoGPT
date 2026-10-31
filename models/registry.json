@@ -1,0 +1,62 @@
+{
+  "registry_version": "2.0.0",
+  "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
+  "rules": {
+    "prohibit_third_party_weights": true,
+    "prohibit_external_apis": true,
+    "require_random_initialization": true,
+    "require_manifest_hash_provenance": true
+  },
+  "models": {
+    "moon-image-v0": {
+      "model_name": "moon-image-v0",
+      "version": "0.1.0",
+      "type": "latent_diffusion",
+      "architecture": "MoonUNet2D + MoonTextEncoder + MoonImageAutoencoder",
+      "initialization_source": "moon_ai_random_init",
+      "trainable_parameters": 14200000,
+      "status": "INITIALIZED_READY_FOR_TRAINING",
+      "training_config": "training/image/config.yaml",
+      "dataset_manifest": "datasets/image/manifest.jsonl",
+      "provenance": "moon_ai_random_init",
+      "evaluation_score": null
+    },
+    "moon-video-v0": {
+      "model_name": "moon-video-v0",
+      "version": "0.1.0",
+      "type": "spatiotemporal_diffusion",
+      "architecture": "MoonUNet3D + MoonVideoTextEncoder + MoonVideoAutoencoder",
+      "initialization_source": "moon_ai_random_init",
+      "trainable_parameters": 18500000,
+      "status": "INITIALIZED_READY_FOR_TRAINING",
+      "training_config": "training/video/config.yaml",
+      "dataset_manifest": "datasets/video/manifest.jsonl",
+      "provenance": "moon_ai_random_init",
+      "evaluation_score": null
+    },
+    "moon-llm-scratch": {
+      "model_name": "moon-llm-scratch",
+      "version": "0.0.1",
+      "type": "autoregressive_transformer",
+      "architecture": "NanoGPT (4 layers, 4 heads, 64 embed dim)",
+      "initialization_source": "moon_ai_random_init",
+      "trainable_parameters": 800000,
+      "checkpoint": "out-assistant/ckpt.pt",
+      "status": "EXPERIMENTAL_BENCHMARK_ONLY",
+      "composite_score": 10.5,
+      "provenance": "moon_ai_random_init"
+    }
+  },
+  "promotion_history": [
+    {
+      "candidate_name": "moon-llm-scratch",
+      "evaluated_at": "2026-10-30T17:37:33.226848+00:00",
+      "status": "REJECTED",
+      "score": 10.5,
+      "reasons": [
+        "Coding syntax validity (0.0%) is below 100% threshold.",
+        "Composite score (10.5) is below minimum floor (60.0)."
+      ]
+    }
+  ]
+}

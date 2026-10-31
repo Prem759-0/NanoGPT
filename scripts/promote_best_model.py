@@ -72,7 +72,7 @@ def evaluate_and_promote(candidate_report_path: str, min_score_threshold: float 
     cand_name = cand.get("model_name", "Unknown Candidate")
     cand_score = cand.get("composite_quality_score", 0.0)
     cand_non_empty = cand.get("non_empty_rate_pct", 0.0)
-    cand_syntax = cand.get("coding_syntax_valid_pct", 0.0)
+    cand_syntax = cand.get("code_syntax_pct", cand.get("coding_syntax_valid_pct", 0.0))
 
     print("=" * 65)
     print("   MODEL PROMOTION GATE & REGRESSION VERIFICATION")
