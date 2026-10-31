@@ -1,0 +1,61 @@
+{
+  "run_id": "moon_video_training_20261031_182553",
+  "experiment_name": "moon_video_training",
+  "model_name": "moon-video-v0",
+  "status": "COMPLETED",
+  "provenance": "moon_ai_random_init",
+  "architect": "Prem Gaikwad (India \ud83c\uddee\ud83c\uddf3)",
+  "created_at": "2026-10-31T18:27:41.260935+00:00",
+  "manifest_path": "D:\\Downloads\\linkden post\\ai\\datasets\\video\\manifest.jsonl",
+  "manifest_hash": "1235b9e69391f6f3546ae4d7214969a442182a6352c006e0f38006c08f273d67",
+  "hardware": {
+    "cuda_available": false,
+    "device_count": 0,
+    "device_name": "CPU",
+    "cpu_count": 4,
+    "torch_version": "2.14.1+cpu"
+  },
+  "config": {
+    "frame_size": 128,
+    "num_frames": 8,
+    "batch_size": 1,
+    "lr": 8e-05,
+    "precision": "auto",
+    "gradient_accumulation_steps": 1,
+    "allow_synthetic": false,
+    "total_steps": 2
+  },
+  "best_metrics": {
+    "val_loss": {
+      "value": 1.035331,
+      "step": 2,
+      "updated_at": "2026-10-31T18:27:38.767722+00:00"
+    }
+  },
+  "total_steps_recorded": 2,
+  "recent_logs": [
+    {
+      "step": 1,
+      "epoch": 1,
+      "train_loss": 1.0781,
+      "val_loss": null,
+      "learning_rate": 7.814014761921585e-05,
+      "throughput_samples_sec": 0.05,
+      "vram_mb": 0.0,
+      "elapsed_seconds": 25.13,
+      "timestamp": "2026-10-31T18:26:18.721553+00:00"
+    },
+    {
+      "step": 2,
+      "epoch": 2,
+      "train_loss": 0.995087,
+      "val_loss": 1.035331,
+      "learning_rate": 7.2742645786248e-05,
+      "throughput_samples_sec": 0.02,
+      "vram_mb": 0.0,
+      "elapsed_seconds": 105.69,
+      "timestamp": "2026-10-31T18:27:38.801087+00:00"
+    }
+  ],
+  "log_file": "D:\\Downloads\\linkden post\\ai\\models/checkpoints\\runs\\moon_video_training_20261031_182553\\experiment_log.json"
+}

@@ -1,0 +1,3 @@
+{"id": "synth_dev_0_0", "media_path": "data/images_3d/sample_0_0.png", "caption": "<moon-synthetic-dev> cybernetic chrome sphere with simulated camera motion", "source": "Moon AI Synthetic Motion Dev Set", "license": "MIT", "split": "train", "width": 128, "height": 128, "camera_motion": "orbit_left", "is_synthetic": true}
+{"id": "synth_dev_0_1", "media_path": "data/images_3d/sample_0_1.png", "caption": "<moon-synthetic-dev> cybernetic chrome sphere with simulated dolly zoom", "source": "Moon AI Synthetic Motion Dev Set", "license": "MIT", "split": "val", "width": 128, "height": 128, "camera_motion": "zoom_in", "is_synthetic": true}
+

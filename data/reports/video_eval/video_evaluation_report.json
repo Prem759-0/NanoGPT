@@ -1,0 +1,43 @@
+{
+  "status": "PASSED",
+  "evaluated_at": "2026-10-31T18:49:48.714624+00:00",
+  "checkpoint": "models\\checkpoints\\best_moon_video.pt",
+  "provenance": "moon_ai_random_init",
+  "checkpoint_step": 2,
+  "checkpoint_train_loss": 0.9950870871543884,
+  "validation_loss": null,
+  "mean_temporal_jitter": 0.09429981062809627,
+  "video_diversity_score": 0.0006412609945982695,
+  "manifest_path": "datasets/video/manifest.jsonl",
+  "manifest_hash": "1235b9e69391f6f3546ae4d7214969a442182a6352c006e0f38006c08f273d67",
+  "benchmark_samples": [
+    {
+      "index": 0,
+      "prompt": "Drone flight orbiting a gleaming hypercar on a coastal mountain pass",
+      "camera_motion": "orbit_left",
+      "seed": 42,
+      "num_frames": 8,
+      "temporal_jitter_score": 0.0932035818696022,
+      "gif_file": "video_eval_sample_0.gif"
+    },
+    {
+      "index": 1,
+      "prompt": "Cinematic camera dolly into a neon cybernetic control room",
+      "camera_motion": "dolly_in",
+      "seed": 43,
+      "num_frames": 8,
+      "temporal_jitter_score": 0.09507167339324951,
+      "gif_file": "video_eval_sample_1.gif"
+    },
+    {
+      "index": 2,
+      "prompt": "Slow pan across a misty pine forest at sunrise",
+      "camera_motion": "pan_right",
+      "seed": 44,
+      "num_frames": 8,
+      "temporal_jitter_score": 0.09462417662143707,
+      "gif_file": "video_eval_sample_2.gif"
+    }
+  ],
+  "total_parameters": 17009011
+}

@@ -32,7 +32,7 @@ class MoonVideoModel(nn.Module):
             num_heads=self.config.text_num_heads,
             num_layers=self.config.text_num_layers,
             max_length=self.config.text_max_length,
-            num_camera_motions=len(self.config.camera_motions) + 1
+            num_camera_motions=max(32, len(self.config.camera_motions) + 2)
         )
 
         self.autoencoder = MoonVideoAutoencoder(

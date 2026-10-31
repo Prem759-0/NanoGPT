@@ -58,7 +58,8 @@ class MoonVideoTextEncoder(nn.Module):
 
         # Inject camera motion vector if specified
         if camera_motion_id is not None:
-            cam_emb = self.camera_embedding(camera_motion_id).unsqueeze(1)
+            cam_id = camera_motion_id.clamp(0, self.camera_embedding.num_embeddings - 1)
+            cam_emb = self.camera_embedding(cam_id).unsqueeze(1)
             x = x + cam_emb
 
         for block in self.blocks:

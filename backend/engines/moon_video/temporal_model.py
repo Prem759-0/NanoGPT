@@ -83,7 +83,7 @@ class TemporalConvBlock(nn.Module):
 
         # Reshape back
         out = h_feat.view(b, h * w, c, num_frames).permute(0, 3, 2, 1) # [B, F, C, HW]
-        out = out.permute(0, 1, 2, 3).view(bf, c, h, w)
+        out = out.reshape(bf, c, h, w)
         return residual + out
 
 

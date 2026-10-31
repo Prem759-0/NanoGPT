@@ -1,0 +1,70 @@
+{
+  "report_generated_at": "2026-10-31T18:53:33.201307+00:00",
+  "architect": "Prem Gaikwad (Chief ML Systems Architect, India \ud83c\uddee\ud83c\uddf3)",
+  "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
+  "datasets": {
+    "image": {
+      "valid": true,
+      "manifest_path": "D:\\Downloads\\linkden post\\ai\\datasets\\image\\manifest.jsonl",
+      "manifest_sha256": "8e65f42efb4656ee359be130c7c3afc3f1b1425894541a6ac38c5d5df8c56bc5",
+      "records_count": 7,
+      "missing_files": [],
+      "corrupted_files": [],
+      "caption_quality_issues": [],
+      "duplicates": [],
+      "invalid_licenses": [],
+      "split_leakage": [],
+      "stats": {
+        "total_records": 7,
+        "unique_media_count": 7,
+        "splits_distribution": {
+          "train": 5,
+          "val": 1,
+          "test": 1,
+          "other": 0
+        },
+        "media_resolutions": {
+          "256x256": 1,
+          "128x128": 6
+        },
+        "avg_caption_length_chars": 128.4,
+        "min_caption_length": 124,
+        "max_caption_length": 132
+      }
+    },
+    "video": {
+      "valid": true,
+      "manifest_path": "D:\\Downloads\\linkden post\\ai\\datasets\\video\\manifest.jsonl",
+      "manifest_sha256": "1235b9e69391f6f3546ae4d7214969a442182a6352c006e0f38006c08f273d67",
+      "records_count": 2,
+      "missing_files": [],
+      "corrupted_files": [],
+      "caption_quality_issues": [],
+      "duplicates": [],
+      "invalid_licenses": [],
+      "split_leakage": [],
+      "stats": {
+        "total_records": 2,
+        "unique_media_count": 2,
+        "splits_distribution": {
+          "train": 1,
+          "val": 1,
+          "test": 0,
+          "other": 0
+        },
+        "media_resolutions": {},
+        "avg_caption_length_chars": 74.5,
+        "min_caption_length": 71,
+        "max_caption_length": 78
+      }
+    }
+  },
+  "summary": {
+    "all_manifests_valid": true,
+    "total_media_samples": 9,
+    "total_missing_files": 0,
+    "total_corrupt_files": 0,
+    "total_duplicates": 0,
+    "total_split_leakages": 0
+  }
+}

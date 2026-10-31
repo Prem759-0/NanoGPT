@@ -24,7 +24,7 @@ class MoonVideoConfig:
     downscale_factor: int = 8  # 128 -> 16x16 spatial latent
 
     # Camera Motion Types supported by conditioning
-    camera_motions: Tuple[str, ...] = ("static", "orbit_left", "orbit_right", "dolly_in", "dolly_out", "pan_left", "pan_right", "tilt_up", "tilt_down")
+    camera_motions: Tuple[str, ...] = ("static", "orbit_left", "orbit_right", "dolly_in", "dolly_out", "zoom_in", "zoom_out", "pan_left", "pan_right", "tilt_up", "tilt_down", "crane_up", "crane_down")
 
     # Text Conditioning Architecture
     text_vocab_size: int = 8192

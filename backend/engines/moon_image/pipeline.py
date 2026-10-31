@@ -21,7 +21,10 @@ class MoonImagePipeline:
     @classmethod
     def from_checkpoint(cls, checkpoint_path: str, device: str = "cpu") -> "MoonImagePipeline":
         """Loads a Moon Image checkpoint verified for sovereign random initialization."""
-        ckpt = torch.load(checkpoint_path, map_location=device)
+        ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
+        provenance = ckpt.get("provenance")
+        if provenance != "moon_ai_random_init":
+            raise ValueError(f"Strict Ownership Violation: Checkpoint provenance '{provenance}' is invalid. Must be 'moon_ai_random_init'.")
         config_data = ckpt.get("config", {})
         config = MoonImageConfig(**config_data) if isinstance(config_data, dict) else MoonImageConfig()
 
