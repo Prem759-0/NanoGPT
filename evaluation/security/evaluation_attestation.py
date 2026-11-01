@@ -6,12 +6,13 @@ test suite hashes, evaluation manifests, individual test results, and independen
 
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
-Attestation Standard: RFC 8785 Compatible Canonical JSON Ed25519 Evaluation Attestation v2.0
+Attestation Standard: Restricted Deterministic Canonical JSON Ed25519 Evaluation Attestation v2.0
 """
 import os
 import sys
 import re
 import json
+import math
 import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, Tuple, List
@@ -23,7 +24,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 DEFAULT_EVALUATORS_PATH = os.path.join(PROJECT_ROOT, "evaluation", "security", "trusted_evaluators.json")
 
 EVAL_SUITE_VERSION_CURRENT = "1.0"
-EVAL_SOFTWARE_VERSION_CURRENT = "2.0.6"
+EVAL_SOFTWARE_VERSION_CURRENT = "2.0.7"
 MAX_ATTESTATION_AGE_DAYS = 730
 MAX_CLOCK_SKEW_SECONDS = 60
 
@@ -42,7 +43,7 @@ def load_trusted_evaluators(evaluators_path: Optional[str] = None) -> Dict[str, 
 def compute_test_results_summary_sha256(test_results: List[Dict[str, Any]]) -> str:
     """
     Computes deterministic SHA-256 summary of individual evaluation test results.
-    Canonical format: RFC 8785 style sorted keys, no whitespace separators, UTF-8.
+    Format: Restricted Deterministic Canonical JSON (sorted keys, no whitespace separators, UTF-8).
     """
     if not isinstance(test_results, list) or len(test_results) == 0:
         return "none"
@@ -57,28 +58,72 @@ def compute_test_results_summary_sha256(test_results: List[Dict[str, Any]]) -> s
 
 def recompute_aggregate_metrics(test_results: List[Dict[str, Any]]) -> Dict[str, float]:
     """
-    Recomputes aggregate benchmark metrics from individual test results.
+    Strictly validates individual evaluation test outcomes and recomputes aggregate benchmark metrics.
+    
+    Validation Policy (SEC-03):
+    1. Rejects empty, null, or non-list result collections.
+    2. Rejects malformed result objects (every item must be a dict).
+    3. Requires 'score' field in every item; rejects missing or null scores.
+    4. Rejects boolean values for score (e.g., True/False).
+    5. Rejects NaN, positive/negative Infinity, and non-numeric strings.
+    6. Enforces finite numeric scores within the strict permitted range [0.0, 100.0].
+    
     Returns: dict with composite_quality_score, non_empty_rate_pct, code_syntax_pct.
+    Raises: ValueError with a descriptive validation error message.
     """
-    if not isinstance(test_results, list) or len(test_results) == 0:
-        return {
-            "composite_quality_score": 0.0,
-            "non_empty_rate_pct": 0.0,
-            "code_syntax_pct": 0.0
-        }
+    if test_results is None:
+        raise ValueError("test_results cannot be None. Non-empty list required.")
+    if not isinstance(test_results, list):
+        raise ValueError(f"test_results must be a list, got {type(test_results).__name__}.")
+    if len(test_results) == 0:
+        raise ValueError("test_results collection is empty. At least one evaluation test outcome is required.")
+
     total = len(test_results)
-    non_empty_count = sum(
-        1 for t in test_results
-        if isinstance(t, dict) and bool(str(t.get("output", "") or t.get("response", "") or t.get("text", "")).strip())
-    )
-    syntax_count = sum(
-        1 for t in test_results
-        if isinstance(t, dict) and t.get("syntax_valid") is True
-    )
-    total_score = sum(
-        float(t.get("score", 0.0)) for t in test_results
-        if isinstance(t, dict) and t.get("score") is not None
-    )
+    non_empty_count = 0
+    syntax_count = 0
+    total_score = 0.0
+
+    for i, t in enumerate(test_results):
+        if not isinstance(t, dict):
+            raise ValueError(f"Malformed test result object at index {i}: expected dict, got {type(t).__name__}.")
+        
+        if "score" not in t:
+            raise ValueError(f"Missing required 'score' field in test result at index {i}.")
+        
+        val = t["score"]
+        if val is None:
+            raise ValueError(f"Score at index {i} is null.")
+        
+        if isinstance(val, bool):
+            raise ValueError(f"Score at index {i} has boolean value ({val}). Boolean scores are strictly rejected.")
+        
+        if isinstance(val, (int, float)):
+            score_num = float(val)
+        elif isinstance(val, str):
+            clean_str = val.strip()
+            if clean_str.lower() in ("nan", "infinity", "-infinity", "+infinity", "inf", "-inf", "+inf"):
+                raise ValueError(f"Score at index {i} has non-finite value '{val}'.")
+            try:
+                score_num = float(clean_str)
+            except Exception:
+                raise ValueError(f"Score at index {i} has non-numeric string value: '{val}'.")
+        else:
+            raise ValueError(f"Score at index {i} has invalid type {type(val).__name__}.")
+        
+        if math.isnan(score_num) or math.isinf(score_num):
+            raise ValueError(f"Score at index {i} is non-finite: {score_num}.")
+        
+        if score_num < 0.0 or score_num > 100.0:
+            raise ValueError(f"Score at index {i} ({score_num}) is out of permitted range [0.0, 100.0].")
+
+        total_score += score_num
+
+        output_str = str(t.get("output", "") or t.get("response", "") or t.get("text", "")).strip()
+        if bool(output_str):
+            non_empty_count += 1
+            
+        if t.get("syntax_valid") is True:
+            syntax_count += 1
 
     return {
         "composite_quality_score": round(total_score / total, 4),
@@ -102,7 +147,7 @@ def construct_canonical_evaluation_payload(
 ) -> bytes:
     """
     Constructs deterministic canonical JSON byte payload for cryptographic binding.
-    Canonical format: RFC 8785 style sorted keys, no whitespace separators, UTF-8.
+    Format: Restricted Deterministic Canonical JSON (sorted keys, no whitespace separators, UTF-8).
     Never uses ambiguous delimiter concatenation.
     """
     canonical_dict = {
@@ -269,10 +314,12 @@ def verify_evaluation_attestation(
     if att_syntax != rep_syntax:
         return False, f"Evaluation attestation code_syntax_pct mismatch: attestation {att_syntax}, report {rep_syntax}."
 
-    # Verify individual test results if present in report
-    if "test_results" in report_data and isinstance(report_data["test_results"], list):
+    # Verify individual test results if present in report (SEC-02, SEC-03)
+    if "test_results" in report_data:
         test_results = report_data["test_results"]
-        if len(test_results) > 0:
+        if not isinstance(test_results, list) or len(test_results) == 0:
+            return False, "Evaluation report 'test_results' field must be a non-empty list of test results."
+        try:
             computed_test_sha = compute_test_results_summary_sha256(test_results)
             if att_test_sha != "none" and att_test_sha != computed_test_sha:
                 return False, f"Individual test results hash mismatch: attestation specifies '{att_test_sha}', but actual test results yield '{computed_test_sha}'."
@@ -284,6 +331,8 @@ def verify_evaluation_attestation(
                 return False, f"Aggregate non_empty_rate_pct {rep_non_empty} does not match individual test results {recomputed_metrics['non_empty_rate_pct']}."
             if abs(recomputed_metrics["code_syntax_pct"] - rep_syntax) > 0.01:
                 return False, f"Aggregate code_syntax_pct {rep_syntax} does not match individual test results {recomputed_metrics['code_syntax_pct']}."
+        except ValueError as e:
+            return False, f"Individual test results validation failed: {e}"
 
     # Keystore verification
     trusted_registry = load_trusted_evaluators(evaluators_path)

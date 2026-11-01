@@ -52,6 +52,10 @@ jobs:
         run: |
           python -m unittest tests/test_stage_2_0_6_strict_integrity.py -v
 
+      - name: Run Stage 2.0.7 Integrity Hardening Test Suite
+        run: |
+          python -m unittest tests/test_stage_2_0_7_integrity_hardening.py -v
+
       - name: Run Full Repository Test Suite
         run: |
           python -m unittest discover -s tests -p "test_*.py"

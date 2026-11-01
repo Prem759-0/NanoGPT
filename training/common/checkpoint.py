@@ -113,7 +113,20 @@ def deep_verify_production_manifest(
        - Validates source URL and license evidence.
     5. Returns (is_valid, production_eligible_count, list_of_errors).
     """
-    resolved_path = os.path.normpath(os.path.join(base_dir, manifest_path)) if not os.path.isabs(manifest_path) else manifest_path
+    clean_path = str(manifest_path).strip()
+    norm_parts = os.path.normpath(clean_path).split(os.sep)
+    if ".." in norm_parts:
+        return False, 0, [f"Manifest path security violation: directory traversal ('..') detected in '{clean_path}'."]
+
+    canonical_base = os.path.realpath(os.path.abspath(base_dir))
+    joined = os.path.join(canonical_base, clean_path) if not os.path.isabs(clean_path) else clean_path
+    resolved_path = os.path.realpath(os.path.abspath(joined))
+    try:
+        if os.path.commonpath([canonical_base, resolved_path]) != canonical_base:
+            return False, 0, [f"Manifest path '{clean_path}' escapes approved base directory '{canonical_base}'."]
+    except ValueError:
+        return False, 0, [f"Manifest path '{clean_path}' is on a separate filesystem drive or outside approved root."]
+
     if not os.path.isfile(resolved_path):
         return False, 0, [f"Manifest file not found on disk: '{manifest_path}'"]
 

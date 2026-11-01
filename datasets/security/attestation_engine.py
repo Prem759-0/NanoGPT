@@ -7,7 +7,7 @@ The repository stores only public verification keys in a trusted keystore.
 
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
-Attestation Standard: RFC 8785 Compatible Canonical JSON Ed25519 Attestation v2.0
+Attestation Standard: Restricted Deterministic Canonical JSON Ed25519 Attestation v2.0
 """
 import os
 import sys
@@ -76,7 +76,7 @@ def construct_canonical_attestation_payload(
 ) -> bytes:
     """
     Constructs deterministic canonical JSON byte payload for cryptographic binding.
-    Canonical format: Restricted RFC 8785 JSON representation:
+    Format: Restricted Deterministic Canonical JSON representation:
     - Lexicographically sorted dictionary keys (sort_keys=True).
     - No whitespace separators (separators=(',', ':')).
     - UTF-8 encoding.

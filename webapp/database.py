@@ -25,17 +25,43 @@ if os.path.exists(_env_path):
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "chats.db"))
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+_DEFAULT_DB_URL = object()
+
 class Database:
     """
     Sovereign Dual Database Engine for Grok / NanoGPT Lab.
     Supports:
-    1. Neon PostgreSQL / Supabase (Serverless Cloud Postgres) when DATABASE_URL is set.
-    2. Local SQLite with WAL mode and zero external dependencies when offline.
+    1. Neon PostgreSQL / Supabase (Serverless Cloud Postgres) when DATABASE_URL is configured.
+    2. Local SQLite with WAL mode and zero external dependencies when offline or in tests.
     """
 
-    def __init__(self, db_path: str = DB_PATH, db_url: Optional[str] = DATABASE_URL):
+    def __init__(
+        self,
+        db_path: str = DB_PATH,
+        db_url: Any = _DEFAULT_DB_URL,
+        allow_sqlite_fallback: bool = False
+    ):
+        """
+        Initializes the dual-database engine with strict environment isolation.
+
+        Resolution Strategy:
+        1. Default behavior (db_url omitted / _DEFAULT_DB_URL): Uses os.environ.get("DATABASE_URL") if present.
+        2. Explicit SQLite selection (db_url is None or db_url == ""): Forces local SQLite; never reads environment.
+        3. Explicit PostgreSQL selection (db_url is a non-empty string starting with postgresql:// or postgres://): Uses that exact URL.
+        4. Silent fallback policy: If PostgreSQL is requested and connection or schema fails,
+           it will only fall back to SQLite if allow_sqlite_fallback=True is explicitly enabled. Otherwise, it fails closed with RuntimeError.
+        """
         self.db_path = db_path
-        self.db_url = db_url or os.environ.get("DATABASE_URL")
+        self.allow_sqlite_fallback = allow_sqlite_fallback
+
+        if db_url is _DEFAULT_DB_URL:
+            resolved_url = os.environ.get("DATABASE_URL")
+        elif db_url is None or db_url == "":
+            resolved_url = None
+        else:
+            resolved_url = str(db_url).strip()
+
+        self.db_url = resolved_url
         self.is_postgres = bool(self.db_url and (self.db_url.startswith("postgres://") or self.db_url.startswith("postgresql://")))
         self._pg_conn = None
         import threading
@@ -54,9 +80,12 @@ class Database:
                     import psycopg
                     from psycopg.rows import dict_row
                 except ImportError:
-                    logger.warning("psycopg library is not installed. Falling back to SQLite.")
-                    self.is_postgres = False
-                    psycopg = None
+                    if self.allow_sqlite_fallback:
+                        logger.warning("psycopg library is not installed. Falling back to SQLite per allow_sqlite_fallback=True policy.")
+                        self.is_postgres = False
+                        psycopg = None
+                    else:
+                        raise RuntimeError("psycopg library is not installed for requested PostgreSQL database. Silent SQLite fallback is disabled.")
 
                 if self.is_postgres and (self._pg_conn is not None and not getattr(self._pg_conn, "closed", True)):
                     try:
@@ -75,8 +104,11 @@ class Database:
                             conn_str = "postgresql://" + conn_str[len("postgres://"):]
                         self._pg_conn = psycopg.connect(conn_str, row_factory=dict_row, autocommit=True)
                     except Exception as e:
-                        logger.warning(f"Failed to connect to Neon ({e}). Falling back to SQLite.")
-                        self.is_postgres = False
+                        if self.allow_sqlite_fallback:
+                            logger.warning(f"Failed to connect to Neon ({e}). Falling back to SQLite per allow_sqlite_fallback=True policy.")
+                            self.is_postgres = False
+                        else:
+                            raise RuntimeError(f"Failed to connect to PostgreSQL ({self.db_url}): {e}. Silent SQLite fallback is disabled.")
 
             if self.is_postgres and self._pg_conn is not None:
                 yield self._pg_conn
@@ -151,11 +183,15 @@ class Database:
                     conn.commit()
                 return
             except Exception as e:
-                logger.error(f"Failed to initialize PostgreSQL schema: {e}. Falling back to SQLite.")
-                self.is_postgres = False
+                if self.allow_sqlite_fallback:
+                    logger.error(f"Failed to initialize PostgreSQL schema: {e}. Falling back to SQLite per allow_sqlite_fallback=True policy.")
+                    self.is_postgres = False
+                else:
+                    raise RuntimeError(f"Failed to initialize PostgreSQL schema ({self.db_url}): {e}. Silent SQLite fallback is disabled.")
 
         # SQLite Schema
-        with self._get_sqlite_connection() as conn:
+        conn = self._get_sqlite_connection()
+        try:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS sessions (
                     id TEXT PRIMARY KEY,
@@ -208,6 +244,9 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_memories_created ON memories (created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_training_created ON training_pairs (created_at DESC);
             """)
+            conn.commit()
+        finally:
+            conn.close()
 
     def _execute(self, query: str, params: tuple = ()):
         """Normalizes and executes a query across PostgreSQL and SQLite."""
