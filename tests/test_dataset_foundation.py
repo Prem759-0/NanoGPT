@@ -39,13 +39,23 @@ from training.video.dataset import MoonVideoDataset
 class TestDatasetFoundation(unittest.TestCase):
     def test_image_source_metadata_validation(self):
         """Verifies validation of valid and invalid image metadata."""
+        sha = "a" * 64
         valid_record = {
             "id": "img_test_01",
             "category": "landscapes",
             "license": "CustomSovereign",
             "creator": "Prem Gaikwad",
-            "source_url": "https://github.com/Prem759-0/NanoGPT",
-            "caption": "A beautiful sunset over mountain peaks with dramatic clouds"
+            "source_url": "https://raw.githubusercontent.com/Prem759-0/NanoGPT/main/data/images/img_test_01.png",
+            "caption": "A beautiful sunset over mountain peaks with dramatic clouds",
+            "is_synthetic": False,
+            "sha256": sha,
+            "media_path": "data/images/img_test_01.png",
+            "owner_declaration": {
+                "declarant": "Prem Gaikwad",
+                "declaration_timestamp": "2026-11-01T00:00:00Z",
+                "asset_sha256": sha,
+                "rights_statement": "I certify this is an original capture created by me."
+            }
         }
         ok, errors = validate_image_source_record(valid_record)
         self.assertTrue(ok, f"Expected valid, got errors: {errors}")

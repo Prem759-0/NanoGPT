@@ -1,7 +1,7 @@
 """
 training/image/dataset.py
 Strict Manifest-driven PyTorch Dataset for Moon Image Training.
-Enforces strict production data integrity and provenance verification.
+Enforces strict production data integrity, owner declarations, and cryptographic file verification.
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 """
 import os
@@ -13,16 +13,22 @@ import numpy as np
 from typing import Optional, List, Dict, Any
 
 from backend.engines.moon_image.text_encoder import SimpleTextTokenizer
-from datasets.tools.validate_image_sources import VALID_IMAGE_LICENSES
+from datasets.tools.provenance_validator import (
+    validate_provenance_record,
+    validate_safe_path,
+    verify_file_checksum,
+    ALLOWED_IMAGE_EXTENSIONS
+)
 
 class MoonImageDataset(Dataset):
     """
     Manifest-driven dataset for Moon Image Training.
-    In production mode (allow_synthetic=False), strictly rejects:
-    - Synthetic records (is_synthetic=True)
-    - Development fixtures or manifests containing 'synthetic'/'dev'
-    - Missing provenance (creator, source_url, license, sha256)
-    - Empty manifests (fails closed with ValueError)
+    In production mode (allow_synthetic=False), strictly enforces:
+    - Explicit is_synthetic=false (never defaulted)
+    - Full provenance and verifiable license / owner declaration
+    - Actual file byte SHA-256 match
+    - Path safety (rejection of directory traversal)
+    - Non-empty manifest (fails closed if 0 eligible records)
     """
     def __init__(
         self,
@@ -70,44 +76,26 @@ class MoonImageDataset(Dataset):
                 if rec_split != self.split.lower():
                     continue
 
-                is_synth = data.get("is_synthetic", False) or data.get("source_type") == "procedural_synthetic_fixture"
-
                 if not self.allow_synthetic:
-                    if is_synth:
+                    audit = validate_provenance_record(
+                        record=data,
+                        modality="image",
+                        base_dir=self.base_dir,
+                        allow_synthetic=False,
+                        verify_file=True
+                    )
+                    if not audit["training_eligible"]:
                         raise ValueError(
-                            f"STRICT IMAGE INTEGRITY ERROR: Synthetic record '{data.get('id')}' found in production "
-                            f"manifest '{self.manifest_path}' line {line_no}. "
-                            "Synthetic procedural fixtures are strictly prohibited in production training."
+                            f"STRICT PROVENANCE ERROR / STRICT IMAGE INTEGRITY ERROR: Record '{data.get('id')}' in '{self.manifest_path}' "
+                            f"line {line_no} failed production verification ({audit['status']}): {'; '.join(audit['errors'])}"
                         )
-                    # Verify provenance fields
-                    creator = str(data.get("creator", "")).strip()
-                    source_url = str(data.get("source_url", "")).strip()
-                    license_id = str(data.get("license", "")).strip()
-                    sha = str(data.get("sha256", "")).strip()
-
-                    if not creator:
-                        raise ValueError(f"STRICT PROVENANCE ERROR: Record '{data.get('id')}' missing 'creator'.")
-                    if not source_url:
-                        raise ValueError(f"STRICT PROVENANCE ERROR: Record '{data.get('id')}' missing 'source_url'.")
-                    if not license_id or license_id not in VALID_IMAGE_LICENSES:
-                        raise ValueError(f"STRICT PROVENANCE ERROR: Record '{data.get('id')}' invalid license '{license_id}'.")
-                    if not sha or len(sha) != 64:
-                        raise ValueError(f"STRICT PROVENANCE ERROR: Record '{data.get('id')}' missing valid SHA-256 checksum.")
-
-                    # Verify media file exists
-                    rel_p = data.get("media_path") or data.get("image_path")
-                    if not rel_p:
-                        raise ValueError(f"STRICT PROVENANCE ERROR: Record '{data.get('id')}' missing media_path.")
-                    full_p = os.path.normpath(os.path.join(self.base_dir, rel_p))
-                    if not os.path.isfile(full_p):
-                        raise FileNotFoundError(f"STRICT IMAGE INTEGRITY ERROR: Image file not found: {full_p}")
 
                 self.records.append(data)
 
         if not self.allow_synthetic:
             if len(self.records) == 0:
                 raise ValueError(
-                    f"STRICT IMAGE INTEGRITY ERROR: Production manifest '{self.manifest_path}' contains "
+                    f"STRICT PROVENANCE ERROR / STRICT IMAGE INTEGRITY ERROR: Production manifest '{self.manifest_path}' contains "
                     f"0 genuine records for split='{self.split}'. "
                     "Production training cannot proceed without verified genuine media."
                 )
@@ -124,9 +112,15 @@ class MoonImageDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         rec = self.records[idx]
         rel_path = rec.get("media_path") or rec.get("image_path")
-        img_path = os.path.normpath(os.path.join(self.base_dir, rel_path))
+        safe_ok, full_path, path_err = validate_safe_path(
+            rel_path,
+            base_dir=self.base_dir,
+            allowed_extensions=ALLOWED_IMAGE_EXTENSIONS
+        )
+        if not safe_ok:
+            raise ValueError(f"Security error opening image: {path_err}")
 
-        with Image.open(img_path) as im:
+        with Image.open(full_path) as im:
             im = im.convert("RGB")
             im = im.resize((self.image_size, self.image_size), Image.Resampling.BILINEAR)
             arr = np.array(im).astype(np.float32) / 127.5 - 1.0  # Normalized to [-1, 1]

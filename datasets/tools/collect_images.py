@@ -1,16 +1,7 @@
 """
 datasets/tools/collect_images.py
-Image Ingestion and Manifest Collection Engine for Moon AI.
+Automated Collection, Normalization, Deduplication, and Hardened Ingestion for Moon Image.
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
-
-Ingestion Workflow:
-1. Validates metadata (licensing, creator, source URL, caption, category).
-2. Verifies image integrity and extracts perceptual & SHA-256 hashes.
-3. Checks for exact or near-duplicates.
-4. Archives original raw file into data/raw/images/.
-5. Normalizes processed training copy into data/images/.
-6. Generates version 2.0.0 JSONL manifest records.
-7. Produces category taxonomy distribution report.
 """
 import os
 import sys
@@ -23,23 +14,27 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from datasets.tools.validate_image_sources import validate_image_source_record, VALID_IMAGE_CATEGORIES
 from datasets.tools.normalize_images import normalize_single_image
 from datasets.tools.deduplicate_images import compute_sha256, compute_dhash, hamming_distance
+from datasets.tools.provenance_validator import (
+    validate_provenance_record,
+    VALID_IMAGE_CATEGORIES,
+    PERMISSIBLE_LICENSES
+)
 
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "2.0.2"
 
 class ImageCollector:
     def __init__(
         self,
         base_dir: str = PROJECT_ROOT,
-        raw_dir: str = "data/raw/images",
-        processed_dir: str = "data/images",
+        raw_dir: Optional[str] = None,
+        processed_dir: Optional[str] = None,
         target_resolution: int = 256
     ):
-        self.base_dir = os.path.abspath(base_dir)
-        self.raw_dir = os.path.join(self.base_dir, raw_dir)
-        self.processed_dir = os.path.join(self.base_dir, processed_dir)
+        self.base_dir = base_dir
+        self.raw_dir = raw_dir or os.path.join(base_dir, "data", "raw", "images")
+        self.processed_dir = processed_dir or os.path.join(base_dir, "data", "images")
         self.target_resolution = target_resolution
 
         os.makedirs(self.raw_dir, exist_ok=True)
@@ -77,13 +72,14 @@ class ImageCollector:
         creator: str,
         source_url: str,
         license_id: str,
+        owner_declaration: Optional[Dict[str, Any]] = None,
+        license_evidence: Optional[Dict[str, Any]] = None,
         attribution: Optional[str] = None,
         split: str = "train",
         phash_threshold: int = 4
     ) -> Dict[str, Any]:
         """
-        Ingests a single image file with strict validation.
-        Returns a valid manifest record dict or raises an exception.
+        Ingests a single image file with fail-closed provenance validation.
         """
         if not os.path.isfile(src_file_path):
             raise FileNotFoundError(f"Source image not found: {src_file_path}")
@@ -93,7 +89,6 @@ class ImageCollector:
         if raw_sha in self.existing_sha:
             raise ValueError(f"Exact duplicate detected! Matches existing record '{self.existing_sha[raw_sha]}' (SHA256: {raw_sha})")
 
-        # Preliminary dHash check
         raw_dhash = compute_dhash(src_file_path)
         for ex_dh, ex_id in self.existing_dhash.items():
             dist = hamming_distance(raw_dhash, ex_dh)
@@ -103,32 +98,48 @@ class ImageCollector:
                     f"to existing record '{ex_id}'"
                 )
 
-        # Build candidate record for validation
+        # Build candidate record for preliminary schema validation
+        rec_id = f"img_{category}_{raw_sha[:10]}"
         candidate = {
-            "id": f"img_{category}_{raw_sha[:10]}",
+            "id": rec_id,
             "caption": caption.strip(),
             "category": category.strip().lower(),
             "creator": creator.strip(),
             "source_url": source_url.strip(),
             "license": license_id.strip(),
             "attribution": (attribution or f"Image by {creator} via {source_url} ({license_id})").strip(),
-            "split": split.strip().lower()
+            "split": split.strip().lower(),
+            "is_synthetic": False,
+            "sha256": raw_sha,
+            "media_path": src_file_path
         }
+        if owner_declaration:
+            candidate["owner_declaration"] = owner_declaration
+        if license_evidence:
+            candidate["license_evidence"] = license_evidence
 
-        # Validate metadata
-        is_valid, errors = validate_image_source_record(candidate)
-        if not is_valid:
-            raise ValueError(f"Metadata validation failed: {'; '.join(errors)}")
+        # Validate provenance dimensions
+        audit = validate_provenance_record(
+            record=candidate,
+            modality="image",
+            base_dir=self.base_dir,
+            allow_synthetic=False,
+            verify_file=False
+        )
+        if not audit["is_valid"]:
+            raise ValueError(f"Image provenance validation failed: {'; '.join(audit['errors'])}")
+        if not audit["dimensions"]["license_verified"] or not audit["dimensions"]["ownership_verified"]:
+            raise ValueError(f"Ingestion blocked: {audit['status']} ({'; '.join(audit['errors'])})")
 
         # Archive raw copy
         ext = os.path.splitext(src_file_path)[1].lower() or ".jpg"
-        raw_filename = f"{candidate['id']}_raw{ext}"
+        raw_filename = f"{rec_id}_raw{ext}"
         archived_raw_path = os.path.join(self.raw_dir, raw_filename)
         if os.path.abspath(src_file_path) != os.path.abspath(archived_raw_path):
             shutil.copy2(src_file_path, archived_raw_path)
 
         # Normalize and save processed copy
-        proc_filename = f"{candidate['id']}.png"
+        proc_filename = f"{rec_id}.png"
         proc_full_path = os.path.join(self.processed_dir, proc_filename)
         norm_meta = normalize_single_image(
             src_path=src_file_path,
@@ -136,13 +147,13 @@ class ImageCollector:
             target_size=self.target_resolution
         )
 
-        # Relative path for manifest portability
         rel_media_path = os.path.relpath(proc_full_path, self.base_dir).replace("\\", "/")
 
         final_record = {
             "schema_version": SCHEMA_VERSION,
-            "id": candidate["id"],
+            "id": rec_id,
             "media_path": rel_media_path,
+            "image_path": rel_media_path,
             "caption": candidate["caption"],
             "category": candidate["category"],
             "source_url": candidate["source_url"],
@@ -152,42 +163,27 @@ class ImageCollector:
             "sha256": norm_meta["sha256"],
             "dhash": norm_meta["dhash"],
             "split": candidate["split"],
-            "width": norm_meta["normalized_width"],
-            "height": norm_meta["normalized_height"],
+            "width": norm_meta["width"],
+            "height": norm_meta["height"],
             "channels": norm_meta["channels"],
             "original_width": norm_meta["original_width"],
             "original_height": norm_meta["original_height"],
-            "is_synthetic": False
+            "is_synthetic": False,
+            "provenance_status": "VERIFIED_PRODUCTION_ELIGIBLE"
         }
+        if owner_declaration:
+            final_decl = dict(owner_declaration)
+            final_decl["asset_sha256"] = norm_meta["sha256"]
+            final_record["owner_declaration"] = final_decl
+        if license_evidence:
+            final_record["license_evidence"] = license_evidence
 
-        # Update cache
-        self.existing_sha[norm_meta["sha256"]] = candidate["id"]
-        self.existing_dhash[norm_meta["dhash"]] = candidate["id"]
+        self.existing_sha[norm_meta["sha256"]] = rec_id
+        self.existing_dhash[norm_meta["dhash"]] = rec_id
 
         return final_record
 
-def generate_category_distribution_report(records: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Generates distribution report across the 10 balanced categories."""
-    dist = {cat: 0 for cat in VALID_IMAGE_CATEGORIES}
-    splits = {"train": 0, "val": 0, "test": 0, "other": 0}
-
-    for r in records:
-        cat = r.get("category", "unknown")
-        if cat in dist:
-            dist[cat] += 1
-        s = r.get("split", "train").lower()
-        if s in splits:
-            splits[s] += 1
-        else:
-            splits["other"] += 1
-
-    total = len(records)
-    pcts = {cat: round((count / total) * 100, 1) if total > 0 else 0.0 for cat, count in dist.items()}
-
-    return {
-        "total_images": total,
-        "category_counts": dist,
-        "category_percentages": pcts,
-        "splits": splits
-    }
-
+def append_to_manifest(record: Dict[str, Any], manifest_path: str):
+    os.makedirs(os.path.dirname(os.path.abspath(manifest_path)), exist_ok=True)
+    with open(manifest_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")

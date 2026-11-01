@@ -12,23 +12,19 @@ from torch.utils.data import Dataset
 from typing import Optional, List, Dict, Any, Tuple
 
 from backend.engines.moon_image.text_encoder import SimpleTextTokenizer
-from datasets.tools.validate_video_sources import VALID_VIDEO_LICENSES, VALID_CAMERA_MOTIONS
+from datasets.tools.provenance_validator import (
+    validate_provenance_record,
+    validate_safe_path,
+    verify_file_checksum,
+    ALLOWED_VIDEO_EXTENSIONS,
+    VALID_CAMERA_MOTIONS
+)
 from .frame_sampling import decode_real_video_clip, create_synthetic_motion_clip, CorruptVideoError
 
 CAMERA_MOTION_CLASSES = (
-    "static",
-    "orbit_left",
-    "orbit_right",
-    "dolly_in",
-    "dolly_out",
-    "zoom_in",
-    "zoom_out",
-    "pan_left",
-    "pan_right",
-    "tilt_up",
-    "tilt_down",
-    "crane_up",
-    "crane_down"
+    "static", "orbit_left", "orbit_right", "dolly_in", "dolly_out",
+    "zoom_in", "zoom_out", "pan_left", "pan_right", "tilt_up", "tilt_down",
+    "crane_up", "crane_down"
 )
 
 REAL_VIDEO_EXTENSIONS = (".mp4", ".webm", ".avi", ".mov", ".mkv")
@@ -58,7 +54,13 @@ class MoonRealVideoDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         rec = self.records[idx]
         rel_path = rec.get("video_path") or rec.get("media_path") or ""
-        full_path = os.path.normpath(os.path.join(self.base_dir, rel_path))
+        safe_ok, full_path, path_err = validate_safe_path(
+            rel_path,
+            base_dir=self.base_dir,
+            allowed_extensions=ALLOWED_VIDEO_EXTENSIONS
+        )
+        if not safe_ok:
+            raise ValueError(f"Security error opening video: {path_err}")
 
         try:
             video_tensor, meta = decode_real_video_clip(
@@ -182,7 +184,7 @@ class MoonVideoDataset(Dataset):
         if not self.allow_synthetic:
             if len(self.real_records) == 0:
                 raise ValueError(
-                    f"STRICT VIDEO INTEGRITY ERROR: Production video training requires real video files (.mp4, .webm). "
+                    f"STRICT PROVENANCE ERROR / STRICT VIDEO INTEGRITY ERROR: Production video training requires real video files (.mp4, .webm). "
                     f"Manifest '{manifest_path}' for split='{split}' contained 0 real video records. "
                     f"Found {len(self.synthetic_records)} synthetic records. "
                     "Synthetic development data is strictly prohibited in production training."
@@ -223,7 +225,7 @@ class MoonVideoDataset(Dataset):
         norm_path = self.manifest_path.replace("\\", "/").lower()
         if not self.allow_synthetic and ("synthetic" in norm_path or "dev" in norm_path):
             raise ValueError(
-                f"STRICT VIDEO INTEGRITY ERROR: Attempted to load synthetic development manifest "
+                f"STRICT PROVENANCE ERROR / STRICT VIDEO INTEGRITY ERROR: Attempted to load synthetic development manifest "
                 f"'{self.manifest_path}' in production mode (allow_synthetic=False). "
                 "Synthetic development manifests cannot be used for production training."
             )
@@ -244,7 +246,7 @@ class MoonVideoDataset(Dataset):
                 # Determine if real video or synthetic
                 path_val = (data.get("video_path") or data.get("media_path") or "").lower()
                 is_synth = (
-                    data.get("is_synthetic", False)
+                    data.get("is_synthetic") is not False
                     or data.get("source_type") == "procedural_synthetic_fixture"
                 )
                 is_real = (
@@ -253,15 +255,18 @@ class MoonVideoDataset(Dataset):
                 )
 
                 if is_real:
-                    # Provenance verification in production mode
                     if not self.allow_synthetic:
-                        creator = str(data.get("creator", "")).strip()
-                        source_url = str(data.get("source_url", "")).strip()
-                        license_id = str(data.get("license", "")).strip()
-                        if not creator or not source_url or not license_id or license_id not in VALID_VIDEO_LICENSES:
+                        audit = validate_provenance_record(
+                            record=data,
+                            modality="video",
+                            base_dir=self.base_dir,
+                            allow_synthetic=False,
+                            verify_file=True
+                        )
+                        if not audit["training_eligible"]:
                             raise ValueError(
-                                f"STRICT PROVENANCE ERROR: Video record '{data.get('id')}' in '{self.manifest_path}' "
-                                "missing or invalid provenance metadata."
+                                f"STRICT PROVENANCE ERROR / STRICT VIDEO INTEGRITY ERROR: Record '{data.get('id')}' in '{self.manifest_path}' "
+                                f"line {line_no} failed production verification ({audit['status']}): {'; '.join(audit['errors'])}"
                             )
                     self.real_records.append(data)
                 else:

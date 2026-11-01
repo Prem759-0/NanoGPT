@@ -1,16 +1,13 @@
 """
 datasets/tools/collect_videos.py
-Video Ingestion and Manifest Collection Engine for Moon AI.
+Video Ingestion, Container Validation, Frame Sampling, and Provenance Enforcement for Moon Video.
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
-
-Ingests genuine video files (.mp4, .webm) into version 2.0.0 manifests.
-Guarantees real temporal frames, timestamps, and verifiable licensing.
 """
 import os
 import sys
 import json
 import shutil
-import hashlib
+import argparse
 from typing import Dict, Any, List, Optional
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -19,21 +16,25 @@ if PROJECT_ROOT not in sys.path:
 
 from datasets.tools.inspect_video import inspect_video_file
 from datasets.tools.extract_video_frames import extract_ordered_frames
-from datasets.tools.validate_video_sources import validate_video_source_record
 from datasets.tools.deduplicate_images import compute_sha256
+from datasets.tools.provenance_validator import (
+    validate_provenance_record,
+    PERMISSIBLE_LICENSES,
+    VALID_CAMERA_MOTIONS
+)
 
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "2.0.2"
 
 class VideoCollector:
     def __init__(
         self,
         base_dir: str = PROJECT_ROOT,
-        raw_dir: str = "data/raw/videos",
-        processed_dir: str = "data/videos"
+        raw_dir: Optional[str] = None,
+        processed_dir: Optional[str] = None
     ):
-        self.base_dir = os.path.abspath(base_dir)
-        self.raw_dir = os.path.join(self.base_dir, raw_dir)
-        self.processed_dir = os.path.join(self.base_dir, processed_dir)
+        self.base_dir = base_dir
+        self.raw_dir = raw_dir or os.path.join(base_dir, "data", "raw", "videos")
+        self.processed_dir = processed_dir or os.path.join(base_dir, "data", "videos")
 
         os.makedirs(self.raw_dir, exist_ok=True)
         os.makedirs(self.processed_dir, exist_ok=True)
@@ -41,7 +42,6 @@ class VideoCollector:
         self.existing_sha: Dict[str, str] = {}
 
     def register_existing_manifest(self, manifest_path: str):
-        """Loads existing hashes to prevent duplicate video ingestion."""
         if not os.path.isfile(manifest_path):
             return
         with open(manifest_path, "r", encoding="utf-8") as f:
@@ -68,13 +68,15 @@ class VideoCollector:
         source_url: str,
         license_id: str,
         camera_motion: str = "static",
+        owner_declaration: Optional[Dict[str, Any]] = None,
+        license_evidence: Optional[Dict[str, Any]] = None,
         attribution: Optional[str] = None,
         split: str = "train",
         min_duration_sec: float = 1.0,
         min_frames: int = 8
     ) -> Dict[str, Any]:
         """
-        Ingests a genuine video clip with full validation.
+        Ingests a genuine video clip with fail-closed provenance validation.
         """
         if not os.path.isfile(src_video_path):
             raise FileNotFoundError(f"Source video not found: {src_video_path}")
@@ -103,12 +105,29 @@ class VideoCollector:
             "attribution": (attribution or f"Video by {creator} via {source_url} ({license_id})").strip(),
             "camera_motion": camera_motion.strip().lower(),
             "split": split.strip().lower(),
-            "is_synthetic": False
+            "is_synthetic": False,
+            "sha256": video_sha,
+            "media_path": src_video_path,
+            "fps": inspect_data["fps"],
+            "duration_sec": inspect_data["duration_sec"],
+            "num_frames": inspect_data["num_frames"]
         }
+        if owner_declaration:
+            candidate["owner_declaration"] = owner_declaration
+        if license_evidence:
+            candidate["license_evidence"] = license_evidence
 
-        is_valid, errors = validate_video_source_record(candidate)
-        if not is_valid:
-            raise ValueError(f"Video metadata validation failed: {'; '.join(errors)}")
+        audit = validate_provenance_record(
+            record=candidate,
+            modality="video",
+            base_dir=self.base_dir,
+            allow_synthetic=False,
+            verify_file=False
+        )
+        if not audit["is_valid"]:
+            raise ValueError(f"Video provenance validation failed: {'; '.join(audit['errors'])}")
+        if not audit["dimensions"]["license_verified"] or not audit["dimensions"]["ownership_verified"]:
+            raise ValueError(f"Video ingestion blocked: {audit['status']} ({'; '.join(audit['errors'])})")
 
         # 5. Archive raw original video
         ext = os.path.splitext(src_video_path)[1].lower() or ".mp4"
@@ -131,11 +150,11 @@ class VideoCollector:
             "caption": candidate["caption"],
             "motion_description": candidate["motion_description"],
             "category": candidate["category"],
+            "camera_motion": candidate["camera_motion"],
             "source_url": candidate["source_url"],
             "creator": candidate["creator"],
             "license": candidate["license"],
             "attribution": candidate["attribution"],
-            "camera_motion": candidate["camera_motion"],
             "sha256": video_sha,
             "split": candidate["split"],
             "width": inspect_data["width"],
@@ -143,11 +162,21 @@ class VideoCollector:
             "fps": inspect_data["fps"],
             "duration_sec": inspect_data["duration_sec"],
             "num_frames": inspect_data["num_frames"],
-            "timestamps": frame_data["timestamps"][:min_frames],
-            "codec": inspect_data["codec"],
-            "is_synthetic": False
+            "container": inspect_data["container"],
+            "is_synthetic": False,
+            "provenance_status": "VERIFIED_PRODUCTION_ELIGIBLE"
         }
+        if owner_declaration:
+            final_decl = dict(owner_declaration)
+            final_decl["asset_sha256"] = video_sha
+            final_record["owner_declaration"] = final_decl
+        if license_evidence:
+            final_record["license_evidence"] = license_evidence
 
         self.existing_sha[video_sha] = rec_id
         return final_record
 
+def append_to_manifest(record: Dict[str, Any], manifest_path: str):
+    os.makedirs(os.path.dirname(os.path.abspath(manifest_path)), exist_ok=True)
+    with open(manifest_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
