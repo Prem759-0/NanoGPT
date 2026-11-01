@@ -655,9 +655,13 @@ class TestStage207IntegrityHardening(unittest.TestCase):
 
         # sqlite:// accepted
         sqlite_custom = os.path.join(self.base_dir, "custom_sqlite.db")
-        db_sqlite = Database(db_url=f"sqlite:///{sqlite_custom}")
+        if os.name == "nt":
+            test_sqlite_url = f"sqlite:///{sqlite_custom}"
+        else:
+            test_sqlite_url = f"sqlite:////{sqlite_custom.lstrip('/')}"
+        db_sqlite = Database(db_url=test_sqlite_url)
         self.assertFalse(db_sqlite.is_postgres)
-        self.assertEqual(os.path.abspath(db_sqlite.db_path), os.path.abspath(sqlite_custom))
+        self.assertEqual(os.path.realpath(db_sqlite.db_path), os.path.realpath(sqlite_custom))
 
         # db_url=None and db_url="" select SQLite
         db_none = Database(db_path=os.path.join(self.base_dir, "test_none.db"), db_url=None)
@@ -686,7 +690,8 @@ class TestStage207IntegrityHardening(unittest.TestCase):
         self.assertIsNone(err_h)
 
         # Reject path outside base_dir
-        outside_path = os.path.join(tempfile.gettempdir(), "outside.json")
+        outside_dir = tempfile.mkdtemp()
+        outside_path = os.path.join(outside_dir, "outside.json")
         with open(outside_path, "w", encoding="utf-8") as f:
             json.dump({"leak": True}, f)
         try:
@@ -697,8 +702,7 @@ class TestStage207IntegrityHardening(unittest.TestCase):
                 f"Unexpected error reason: {err_out}"
             )
         finally:
-            if os.path.exists(outside_path):
-                os.remove(outside_path)
+            shutil.rmtree(outside_dir, ignore_errors=True)
 
 if __name__ == "__main__":
     unittest.main()
