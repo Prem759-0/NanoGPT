@@ -1,0 +1,64 @@
+{
+  "report_metadata": {
+    "title": "Moon AI \u2014 Sovereign Chat Dataset Audit Report",
+    "timestamp": "2026-11-01T18:08:56.912238+00:00",
+    "architect": "Prem Gaikwad (Chief ML Systems Architect, India \ud83c\uddee\ud83c\uddf3)",
+    "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
+    "model_track": "moon-chat-v0",
+    "status": "READY_FOR_PILOT_TRAINING"
+  },
+  "summary": {
+    "total_records": 10,
+    "train_records": 8,
+    "val_records": 1,
+    "test_records": 1,
+    "total_tokens": 4296,
+    "mean_tokens_per_dialogue": 429.6,
+    "median_tokens_per_dialogue": 431.0,
+    "min_tokens_per_dialogue": 311,
+    "max_tokens_per_dialogue": 494,
+    "total_turns": 40,
+    "mean_turns_per_dialogue": 4
+  },
+  "integrity_verification": {
+    "total_records_checked": 10,
+    "cryptographic_hashes_verified": 10,
+    "hash_mismatches": 0,
+    "hash_failures_list": [],
+    "cross_split_leakage_detected": false,
+    "leakage_train_val_count": 0,
+    "leakage_train_test_count": 0,
+    "leakage_val_test_count": 0
+  },
+  "license_distribution": {
+    "Public Domain": 4,
+    "CustomSovereign": 2,
+    "CC0-1.0": 2,
+    "MIT": 2
+  },
+  "category_distribution": {
+    "cryptography": 1,
+    "mathematics": 1,
+    "physics": 1,
+    "science": 1,
+    "machine_learning": 1,
+    "computer_science": 2,
+    "software_engineering": 1,
+    "operating_systems": 1,
+    "sovereign_identity": 1
+  },
+  "tokenizer_info": {
+    "type": "byte_level_bpe_scratch",
+    "vocab_size": 512,
+    "special_tokens": [
+      "<|endoftext|>",
+      "<|pad|>",
+      "<|im_start|>",
+      "<|im_end|>",
+      "<|system|>",
+      "<|user|>",
+      "<|assistant|>"
+    ],
+    "zero_third_party_dependencies": true
+  }
+}

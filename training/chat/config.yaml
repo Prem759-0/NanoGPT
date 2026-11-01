@@ -1,0 +1,68 @@
+# Moon AI — Moon Chat v0 Training Configuration
+# Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
+# Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
+# Hardware Target: Google Colab NVIDIA T4 (15.3 GB VRAM)
+
+model_track: "moon-chat-v0"
+ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
+
+# T4 Pilot Model Architecture (Random Gaussian Initialization Only)
+model:
+  name: "moon-chat-pilot-25m"
+  n_layer: 8
+  n_head: 8
+  n_embd: 512
+  block_size: 512
+  vocab_size: 512
+  dropout: 0.1
+  bias: false
+
+# Baseline 124M Model Architecture (Reference)
+baseline_124m:
+  name: "moon-chat-124m"
+  n_layer: 12
+  n_head: 12
+  n_embd: 768
+  block_size: 1024
+  vocab_size: 512
+  dropout: 0.1
+  bias: false
+
+# Google Colab T4 Training Hyperparameters
+training:
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0003
+  min_lr: 0.00003
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  warmup_iters: 50
+  max_iters: 500
+  eval_interval: 50
+  eval_iters: 10
+  mixed_precision: "fp16" # PyTorch torch.cuda.amp on T4
+  seed: 42
+
+# Paths
+paths:
+  train_manifest: "datasets/manifests/chat_train.jsonl"
+  val_manifest: "datasets/manifests/chat_val.jsonl"
+  tokenizer_path: "models/chat/tokenizer.json"
+  checkpoint_dir: "models/checkpoints/chat"
+  checkpoint_name: "moon_chat_pilot_v0.pt"
+
+# Hardware Feasibility Budget (NVIDIA T4 15.3 GB VRAM)
+hardware_budget:
+  gpu: "NVIDIA T4 (Turing, Compute Capability 7.5)"
+  vram_available_mb: 15360
+  model_params: 25300000
+  model_weights_fp16_mb: 50.6
+  gradients_fp16_mb: 50.6
+  optimizer_states_adamw_fp32_mb: 303.6
+  activations_estimate_mb: 450.0
+  cuda_runtime_context_mb: 600.0
+  estimated_peak_vram_mb: 1454.8
+  vram_safety_margin_mb: 13905.2
+  oom_risk: "ZERO"

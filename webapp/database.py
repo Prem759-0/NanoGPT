@@ -79,7 +79,9 @@ class Database:
                 self.db_path = os.path.abspath("/" + raw_path.lstrip("/"))
             else:
                 raw_clean = raw_path.lstrip("/")
-                if raw_clean:
+                if raw_clean == ":memory:":
+                    self.db_path = ":memory:"
+                elif raw_clean:
                     self.db_path = os.path.abspath(raw_clean)
         else:
             raise ValueError(
@@ -90,7 +92,7 @@ class Database:
         import threading
         self._lock = threading.Lock()
         
-        if not self.is_postgres:
+        if not self.is_postgres and self.db_path != ":memory:":
             os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
             
         self._init_db()
@@ -167,6 +169,8 @@ class Database:
         if self.is_postgres:
             try:
                 with self._get_connection() as conn:
+                    if not self.is_postgres:
+                        raise RuntimeError("Database connection fell back to SQLite")
                     with conn.cursor() as cur:
                         cur.execute("""
                             CREATE TABLE IF NOT EXISTS sessions (

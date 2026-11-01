@@ -145,14 +145,10 @@ def load_registry(registry_path: Optional[str] = None) -> Dict[str, Any]:
         except Exception:
             pass
     return {
-        "version": "1.0.0",
-        "current_best_model": {
-            "name": "Moon AI Sovereign (7.6B v1)",
-            "checkpoint": "Moon-AI-v1.Q4_K_M.gguf",
-            "composite_score": 75.0,
-            "promoted_at": datetime.now(timezone.utc).isoformat()
-        },
-        "promotion_history": []
+        "version": "2.0.8",
+        "current_best_model": None,
+        "promotion_history": [],
+        "unverified_legacy_artifacts": []
     }
 
 def save_registry(data: Dict[str, Any], registry_path: Optional[str] = None):
@@ -183,8 +179,9 @@ def evaluate_and_promote(
         return False
 
     registry = load_registry(registry_path)
-    current_best = registry.get("current_best_model", {})
-    current_best_score = current_best.get("composite_score", 0.0)
+    current_best = registry.get("current_best_model") or {}
+    current_best_name = current_best.get("name", "None (No Verified Production Model)")
+    current_best_score = float(current_best.get("composite_score") or 0.0)
 
     cand_name = cand.get("model_name", "Unknown Candidate")
     cand_score = cand.get("composite_quality_score", 0.0)
@@ -194,7 +191,7 @@ def evaluate_and_promote(
     print("=" * 65)
     print("   MODEL PROMOTION GATE & REGRESSION VERIFICATION")
     print("=" * 65)
-    print(f"Current Best Model:   {current_best.get('name')} (Score: {current_best_score})")
+    print(f"Current Best Model:   {current_best_name} (Score: {current_best_score})")
     print(f"Candidate Model:      {cand_name} (Score: {cand_score})")
     print(f"Candidate Non-Empty:  {cand_non_empty}% (Required: 100%)")
     print(f"Candidate Syntax:     {cand_syntax}% (Required: 100%)")
@@ -342,7 +339,7 @@ def evaluate_and_promote(
 
     print("🎉 PROMOTION ACCEPTED! Candidate meets all quality and non-regression criteria.")
     # Promote
-    previous_model = registry["current_best_model"]
+    previous_model = registry.get("current_best_model")
     registry["current_best_model"] = {
         "name": cand_name,
         "checkpoint": cand.get("checkpoint_path", "unknown"),
@@ -355,7 +352,7 @@ def evaluate_and_promote(
         "evaluated_at": datetime.now(timezone.utc).isoformat(),
         "status": "PROMOTED",
         "score": cand_score,
-        "replaced_model": previous_model.get("name")
+        "replaced_model": previous_model.get("name") if previous_model else "None"
     })
     save_registry(registry, registry_path)
     reg_display = registry_path or REGISTRY_PATH

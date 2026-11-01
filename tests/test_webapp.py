@@ -8,6 +8,10 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+_test_db_dir = tempfile.mkdtemp()
+_test_db_path = os.path.join(_test_db_dir, "test_webapp.sqlite").replace("\\", "/")
+os.environ["DATABASE_URL"] = f"sqlite:///{_test_db_path}"
+
 from fastapi.testclient import TestClient
 from webapp.main import app, model_service
 

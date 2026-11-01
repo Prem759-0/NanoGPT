@@ -94,6 +94,23 @@
       "notes": "Development examples only (3 records in synthetic_code_dev.jsonl). Production coding corpus collection required."
     }
   },
+  "unverified_legacy_artifacts": [
+    {
+      "name": "Moon AI Sovereign (7.6B v1)",
+      "checkpoint": "Moon-AI-v1.Q4_K_M.gguf",
+      "claimed_score": 75.0,
+      "status": "UNVERIFIED_LEGACY_THIRD_PARTY_DERIVATIVE",
+      "provenance": "UNVERIFIED_PRETRAINED_DERIVATIVE (Qwen-2.5-Coder base)",
+      "policy_compliance": "NON_COMPLIANT",
+      "disqualification_reasons": [
+        "Derived from third-party pretrained base weights (unsloth/Qwen2.5-7B-Instruct) via LoRA fine-tuning in Train_Super_AI_Colab.ipynb.",
+        "Violates STRICT_SOVEREIGN_RANDOM_INIT_ONLY project policy prohibiting external pretrained weights.",
+        "Zero cryptographic provenance attestation and zero signed evaluation attestation artifacts exist in the repository.",
+        "Training dataset manifests are unverified and not reproducible from repository code."
+      ],
+      "notes": "Preserved for historical traceability only. Cannot be used as a production sovereign model."
+    }
+  ],
   "promotion_history": [
     {
       "candidate_name": "moon-llm-scratch",

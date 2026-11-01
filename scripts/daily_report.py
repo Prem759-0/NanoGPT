@@ -61,11 +61,16 @@ def generate_daily_report() -> str:
         except Exception:
             pass
 
-    current_best = registry.get("current_best_model", {
-        "name": "Moon AI Sovereign (7.6B v1)",
-        "checkpoint": "Moon-AI-v1.Q4_K_M.gguf",
-        "composite_score": 75.0
-    })
+    current_best = registry.get("current_best_model") or {
+        "name": "None (Awaiting Sovereign Training)",
+        "checkpoint": "none",
+        "composite_score": 0.0
+    }
+
+
+
+
+
 
     splits = manifest.get("splits", {})
     categories = manifest.get("category_distribution", {})
