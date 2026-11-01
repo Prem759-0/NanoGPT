@@ -3,6 +3,7 @@ training/video/dataset.py
 Strict Video Datasets for Moon Video Engine.
 Separates real video training data from synthetic development data.
 Prohibits silent substitution of synthetic still-image animations in production training.
+Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 """
 import os
 import json
@@ -11,12 +12,15 @@ from torch.utils.data import Dataset
 from typing import Optional, List, Dict, Any, Tuple
 
 from backend.engines.moon_image.text_encoder import SimpleTextTokenizer
+from datasets.tools.validate_video_sources import VALID_VIDEO_LICENSES, VALID_CAMERA_MOTIONS
 from .frame_sampling import decode_real_video_clip, create_synthetic_motion_clip, CorruptVideoError
 
 CAMERA_MOTION_CLASSES = (
     "static",
     "orbit_left",
     "orbit_right",
+    "dolly_in",
+    "dolly_out",
     "zoom_in",
     "zoom_out",
     "pan_left",
@@ -56,22 +60,22 @@ class MoonRealVideoDataset(Dataset):
         rel_path = rec.get("video_path") or rec.get("media_path") or ""
         full_path = os.path.normpath(os.path.join(self.base_dir, rel_path))
 
-        # Decode actual video clip
-        video_tensor, meta = decode_real_video_clip(
-            video_path=full_path,
-            target_frames=self.num_frames,
-            frame_size=self.frame_size,
-            start_sec=float(rec.get("start_sec", 0.0)),
-            duration_sec=float(rec["duration_s"]) if "duration_s" in rec else None
-        )
+        try:
+            video_tensor, meta = decode_real_video_clip(
+                video_path=full_path,
+                target_num_frames=self.num_frames,
+                target_size=self.frame_size
+            )
+        except Exception as e:
+            raise CorruptVideoError(f"Failed to decode video file '{full_path}': {e}")
 
         caption = rec.get("caption", "")
         input_ids = self.tokenizer.encode(caption)
 
-        motion_label = rec.get("camera_motion", "static").lower()
+        motion_str = rec.get("camera_motion", "static")
         cam_id = (
-            CAMERA_MOTION_CLASSES.index(motion_label) + 1
-            if motion_label in CAMERA_MOTION_CLASSES
+            CAMERA_MOTION_CLASSES.index(motion_str) + 1
+            if motion_str in CAMERA_MOTION_CLASSES
             else 0
         )
 
@@ -167,6 +171,7 @@ class MoonVideoDataset(Dataset):
         self.num_frames = num_frames
         self.frame_size = frame_size
         self.allow_synthetic = allow_synthetic
+        self.is_synthetic_dev = False
 
         self.real_records: List[Dict[str, Any]] = []
         self.synthetic_records: List[Dict[str, Any]] = []
@@ -190,19 +195,19 @@ class MoonVideoDataset(Dataset):
                 max_length=max_length
             )
         else:
+            self.is_synthetic_dev = True
             # Dev / unit testing mode
-            if len(self.real_records) > 0:
-                self._underlying_dataset = MoonRealVideoDataset(
-                    records=self.real_records,
+            if len(self.synthetic_records) > 0:
+                self._underlying_dataset = MoonSyntheticVideoDataset(
+                    records=self.synthetic_records,
                     base_dir=self.base_dir,
                     num_frames=self.num_frames,
                     frame_size=self.frame_size,
                     max_length=max_length
                 )
-            elif len(self.synthetic_records) > 0:
-                print(f"⚠️ [DEV MODE NOTICE] Utilizing synthetic motion dataset ({len(self.synthetic_records)} samples) for pipeline validation.")
-                self._underlying_dataset = MoonSyntheticVideoDataset(
-                    records=self.synthetic_records,
+            elif len(self.real_records) > 0:
+                self._underlying_dataset = MoonRealVideoDataset(
+                    records=self.real_records,
                     base_dir=self.base_dir,
                     num_frames=self.num_frames,
                     frame_size=self.frame_size,
@@ -214,6 +219,14 @@ class MoonVideoDataset(Dataset):
     def _load_and_partition_records(self):
         if not os.path.isfile(self.manifest_path):
             raise FileNotFoundError(f"Video manifest not found at '{self.manifest_path}'.")
+
+        norm_path = self.manifest_path.replace("\\", "/").lower()
+        if not self.allow_synthetic and ("synthetic" in norm_path or "dev" in norm_path):
+            raise ValueError(
+                f"STRICT VIDEO INTEGRITY ERROR: Attempted to load synthetic development manifest "
+                f"'{self.manifest_path}' in production mode (allow_synthetic=False). "
+                "Synthetic development manifests cannot be used for production training."
+            )
 
         with open(self.manifest_path, "r", encoding="utf-8") as f:
             for line_no, line in enumerate(f, 1):
@@ -230,12 +243,26 @@ class MoonVideoDataset(Dataset):
 
                 # Determine if real video or synthetic
                 path_val = (data.get("video_path") or data.get("media_path") or "").lower()
+                is_synth = (
+                    data.get("is_synthetic", False)
+                    or data.get("source_type") == "procedural_synthetic_fixture"
+                )
                 is_real = (
                     any(path_val.endswith(ext) for ext in REAL_VIDEO_EXTENSIONS)
-                    and not data.get("is_synthetic", False)
+                    and not is_synth
                 )
 
                 if is_real:
+                    # Provenance verification in production mode
+                    if not self.allow_synthetic:
+                        creator = str(data.get("creator", "")).strip()
+                        source_url = str(data.get("source_url", "")).strip()
+                        license_id = str(data.get("license", "")).strip()
+                        if not creator or not source_url or not license_id or license_id not in VALID_VIDEO_LICENSES:
+                            raise ValueError(
+                                f"STRICT PROVENANCE ERROR: Video record '{data.get('id')}' in '{self.manifest_path}' "
+                                "missing or invalid provenance metadata."
+                            )
                     self.real_records.append(data)
                 else:
                     self.synthetic_records.append(data)

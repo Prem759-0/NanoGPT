@@ -1,33 +1,38 @@
-# Moon AI — Sovereign Dataset Quality and Audit Report
-**Generated:** 2026-10-31T18:53:33.201307+00:00  
+# Moon AI — Stage 2.0.1 Dataset Provenance & Adequacy Audit Report
+**Generated:** 2026-11-01T08:57:44.336505+00:00  
 **Chief ML Systems Architect:** Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)  
 **Ownership Policy:** `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`  
 
-## Executive Summary
-- **Overall Manifest Hygiene:** ✅ PASS
-- **Total Samples Cataloged:** 9
-- **Missing Media Files:** 0
-- **Corrupted Files:** 0
-- **Duplicate Files (SHA-256):** 0
-- **Train/Val/Test Split Leakages:** 0
+## Executive Summary & Quality Gate Status
+- **HYGIENE_VALID:** `✅ PASS` (Zero corrupted, missing, duplicate, or leaking files)
+- **GENUINE_DATA_PRESENT:** `⚠️ NO (0 verified genuine samples)`
+- **TRAINING_DATA_ADEQUATE:** `⚠️ INSUFFICIENT (TRAINING BLOCKED PENDING GENUINE MEDIA COLLECTION)`
+
+> [!IMPORTANT]
+> Stage 2.0.1 strictly decouples technical hygiene from genuine training data adequacy.
+> All procedural drawing fixtures are quarantined as `is_synthetic=True` in synthetic dev manifests.
+> Production training manifests contain 0 records until verified genuine media is ingested.
 
 ## 1. Moon Image Dataset Audit
-- **Manifest:** `D:\Downloads\linkden post\ai\datasets\image\manifest.jsonl`
-- **Manifest SHA-256:** `8e65f42efb4656ee359be130c7c3afc3f1b1425894541a6ac38c5d5df8c56bc5`
-- **Record Count:** 7
-- **Unique Media Count:** 7
-- **Splits:** Train (5), Val (1), Test (1)
-- **Average Caption Length:** 128.4 chars
+- **Genuine Production Media:** 0 / 500 pilot target (Shortfall: 500)
+- **Quarantined Synthetic Dev Fixtures:** 37
+- **Splits Breakdown:** `{"train": 0, "val": 0, "test": 0, "dev": 37}`
+- **Hygiene Status:** `✅ PASS`
+- **Adequacy Status:** `INSUFFICIENT (0 genuine samples)`
 
 ## 2. Moon Video Dataset Audit
-- **Manifest:** `D:\Downloads\linkden post\ai\datasets\video\manifest.jsonl`
-- **Manifest SHA-256:** `1235b9e69391f6f3546ae4d7214969a442182a6352c006e0f38006c08f273d67`
-- **Record Count:** 2
-- **Unique Media Count:** 2
-- **Splits:** Train (1), Val (1), Test (0)
-- **Average Caption Length:** 74.5 chars
+- **Genuine Production Media:** 0 / 50 pilot target (Shortfall: 50)
+- **Quarantined Synthetic Dev Fixtures:** 10
+- **Splits Breakdown:** `{"train": 0, "val": 0, "test": 0, "dev": 10}`
+- **Hygiene Status:** `✅ PASS`
+- **Adequacy Status:** `INSUFFICIENT (0 genuine clips)`
 
-## 3. Strict Compliance Assurance
-- Zero third-party proprietary datasets or scraped copyrighted works without open licenses.
-- Complete SHA-256 cryptographic provenance recorded in all training pipelines.
-- Synthetic dev media strictly quarantined from production training loops.
+## 3. Moon Chat & Code Corpus Audit
+- **Chat Corpus:** 4 development examples (123 tokens) — `INSUFFICIENT (DEV EXAMPLES ONLY)`
+- **Code Corpus:** 3 development examples (111 tokens) — `INSUFFICIENT (DEV EXAMPLES ONLY)`
+
+## 4. Strict Sovereign Ownership Assurances
+- ZERO third-party pretrained weights (no SDXL, Flux, ModelScope, CLIP, T5).
+- ZERO external generative APIs (no Pollinations, OpenAI, Anthropic, Replicate).
+- 100% Random Weight Initialization for all architectures.
+- Complete provenance tracking and fail-closed gates active.
