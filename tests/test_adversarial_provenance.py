@@ -35,6 +35,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+from datasets.security.attestation_engine import sign_attestation
 from datasets.tools.provenance_validator import (
     validate_provenance_record,
     validate_safe_path,
@@ -65,6 +66,15 @@ class TestAdversarialProvenance(unittest.TestCase):
 
     def _build_valid_sovereign_record(self) -> dict:
         now_iso = datetime.now(timezone.utc).isoformat()
+        att = sign_attestation(
+            verifier_id="moon_compliance_authority_v1",
+            secret_key="4f8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a",
+            record_id="img_valid_001",
+            asset_sha256=self.real_img_sha,
+            license_id="CustomSovereign",
+            commercial_use_permitted=True,
+            timestamp=now_iso
+        )
         return {
             "id": "img_valid_001",
             "media_path": self.real_img_rel,
@@ -79,6 +89,7 @@ class TestAdversarialProvenance(unittest.TestCase):
             "split": "train",
             "is_synthetic": False,
             "verification_state": "EXTERNALLY_VERIFIED",
+            "attestation": att,
             "owner_declaration": {
                 "declarant": "Prem Gaikwad",
                 "declaration_timestamp": now_iso,

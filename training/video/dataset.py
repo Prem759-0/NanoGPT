@@ -278,6 +278,14 @@ class MoonVideoDataset(Dataset):
                 else:
                     self.synthetic_records.append(data)
 
+    @property
+    def synthetic_sample_count(self) -> int:
+        return len(self.synthetic_records)
+
+    @property
+    def production_eligible_sample_count(self) -> int:
+        return len(self.real_records)
+
     def __len__(self) -> int:
         return len(self._underlying_dataset)
 

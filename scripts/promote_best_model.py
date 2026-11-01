@@ -15,7 +15,12 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from training.common.checkpoint import verify_checkpoint_provenance, TRAINING_MODE_PRODUCTION
+from training.common.checkpoint import (
+    verify_checkpoint_provenance,
+    compute_file_sha256,
+    TRAINING_MODE_PRODUCTION,
+    TRAINING_MODE_DEVELOPMENT
+)
 
 if sys.platform == "win32":
     try:
@@ -26,12 +31,13 @@ if sys.platform == "win32":
 
 REGISTRY_PATH = os.path.join(PROJECT_ROOT, "models", "model_registry.json")
 
-def load_registry() -> Dict[str, Any]:
+def load_registry(registry_path: Optional[str] = None) -> Dict[str, Any]:
     """Loads or initializes model registry."""
-    os.makedirs(os.path.dirname(REGISTRY_PATH), exist_ok=True)
-    if os.path.isfile(REGISTRY_PATH):
+    reg_p = registry_path or REGISTRY_PATH
+    os.makedirs(os.path.dirname(os.path.abspath(reg_p)), exist_ok=True)
+    if os.path.isfile(reg_p):
         try:
-            with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+            with open(reg_p, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             pass
@@ -46,13 +52,18 @@ def load_registry() -> Dict[str, Any]:
         "promotion_history": []
     }
 
-def save_registry(data: Dict[str, Any]):
+def save_registry(data: Dict[str, Any], registry_path: Optional[str] = None):
     """Saves model registry to disk."""
-    os.makedirs(os.path.dirname(REGISTRY_PATH), exist_ok=True)
-    with open(REGISTRY_PATH, "w", encoding="utf-8") as f:
+    reg_p = registry_path or REGISTRY_PATH
+    os.makedirs(os.path.dirname(os.path.abspath(reg_p)), exist_ok=True)
+    with open(reg_p, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-def evaluate_and_promote(candidate_report_path: str, min_score_threshold: float = 60.0) -> bool:
+def evaluate_and_promote(
+    candidate_report_path: str,
+    min_score_threshold: float = 60.0,
+    registry_path: Optional[str] = None
+) -> bool:
     """
     Evaluates candidate model evaluation report against promotion criteria.
     Acceptance Criteria:
@@ -67,7 +78,7 @@ def evaluate_and_promote(candidate_report_path: str, min_score_threshold: float 
     with open(candidate_report_path, "r", encoding="utf-8") as f:
         cand = json.load(f)
 
-    registry = load_registry()
+    registry = load_registry(registry_path)
     current_best = registry.get("current_best_model", {})
     current_best_score = current_best.get("composite_score", 0.0)
 
@@ -96,14 +107,34 @@ def evaluate_and_promote(candidate_report_path: str, min_score_threshold: float 
         rejection_reasons.append("Candidate model has 'is_production_eligible: false'. Rejected from production.")
 
     ckpt_path = cand.get("checkpoint_path") or cand.get("checkpoint")
-    if ckpt_path:
+    cand_ckpt_sha = str(cand.get("checkpoint_sha256", "")).strip().lower()
+
+    if not ckpt_path or not str(ckpt_path).strip():
+        rejection_reasons.append("Missing required 'checkpoint_path' in candidate evaluation report.")
+    else:
         full_ckpt = os.path.normpath(os.path.join(PROJECT_ROOT, ckpt_path)) if not os.path.isabs(ckpt_path) else ckpt_path
-        if os.path.isfile(full_ckpt):
-            valid_ckpt, ckpt_meta, ckpt_errs = verify_checkpoint_provenance(full_ckpt, mode=TRAINING_MODE_PRODUCTION)
+        if not os.path.isfile(full_ckpt):
+            rejection_reasons.append(f"Candidate checkpoint file not found on disk: '{ckpt_path}'")
+        else:
+            if not cand_ckpt_sha or len(cand_ckpt_sha) != 64:
+                rejection_reasons.append("Missing or invalid 'checkpoint_sha256' in candidate evaluation report (must be 64-char hex SHA-256).")
+            else:
+                actual_ckpt_sha = compute_file_sha256(full_ckpt)
+                if actual_ckpt_sha != cand_ckpt_sha:
+                    rejection_reasons.append(
+                        f"Candidate checkpoint_sha256 mismatch! Report specifies '{cand_ckpt_sha}', "
+                        f"but actual file bytes yield '{actual_ckpt_sha}'."
+                    )
+
+            valid_ckpt, ckpt_meta, ckpt_errs = verify_checkpoint_provenance(full_ckpt, mode=TRAINING_MODE_PRODUCTION, recompute_manifests=True)
             if not valid_ckpt:
                 rejection_reasons.append(f"Underlying checkpoint failed production provenance verification: {'; '.join(ckpt_errs)}")
-        elif "dev" in str(ckpt_path).lower():
-            rejection_reasons.append(f"Candidate checkpoint references development directory: '{ckpt_path}'")
+            else:
+                ckpt_model_name = ckpt_meta.get("model_name")
+                if ckpt_model_name and cand_name and ckpt_model_name != cand_name:
+                    rejection_reasons.append(
+                        f"Candidate model name '{cand_name}' does not match model name inside checkpoint '{ckpt_model_name}'."
+                    )
 
     if cand_non_empty < 100.0:
         rejection_reasons.append(f"Non-empty rate ({cand_non_empty}%) is below 100% threshold.")
@@ -127,7 +158,7 @@ def evaluate_and_promote(candidate_report_path: str, min_score_threshold: float 
             "score": cand_score,
             "reasons": rejection_reasons
         })
-        save_registry(registry)
+        save_registry(registry, registry_path)
         print("=" * 65)
         return False
 
@@ -148,8 +179,13 @@ def evaluate_and_promote(candidate_report_path: str, min_score_threshold: float 
         "score": cand_score,
         "replaced_model": previous_model.get("name")
     })
-    save_registry(registry)
-    print(f"Model registry updated: {os.path.relpath(REGISTRY_PATH, PROJECT_ROOT)}")
+    save_registry(registry, registry_path)
+    reg_display = registry_path or REGISTRY_PATH
+    try:
+        reg_display_str = os.path.relpath(reg_display, PROJECT_ROOT)
+    except ValueError:
+        reg_display_str = reg_display
+    print(f"Model registry updated: {reg_display_str}")
     print("=" * 65)
     return True
 

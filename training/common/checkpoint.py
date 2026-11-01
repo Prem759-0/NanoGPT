@@ -83,6 +83,18 @@ def restore_rng_state(rng: Dict[str, Any]) -> None:
         except Exception:
             pass
 
+def count_manifest_records(filepath: str) -> int:
+    """Counts non-empty, non-comment records in a JSONL manifest."""
+    if not os.path.isfile(filepath):
+        return 0
+    count = 0
+    with open(filepath, "r", encoding="utf-8") as f:
+        for line in f:
+            line_str = line.strip()
+            if line_str and not line_str.startswith("#"):
+                count += 1
+    return count
+
 def save_checkpoint(
     model: torch.nn.Module,
     optimizer: Optional[torch.optim.Optimizer],
@@ -138,27 +150,89 @@ def save_checkpoint(
                 f"CHECKPOINT SECURITY ERROR: Cannot save DEVELOPMENT_SYNTHETIC checkpoint to production path '{output_path}'. "
                 "Must be saved to development directory (e.g. checkpoints/dev/moon_image/...)."
             )
+
+        calculated_manifest_hash = manifest_hash
+        if not calculated_manifest_hash and manifest_path and os.path.isfile(manifest_path):
+            calculated_manifest_hash = compute_file_sha256(manifest_path)
+
+        calculated_val_manifest_hash = val_manifest_hash
+        if not calculated_val_manifest_hash and val_manifest_path and os.path.isfile(val_manifest_path):
+            calculated_val_manifest_hash = compute_file_sha256(val_manifest_path)
+
     elif training_mode == TRAINING_MODE_PRODUCTION:
+        # Task 4 & 5: Fail-closed verification on production manifests and data integrity
         if synthetic_sample_count > 0:
             raise ValueError(
                 f"CHECKPOINT SECURITY ERROR: Cannot emit PRODUCTION_GENUINE checkpoint with synthetic samples "
                 f"({synthetic_sample_count} synthetic samples present). Synthetic data is strictly prohibited in production."
             )
+
         if is_production_eligible is False:
             raise ValueError(
                 "CHECKPOINT SECURITY ERROR: Cannot set is_production_eligible=False for PRODUCTION_GENUINE checkpoint."
             )
         is_production_eligible = True
 
+        # Reject saving production checkpoints in development directories
+        if "/dev/" in norm_out or "\\dev\\" in norm_out or norm_out.startswith("dev/") or norm_out.startswith("checkpoints/dev/"):
+            raise ValueError(
+                f"CHECKPOINT SECURITY ERROR: Cannot save PRODUCTION_GENUINE checkpoint to development directory '{output_path}'."
+            )
+
+        if not manifest_path or not isinstance(manifest_path, str) or not manifest_path.strip():
+            raise ValueError(
+                "CHECKPOINT SECURITY ERROR: manifest_path is strictly required for PRODUCTION_GENUINE checkpoints."
+            )
+        resolved_manifest = os.path.normpath(os.path.join(PROJECT_ROOT, manifest_path)) if not os.path.isabs(manifest_path) else manifest_path
+        if not os.path.isfile(resolved_manifest):
+            raise ValueError(
+                f"CHECKPOINT SECURITY ERROR: Production training manifest does not exist on disk: '{manifest_path}'."
+            )
+
+        if not val_manifest_path or not isinstance(val_manifest_path, str) or not val_manifest_path.strip():
+            raise ValueError(
+                "CHECKPOINT SECURITY ERROR: val_manifest_path is strictly required for PRODUCTION_GENUINE checkpoints."
+            )
+        resolved_val_manifest = os.path.normpath(os.path.join(PROJECT_ROOT, val_manifest_path)) if not os.path.isabs(val_manifest_path) else val_manifest_path
+        if not os.path.isfile(resolved_val_manifest):
+            raise ValueError(
+                f"CHECKPOINT SECURITY ERROR: Production validation manifest does not exist on disk: '{val_manifest_path}'."
+            )
+
+        # Recompute SHA-256 of manifest files directly from disk bytes
+        actual_manifest_sha = compute_file_sha256(resolved_manifest)
+        if manifest_hash and manifest_hash != "none" and manifest_hash.strip().lower() != actual_manifest_sha.lower():
+            raise ValueError(
+                f"CHECKPOINT SECURITY ERROR: Supplied manifest_hash '{manifest_hash}' does not match actual disk hash '{actual_manifest_sha}'."
+            )
+        calculated_manifest_hash = actual_manifest_sha
+
+        actual_val_sha = compute_file_sha256(resolved_val_manifest)
+        if val_manifest_hash and val_manifest_hash != "none" and val_manifest_hash.strip().lower() != actual_val_sha.lower():
+            raise ValueError(
+                f"CHECKPOINT SECURITY ERROR: Supplied val_manifest_hash '{val_manifest_hash}' does not match actual disk hash '{actual_val_sha}'."
+            )
+        calculated_val_manifest_hash = actual_val_sha
+
+        # Verify manifests are not empty
+        train_count = count_manifest_records(resolved_manifest)
+        if train_count == 0:
+            raise ValueError(
+                f"CHECKPOINT SECURITY ERROR: Production manifest '{manifest_path}' contains 0 records."
+            )
+
+        val_count = count_manifest_records(resolved_val_manifest)
+        if val_count == 0:
+            raise ValueError(
+                f"CHECKPOINT SECURITY ERROR: Production validation manifest '{val_manifest_path}' contains 0 records."
+            )
+
+        if production_eligible_sample_count <= 0:
+            raise ValueError(
+                "CHECKPOINT SECURITY ERROR: production_eligible_sample_count must be > 0 for PRODUCTION_GENUINE checkpoint."
+            )
+
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-
-    calculated_manifest_hash = manifest_hash
-    if not calculated_manifest_hash and manifest_path and os.path.isfile(manifest_path):
-        calculated_manifest_hash = compute_file_sha256(manifest_path)
-
-    calculated_val_manifest_hash = val_manifest_hash
-    if not calculated_val_manifest_hash and val_manifest_path and os.path.isfile(val_manifest_path):
-        calculated_val_manifest_hash = compute_file_sha256(val_manifest_path)
 
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -213,10 +287,14 @@ def save_checkpoint(
 
 def verify_checkpoint_provenance(
     checkpoint_path: str,
-    mode: str = TRAINING_MODE_PRODUCTION
+    mode: str = TRAINING_MODE_PRODUCTION,
+    recompute_manifests: bool = True,
+    base_dir: str = PROJECT_ROOT
 ) -> Tuple[bool, Dict[str, Any], List[str]]:
     """
     Inspects checkpoint provenance and training isolation metadata on disk.
+    In PRODUCTION_GENUINE mode, independently verifies and recomputes actual manifest
+    hashes on disk to prevent manifest drift and silent dataset tampering.
     Returns (is_valid, metadata_dict, list_of_errors).
     """
     errors: List[str] = []
@@ -243,6 +321,7 @@ def verify_checkpoint_provenance(
 
     is_prod_eligible = ckpt.get("is_production_eligible")
     synth_count = ckpt.get("synthetic_sample_count", 0)
+    prod_sample_count = ckpt.get("production_eligible_sample_count", 0)
 
     # Check for metadata tampering
     if is_prod_eligible is True and (ckpt_training_mode == TRAINING_MODE_DEVELOPMENT or synth_count > 0):
@@ -264,6 +343,48 @@ def verify_checkpoint_provenance(
             errors.append(
                 f"CHECKPOINT SECURITY ERROR: Checkpoint contains {synth_count} synthetic samples. Rejected from production."
             )
+        if prod_sample_count <= 0:
+            errors.append(
+                "CHECKPOINT SECURITY ERROR: Checkpoint has 0 production_eligible_sample_count. Rejected from production."
+            )
+
+        if recompute_manifests:
+            m_path = ckpt.get("manifest_path")
+            m_hash = ckpt.get("manifest_hash", "")
+            v_path = ckpt.get("val_manifest_path")
+            v_hash = ckpt.get("val_manifest_hash", "")
+
+            if not m_path:
+                errors.append("CHECKPOINT SECURITY ERROR: Production checkpoint is missing 'manifest_path'.")
+            else:
+                res_m = os.path.normpath(os.path.join(base_dir, m_path)) if not os.path.isabs(m_path) else m_path
+                if not os.path.isfile(res_m):
+                    errors.append(f"CHECKPOINT INTEGRITY ERROR: Training manifest not found on disk: '{m_path}'")
+                else:
+                    actual_m_sha = compute_file_sha256(res_m)
+                    if m_hash.lower() != actual_m_sha.lower():
+                        errors.append(
+                            f"CHECKPOINT INTEGRITY ERROR: Training manifest hash drift detected! Checkpoint expected manifest_hash '{m_hash}', "
+                            f"but actual disk file '{m_path}' has hash '{actual_m_sha}'."
+                        )
+                    if count_manifest_records(res_m) == 0:
+                        errors.append(f"CHECKPOINT INTEGRITY ERROR: Production manifest '{m_path}' on disk is empty.")
+
+            if not v_path:
+                errors.append("CHECKPOINT SECURITY ERROR: Production checkpoint is missing 'val_manifest_path'.")
+            else:
+                res_v = os.path.normpath(os.path.join(base_dir, v_path)) if not os.path.isabs(v_path) else v_path
+                if not os.path.isfile(res_v):
+                    errors.append(f"CHECKPOINT INTEGRITY ERROR: Validation manifest not found on disk: '{v_path}'")
+                else:
+                    actual_v_sha = compute_file_sha256(res_v)
+                    if v_hash.lower() != actual_v_sha.lower():
+                        errors.append(
+                            f"CHECKPOINT INTEGRITY ERROR: Validation manifest hash drift detected! Checkpoint expected val_manifest_hash '{v_hash}', "
+                            f"but actual disk file '{v_path}' has hash '{actual_v_sha}'."
+                        )
+                    if count_manifest_records(res_v) == 0:
+                        errors.append(f"CHECKPOINT INTEGRITY ERROR: Production validation manifest '{v_path}' on disk is empty.")
 
     meta = {
         "model_name": ckpt.get("model_name", "unknown"),
@@ -278,7 +399,7 @@ def verify_checkpoint_provenance(
         "val_manifest_hash": ckpt.get("val_manifest_hash", "none"),
         "dataset_record_counts": ckpt.get("dataset_record_counts", {}),
         "synthetic_sample_count": synth_count,
-        "production_eligible_sample_count": ckpt.get("production_eligible_sample_count", 0),
+        "production_eligible_sample_count": prod_sample_count,
         "training_timestamp": ckpt.get("training_timestamp", ckpt.get("saved_at", "")),
         "evaluation_status": ckpt.get("evaluation_status", "UNEVALUATED"),
         "step": ckpt.get("step", 0),
@@ -300,7 +421,8 @@ def load_checkpoint(
     device: str = "cpu",
     restore_rng: bool = True,
     enforce_provenance: bool = True,
-    mode: str = TRAINING_MODE_PRODUCTION
+    mode: str = TRAINING_MODE_PRODUCTION,
+    recompute_manifests: Optional[bool] = None
 ) -> Dict[str, Any]:
     """
     Loads checkpoint, validates model provenance and training mode, and restores states.
@@ -310,7 +432,8 @@ def load_checkpoint(
         raise FileNotFoundError(f"Checkpoint not found at '{checkpoint_path}'.")
 
     if enforce_provenance:
-        valid, meta, errors = verify_checkpoint_provenance(checkpoint_path, mode=mode)
+        do_recompute = (mode == TRAINING_MODE_PRODUCTION) if recompute_manifests is None else recompute_manifests
+        valid, meta, errors = verify_checkpoint_provenance(checkpoint_path, mode=mode, recompute_manifests=do_recompute)
         if not valid:
             raise ValueError(f"CHECKPOINT SECURITY ERROR: Failed verification on '{checkpoint_path}': {'; '.join(errors)}")
 

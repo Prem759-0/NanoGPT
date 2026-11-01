@@ -28,6 +28,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+from datasets.security.attestation_engine import sign_attestation
 from datasets.tools.validate_image_sources import validate_image_source_record
 from datasets.tools.validate_video_sources import validate_video_source_record
 from datasets.tools.deduplicate_images import compute_sha256, compute_dhash, hamming_distance
@@ -40,6 +41,15 @@ class TestDatasetFoundation(unittest.TestCase):
     def test_image_source_metadata_validation(self):
         """Verifies validation of valid and invalid image metadata."""
         sha = "a" * 64
+        att = sign_attestation(
+            verifier_id="moon_compliance_authority_v1",
+            secret_key="4f8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a",
+            record_id="img_test_01",
+            asset_sha256=sha,
+            license_id="CustomSovereign",
+            commercial_use_permitted=True,
+            timestamp="2026-11-01T00:00:00Z"
+        )
         valid_record = {
             "id": "img_test_01",
             "category": "landscapes",
@@ -51,6 +61,7 @@ class TestDatasetFoundation(unittest.TestCase):
             "sha256": sha,
             "media_path": "data/images/img_test_01.png",
             "verification_state": "EXTERNALLY_VERIFIED",
+            "attestation": att,
             "owner_declaration": {
                 "declarant": "Prem Gaikwad",
                 "declaration_timestamp": "2026-11-01T00:00:00Z",

@@ -1,0 +1,74 @@
+name: Moon AI CI & Zero-Trust Release Gate
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-and-verify:
+    name: Backend & Security Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+          pip install fastapi httpx Pillow numpy
+
+      - name: Run Zero-Trust Release Gate Test Suite (20 Scenarios)
+        run: |
+          python -m unittest tests/test_zero_trust_release_gate.py -v
+
+      - name: Run Checkpoint Security & Provenance Test Suite
+        run: |
+          python -m unittest tests/test_checkpoint_security_and_provenance.py -v
+
+      - name: Run Adversarial Provenance Security Test Suite
+        run: |
+          python -m unittest tests/test_adversarial_provenance.py -v
+
+      - name: Run Full Repository Test Suite
+        run: |
+          python -m unittest discover -s tests -p "test_*.py"
+
+  frontend-build:
+    name: Frontend Production Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: |
+          npm install
+
+      - name: Build Frontend Application
+        working-directory: frontend
+        run: |
+          npm run build

@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "authority": "Moon AI Independent Compliance & Rights Authority",
+  "updated_at": "2026-11-01T10:00:00Z",
+  "trusted_verifiers": {
+    "moon_compliance_authority_v1": {
+      "verifier_id": "moon_compliance_authority_v1",
+      "name": "Moon AI Independent Compliance & Rights Authority",
+      "organization": "Moon AI Governance & Licensing Board",
+      "status": "ACTIVE",
+      "algorithm": "HMAC-SHA256",
+      "verification_key": "4f8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_until": "2030-01-01T00:00:00Z"
+    },
+    "independent_auditor_org_v1": {
+      "verifier_id": "independent_auditor_org_v1",
+      "name": "Global Open Data Auditing Syndicate",
+      "organization": "Independent Dataset Ethics Council",
+      "status": "ACTIVE",
+      "algorithm": "HMAC-SHA256",
+      "verification_key": "8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_until": "2030-01-01T00:00:00Z"
+    }
+  }
+}

@@ -13,7 +13,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from training.common.checkpoint import load_checkpoint, save_checkpoint
+from training.common.checkpoint import load_checkpoint, save_checkpoint, TRAINING_MODE_DEVELOPMENT
 from models.registry_manager import verify_checkpoint_provenance, get_dynamic_model_stats
 from backend.engines.moon_image.inference import MoonImageInferenceService
 from backend.engines.moon_video.inference import MoonVideoInferenceService
@@ -50,11 +50,12 @@ class TestProvenanceAndRegistry(unittest.TestCase):
                 epoch=1,
                 loss=0.5,
                 config_dict={"test": True},
-                output_path=good_ckpt_path
+                output_path=good_ckpt_path,
+                training_mode=TRAINING_MODE_DEVELOPMENT
             )
 
             new_model = torch.nn.Linear(10, 10)
-            meta = load_checkpoint(good_ckpt_path, new_model)
+            meta = load_checkpoint(good_ckpt_path, new_model, mode=TRAINING_MODE_DEVELOPMENT)
             self.assertEqual(meta["provenance"], "moon_ai_random_init")
             self.assertTrue(verify_checkpoint_provenance(good_ckpt_path))
 

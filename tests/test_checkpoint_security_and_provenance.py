@@ -34,6 +34,7 @@ from training.common.checkpoint import (
     TRAINING_MODE_DEVELOPMENT,
     PROVENANCE_TAG
 )
+from datasets.security.attestation_engine import sign_attestation
 from datasets.tools.provenance_validator import (
     validate_safe_path,
     validate_provenance_record,
@@ -327,6 +328,15 @@ class TestCheckpointSecurityAndProvenance(unittest.TestCase):
 
     def test_genuine_fully_verified_fixture_passes_production_validation(self):
         """Verifies that an authentic, externally verified record passes the production validation path cleanly."""
+        att = sign_attestation(
+            verifier_id="moon_compliance_authority_v1",
+            secret_key="4f8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a",
+            record_id="img_fully_verified",
+            asset_sha256=self.img_sha,
+            license_id="CustomSovereign",
+            commercial_use_permitted=True,
+            timestamp="2026-11-01T00:00:00Z"
+        )
         rec = {
             "id": "img_fully_verified",
             "media_path": self.img_rel,
@@ -339,6 +349,7 @@ class TestCheckpointSecurityAndProvenance(unittest.TestCase):
             "is_synthetic": False,
             "split": "train",
             "verification_state": VERIFICATION_STATE_EXTERNALLY_VERIFIED,
+            "attestation": att,
             "owner_declaration": {
                 "declarant": "Prem Gaikwad",
                 "declaration_timestamp": "2026-11-01T00:00:00Z",

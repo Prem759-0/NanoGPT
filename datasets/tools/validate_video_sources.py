@@ -13,7 +13,7 @@ Enforces fail-closed validation:
 """
 import os
 import sys
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if PROJECT_ROOT not in sys.path:
@@ -30,7 +30,8 @@ def validate_video_source_record(
     record: Dict[str, Any],
     allow_synthetic: bool = False,
     base_dir: str = PROJECT_ROOT,
-    verify_file: bool = False
+    verify_file: bool = False,
+    verifiers_path: Optional[str] = None
 ) -> Tuple[bool, List[str]]:
     """
     Validates a single video metadata record.
@@ -41,6 +42,7 @@ def validate_video_source_record(
         modality="video",
         base_dir=base_dir,
         allow_synthetic=allow_synthetic,
-        verify_file=verify_file
+        verify_file=verify_file,
+        verifiers_path=verifiers_path
     )
     return audit["is_valid"], audit["errors"]

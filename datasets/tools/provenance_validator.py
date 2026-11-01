@@ -23,6 +23,8 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+from datasets.security.attestation_engine import verify_attestation, DEFAULT_VERIFIERS_PATH
+
 # Explicit Verification States (Task 4)
 VERIFICATION_STATE_SELF_DECLARED = "SELF_DECLARED"
 VERIFICATION_STATE_PENDING_MANUAL = "PENDING_MANUAL_VERIFICATION"
@@ -180,7 +182,8 @@ def validate_provenance_record(
     modality: str = "image",
     base_dir: str = PROJECT_ROOT,
     allow_synthetic: bool = False,
-    verify_file: bool = True
+    verify_file: bool = True,
+    verifiers_path: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Performs comprehensive 5-dimensional security, provenance, and integrity audit on a record.
@@ -341,6 +344,13 @@ def validate_provenance_record(
     # =========================================================================
     # DIMENSION 3: LICENCE VERIFICATION (TASK 4 & 5)
     # =========================================================================
+    # Extract optional cryptographic attestation bundle from record, license_evidence, or owner_declaration
+    att_bundle = record.get("attestation")
+    if not att_bundle and isinstance(record.get("license_evidence"), dict):
+        att_bundle = record["license_evidence"].get("attestation")
+    if not att_bundle and isinstance(record.get("owner_declaration"), dict):
+        att_bundle = record["owner_declaration"].get("attestation")
+
     if license_id == "CustomSovereign":
         # Governed by ownership verification
         dims["license_verified"] = True
@@ -358,16 +368,43 @@ def validate_provenance_record(
         else:
             ver_status = license_ev.get("verification_status")
             comm_ok = bool(license_ev.get("commercial_use_permitted", False))
-            if ver_status in (VERIFICATION_STATE_EXTERNALLY_VERIFIED, "VERIFIED_PERMISSIBLE") and comm_ok:
-                dims["license_verified"] = True
-                dims["licence_verification_state"] = VERIFICATION_STATE_EXTERNALLY_VERIFIED
-            else:
+            if not comm_ok:
                 dims["license_verified"] = False
                 dims["licence_verification_state"] = VERIFICATION_STATE_PENDING_MANUAL
                 errors.append(
-                    f"External licence claim remains blocked (status: '{ver_status}', commercial_use_permitted: {comm_ok}). "
-                    "Requires EXTERNALLY_VERIFIED or VERIFIED_PERMISSIBLE status with commercial suitability."
+                    f"External licence '{license_id}' has commercial_use_permitted=False. Commercial suitability is required for production."
                 )
+            elif not att_bundle:
+                # No cryptographic attestation provided! Even if submitter wrote "EXTERNALLY_VERIFIED" or "VERIFIED_PERMISSIBLE"
+                dims["license_verified"] = False
+                dims["licence_verification_state"] = VERIFICATION_STATE_PENDING_MANUAL
+                if ver_status in (VERIFICATION_STATE_EXTERNALLY_VERIFIED, "VERIFIED_PERMISSIBLE") or record.get("verification_state") == VERIFICATION_STATE_EXTERNALLY_VERIFIED:
+                    errors.append(
+                        f"External licence claim '{license_id}' self-declared external verification ('{ver_status}') "
+                        "without a valid cryptographic attestation bundle from a trusted verifier in trusted_verifiers.json."
+                    )
+                else:
+                    errors.append(
+                        f"External licence claim remains pending manual verification (status: '{ver_status}'). "
+                        "Requires cryptographic attestation from a trusted verifier."
+                    )
+            else:
+                # Verify cryptographic attestation
+                is_valid_att, att_state, att_reason = verify_attestation(
+                    attestation=att_bundle,
+                    record_id=rec_id,
+                    actual_asset_sha256=sha256_val,
+                    license_id=license_id,
+                    commercial_use_permitted=True,
+                    verifiers_path=verifiers_path
+                )
+                if is_valid_att:
+                    dims["license_verified"] = True
+                    dims["licence_verification_state"] = VERIFICATION_STATE_EXTERNALLY_VERIFIED
+                else:
+                    dims["license_verified"] = False
+                    dims["licence_verification_state"] = att_state
+                    errors.append(f"External licence cryptographic attestation failed: {att_reason}")
 
     # =========================================================================
     # DIMENSION 4: OWNERSHIP VERIFICATION (TASKS 4 & 5)
@@ -414,27 +451,49 @@ def validate_provenance_record(
                 decl_valid = False
 
             if decl_valid:
-                # Task 4: Never convert a self-declaration into independent ownership verification automatically.
-                # An owner declaration is by definition SELF_DECLARED unless independent external verification evidence is present.
-                is_ext_verified = (
-                    owner_decl.get("verification_state") == VERIFICATION_STATE_EXTERNALLY_VERIFIED
-                    or record.get("verification_state") == VERIFICATION_STATE_EXTERNALLY_VERIFIED
-                    or bool(record.get("independent_verification"))
-                    or bool(owner_decl.get("independent_verification"))
-                )
-                if is_ext_verified:
-                    dims["ownership_verified"] = True
-                    dims["ownership_verification_state"] = VERIFICATION_STATE_EXTERNALLY_VERIFIED
-                else:
+                # Task 4 & Stage 2.0.4 Fix A:
+                # Never convert a self-declaration into independent ownership verification automatically.
+                # A self-declaration is by definition SELF_DECLARED unless verified by cryptographic attestation.
+                if not att_bundle:
                     dims["ownership_verified"] = False
                     dims["ownership_verification_state"] = VERIFICATION_STATE_SELF_DECLARED
-                    errors.append(
-                        "Self-declared ownership remains unverified (SELF_DECLARED). "
-                        "Self-attestation alone does not prove independent ownership. "
-                        "Asset remains blocked pending independent external verification."
+                    claimed_ext = (
+                        owner_decl.get("verification_state") == VERIFICATION_STATE_EXTERNALLY_VERIFIED
+                        or record.get("verification_state") == VERIFICATION_STATE_EXTERNALLY_VERIFIED
+                        or bool(record.get("independent_verification"))
+                        or bool(owner_decl.get("independent_verification"))
                     )
+                    if claimed_ext:
+                        errors.append(
+                            "Self-declared EXTERNALLY_VERIFIED or independent_verification without cryptographic attestation. "
+                            "Submitters cannot self-declare external verification. "
+                            "Requires cryptographic attestation signed by a trusted verifier in trusted_verifiers.json."
+                        )
+                    else:
+                        errors.append(
+                            "Self-declared ownership remains unverified (SELF_DECLARED). "
+                            "Self-attestation alone does not prove independent ownership. "
+                            "Asset remains blocked pending independent external verification."
+                        )
+                else:
+                    # Verify cryptographic attestation
+                    is_valid_att, att_state, att_reason = verify_attestation(
+                        attestation=att_bundle,
+                        record_id=rec_id,
+                        actual_asset_sha256=sha256_val,
+                        license_id=license_id,
+                        commercial_use_permitted=True,
+                        verifiers_path=verifiers_path
+                    )
+                    if is_valid_att:
+                        dims["ownership_verified"] = True
+                        dims["ownership_verification_state"] = VERIFICATION_STATE_EXTERNALLY_VERIFIED
+                    else:
+                        dims["ownership_verified"] = False
+                        dims["ownership_verification_state"] = att_state
+                        errors.append(f"Ownership cryptographic attestation failed: {att_reason}")
     else:
-        # For third-party assets, ownership is tied to valid licence verification
+        # For third-party assets, ownership is tied to valid licence verification with external attestation
         if dims["license_verified"] and dims["licence_verification_state"] == VERIFICATION_STATE_EXTERNALLY_VERIFIED:
             dims["ownership_verified"] = True
             dims["ownership_verification_state"] = VERIFICATION_STATE_EXTERNALLY_VERIFIED

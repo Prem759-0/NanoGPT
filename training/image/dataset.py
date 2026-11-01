@@ -106,6 +106,14 @@ class MoonImageDataset(Dataset):
                     f"No records found in dev manifest '{self.manifest_path}' for split='{self.split}'."
                 )
 
+    @property
+    def synthetic_sample_count(self) -> int:
+        return sum(1 for r in self.records if r.get("is_synthetic") is not False)
+
+    @property
+    def production_eligible_sample_count(self) -> int:
+        return sum(1 for r in self.records if r.get("is_synthetic") is False)
+
     def __len__(self) -> int:
         return len(self.records)
 
