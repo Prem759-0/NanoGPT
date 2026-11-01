@@ -97,24 +97,32 @@ def recompute_aggregate_metrics(test_results: List[Dict[str, Any]]) -> Dict[str,
         if isinstance(val, bool):
             raise ValueError(f"Score at index {i} has boolean value ({val}). Boolean scores are strictly rejected.")
         
-        if isinstance(val, (int, float)):
+        if isinstance(val, int):
+            if val < 0 or val > 100:
+                raise ValueError(f"Score at index {i} ({val}) is out of permitted range [0.0, 100.0].")
             score_num = float(val)
+        elif isinstance(val, float):
+            if math.isnan(val) or math.isinf(val):
+                raise ValueError(f"Score at index {i} is non-finite: {val}.")
+            if val < 0.0 or val > 100.0:
+                raise ValueError(f"Score at index {i} ({val}) is out of permitted range [0.0, 100.0].")
+            score_num = val
         elif isinstance(val, str):
             clean_str = val.strip()
+            if not clean_str:
+                raise ValueError(f"Score at index {i} has empty or whitespace string value.")
             if clean_str.lower() in ("nan", "infinity", "-infinity", "+infinity", "inf", "-inf", "+inf"):
                 raise ValueError(f"Score at index {i} has non-finite value '{val}'.")
             try:
                 score_num = float(clean_str)
-            except Exception:
+            except (OverflowError, ValueError) as e:
                 raise ValueError(f"Score at index {i} has non-numeric string value: '{val}'.")
+            if math.isnan(score_num) or math.isinf(score_num):
+                raise ValueError(f"Score at index {i} is non-finite: {score_num}.")
+            if score_num < 0.0 or score_num > 100.0:
+                raise ValueError(f"Score at index {i} ({score_num}) is out of permitted range [0.0, 100.0].")
         else:
             raise ValueError(f"Score at index {i} has invalid type {type(val).__name__}.")
-        
-        if math.isnan(score_num) or math.isinf(score_num):
-            raise ValueError(f"Score at index {i} is non-finite: {score_num}.")
-        
-        if score_num < 0.0 or score_num > 100.0:
-            raise ValueError(f"Score at index {i} ({score_num}) is out of permitted range [0.0, 100.0].")
 
         total_score += score_num
 
@@ -302,15 +310,22 @@ def verify_evaluation_attestation(
     if att_name != rep_name:
         return False, f"Evaluation attestation model_name mismatch: attestation '{att_name}', report '{rep_name}'."
 
-    rep_score = round(float(report_data.get("composite_quality_score", 0.0)), 4)
+    try:
+        rep_score = round(float(report_data.get("composite_quality_score", 0.0)), 4)
+        rep_non_empty = round(float(report_data.get("non_empty_rate_pct", 0.0)), 4)
+        rep_syntax = round(float(report_data.get("code_syntax_pct", report_data.get("coding_syntax_valid_pct", 0.0))), 4)
+    except (OverflowError, ValueError, TypeError) as e:
+        return False, f"Invalid numeric benchmark metrics in candidate report: {e}"
+
+    if any(math.isnan(x) or math.isinf(x) for x in (rep_score, rep_non_empty, rep_syntax)):
+        return False, "Candidate report benchmark metrics must be finite numbers."
+
     if att_score != rep_score:
         return False, f"Evaluation attestation score mismatch (tampered score detected): attestation {att_score}, report {rep_score}."
 
-    rep_non_empty = round(float(report_data.get("non_empty_rate_pct", 0.0)), 4)
     if att_non_empty != rep_non_empty:
         return False, f"Evaluation attestation non_empty_rate_pct mismatch: attestation {att_non_empty}, report {rep_non_empty}."
 
-    rep_syntax = round(float(report_data.get("code_syntax_pct", report_data.get("coding_syntax_valid_pct", 0.0))), 4)
     if att_syntax != rep_syntax:
         return False, f"Evaluation attestation code_syntax_pct mismatch: attestation {att_syntax}, report {rep_syntax}."
 
@@ -331,7 +346,7 @@ def verify_evaluation_attestation(
                 return False, f"Aggregate non_empty_rate_pct {rep_non_empty} does not match individual test results {recomputed_metrics['non_empty_rate_pct']}."
             if abs(recomputed_metrics["code_syntax_pct"] - rep_syntax) > 0.01:
                 return False, f"Aggregate code_syntax_pct {rep_syntax} does not match individual test results {recomputed_metrics['code_syntax_pct']}."
-        except ValueError as e:
+        except (ValueError, OverflowError, TypeError) as e:
             return False, f"Individual test results validation failed: {e}"
 
     # Keystore verification

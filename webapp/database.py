@@ -61,8 +61,23 @@ class Database:
         else:
             resolved_url = str(db_url).strip()
 
-        self.db_url = resolved_url
-        self.is_postgres = bool(self.db_url and (self.db_url.startswith("postgres://") or self.db_url.startswith("postgresql://")))
+        if resolved_url is None or resolved_url == "":
+            self.db_url = None
+            self.is_postgres = False
+        elif resolved_url.startswith("postgresql://") or resolved_url.startswith("postgres://"):
+            self.db_url = resolved_url
+            self.is_postgres = True
+        elif resolved_url.startswith("sqlite://"):
+            self.db_url = resolved_url
+            self.is_postgres = False
+            raw_path = resolved_url[len("sqlite://"):].lstrip("/")
+            if raw_path:
+                self.db_path = os.path.abspath(raw_path)
+        else:
+            raise ValueError(
+                f"Unsupported database URL scheme in '{resolved_url}'. "
+                "Supported schemes are 'postgresql://', 'postgres://', or 'sqlite://'."
+            )
         self._pg_conn = None
         import threading
         self._lock = threading.Lock()

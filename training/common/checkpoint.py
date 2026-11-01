@@ -130,6 +130,9 @@ def deep_verify_production_manifest(
     if not os.path.isfile(resolved_path):
         return False, 0, [f"Manifest file not found on disk: '{manifest_path}'"]
 
+    if os.path.islink(resolved_path):
+        return False, 0, [f"Manifest path security violation: symlink detected on '{manifest_path}'."]
+
     import json
     from datasets.tools.provenance_validator import validate_provenance_record
 
@@ -138,6 +141,10 @@ def deep_verify_production_manifest(
     seen_ids: Set[str] = set()
 
     with open(resolved_path, "r", encoding="utf-8") as f:
+        # Post-open containment re-verification (TOCTOU mitigation)
+        post_resolved = os.path.realpath(os.path.abspath(resolved_path))
+        if os.path.islink(resolved_path) or post_resolved != resolved_path:
+            return False, 0, [f"Manifest post-open path containment violation: file was replaced or symlinked."]
         for line_no, raw_line in enumerate(f, 1):
             line = raw_line.strip()
             if not line or line.startswith("#"):

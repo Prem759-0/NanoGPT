@@ -7,6 +7,7 @@ Prevents quality regression and maintains a versioned model registry.
 import os
 import sys
 import json
+import hashlib
 import argparse
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Tuple
@@ -74,6 +75,65 @@ def verify_path_containment(target_path: str, base_dir: str = PROJECT_ROOT) -> T
 
     return True, canonical_target, None
 
+def safe_read_json_contained(
+    target_path: str,
+    base_dir: str = PROJECT_ROOT
+) -> Tuple[bool, Any, Optional[str]]:
+    """
+    Safely opens and parses a JSON file within the approved base directory root,
+    mitigating TOCTOU race conditions via pre- and post-open verification.
+    """
+    ok, canonical_path, err = verify_path_containment(target_path, base_dir=base_dir)
+    if not ok:
+        return False, None, err
+
+    if not os.path.isfile(canonical_path):
+        return False, None, f"File not found on disk: '{target_path}'"
+
+    if os.path.islink(canonical_path):
+        return False, None, f"Symlink detected on canonical target path: '{canonical_path}'"
+
+    try:
+        with open(canonical_path, "r", encoding="utf-8") as f:
+            # Post-open containment check
+            re_ok, re_canonical, re_err = verify_path_containment(canonical_path, base_dir=base_dir)
+            if not re_ok or re_canonical != canonical_path or os.path.islink(canonical_path):
+                return False, None, f"Post-open path containment violation: {re_err or 'File replaced during open'}"
+            data = json.load(f)
+            return True, data, None
+    except Exception as e:
+        return False, None, f"Failed to read or parse JSON from '{target_path}': {e}"
+
+def safe_compute_file_sha256_contained(
+    target_path: str,
+    base_dir: str = PROJECT_ROOT
+) -> Tuple[bool, str, Optional[str]]:
+    """
+    Computes SHA-256 of a file within the approved directory with pre- and post-open containment checks.
+    """
+    ok, canonical_path, err = verify_path_containment(target_path, base_dir=base_dir)
+    if not ok:
+        return False, "", err
+
+    if not os.path.isfile(canonical_path):
+        return False, "", f"File not found on disk: '{target_path}'"
+
+    if os.path.islink(canonical_path):
+        return False, "", f"Symlink detected on canonical target path: '{canonical_path}'"
+
+    hasher = hashlib.sha256()
+    try:
+        with open(canonical_path, "rb") as f:
+            # Post-open containment check
+            re_ok, re_canonical, re_err = verify_path_containment(canonical_path, base_dir=base_dir)
+            if not re_ok or re_canonical != canonical_path or os.path.islink(canonical_path):
+                return False, "", f"Post-open path containment violation: {re_err or 'File replaced during open'}"
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+            return True, hasher.hexdigest().lower(), None
+    except Exception as e:
+        return False, "", f"Failed to read file '{target_path}': {e}"
+
 def load_registry(registry_path: Optional[str] = None) -> Dict[str, Any]:
     """Loads or initializes model registry."""
     reg_p = registry_path or REGISTRY_PATH
@@ -117,17 +177,10 @@ def evaluate_and_promote(
     2. Coding syntax validity must be 100%.
     3. Composite quality score must be >= current best score AND >= min_score_threshold.
     """
-    ok_rep, full_rep_path, err_rep = verify_path_containment(candidate_report_path, base_dir=base_dir)
+    ok_rep, cand, err_rep = safe_read_json_contained(candidate_report_path, base_dir=base_dir)
     if not ok_rep:
         print(f"❌ Evaluation report path security violation: {err_rep}")
         return False
-
-    if not os.path.isfile(full_rep_path):
-        print(f"❌ Evaluation report not found: {candidate_report_path}")
-        return False
-
-    with open(full_rep_path, "r", encoding="utf-8") as f:
-        cand = json.load(f)
 
     registry = load_registry(registry_path)
     current_best = registry.get("current_best_model", {})
@@ -177,17 +230,13 @@ def evaluate_and_promote(
         if not cand_manifest_sha or cand_manifest_sha in ("none", "null", ""):
             rejection_reasons.append("Missing or placeholder 'dataset_manifest_sha256' in candidate evaluation report. Genuine 64-char hex SHA-256 required.")
         elif cand_manifest_path:
-            ok_m, full_manifest, err_m = verify_path_containment(cand_manifest_path, base_dir=base_dir)
+            ok_m, actual_manifest_sha, err_m = safe_compute_file_sha256_contained(cand_manifest_path, base_dir=base_dir)
             if not ok_m:
-                rejection_reasons.append(f"Evaluation dataset manifest path security violation: {err_m}")
-            elif not os.path.isfile(full_manifest):
-                rejection_reasons.append(f"Evaluation dataset manifest not found on disk: '{cand_manifest_path}'")
-            else:
-                actual_manifest_sha = compute_file_sha256(full_manifest)
-                if actual_manifest_sha.lower() != cand_manifest_sha.lower():
-                    rejection_reasons.append(
-                        f"Evaluation dataset manifest SHA-256 mismatch! Report specifies '{cand_manifest_sha}', but actual file yields '{actual_manifest_sha}'."
-                    )
+                rejection_reasons.append(f"Evaluation dataset manifest security violation: {err_m}")
+            elif actual_manifest_sha.lower() != cand_manifest_sha.lower():
+                rejection_reasons.append(
+                    f"Evaluation dataset manifest SHA-256 mismatch! Report specifies '{cand_manifest_sha}', but actual file yields '{actual_manifest_sha}'."
+                )
 
     # Recompute test results summary hash and verify aggregate metrics (SEC-02, SEC-03, SEC-04)
     if has_test_results:
@@ -198,17 +247,9 @@ def evaluate_and_promote(
             test_results = cand.get("test_results")
             if test_results is None and cand.get("test_results_path"):
                 tr_path = cand["test_results_path"]
-                ok_tr, full_tr_path, err_tr = verify_path_containment(tr_path, base_dir=base_dir)
+                ok_tr, test_results, err_tr = safe_read_json_contained(tr_path, base_dir=base_dir)
                 if not ok_tr:
-                    rejection_reasons.append(f"Test results path security violation: {err_tr}")
-                elif not os.path.isfile(full_tr_path):
-                    rejection_reasons.append(f"Test results file not found on disk: '{tr_path}'")
-                else:
-                    try:
-                        with open(full_tr_path, "r", encoding="utf-8") as f:
-                            test_results = json.load(f)
-                    except Exception as e:
-                        rejection_reasons.append(f"Failed to read or parse JSON in test_results_path '{tr_path}': {e}")
+                    rejection_reasons.append(f"Test results security violation: {err_tr}")
             
             # SEC-02 & SEC-03: Explicitly reject None, non-list, or empty test_results
             if test_results is None:
@@ -244,22 +285,19 @@ def evaluate_and_promote(
     if not ckpt_path or not str(ckpt_path).strip():
         rejection_reasons.append("Missing required 'checkpoint_path' in candidate evaluation report.")
     else:
-        ok_ckpt, full_ckpt, err_ckpt = verify_path_containment(ckpt_path, base_dir=base_dir)
+        ok_ckpt, actual_ckpt_sha, err_ckpt = safe_compute_file_sha256_contained(ckpt_path, base_dir=base_dir)
         if not ok_ckpt:
-            rejection_reasons.append(f"Checkpoint path security violation: {err_ckpt}")
-        elif not os.path.isfile(full_ckpt):
-            rejection_reasons.append(f"Candidate checkpoint file not found on disk: '{ckpt_path}'")
+            rejection_reasons.append(f"Checkpoint security violation: {err_ckpt}")
         else:
             if not cand_ckpt_sha or len(cand_ckpt_sha) != 64:
                 rejection_reasons.append("Missing or invalid 'checkpoint_sha256' in candidate evaluation report (must be 64-char hex SHA-256).")
-            else:
-                actual_ckpt_sha = compute_file_sha256(full_ckpt)
-                if actual_ckpt_sha != cand_ckpt_sha:
-                    rejection_reasons.append(
-                        f"Candidate checkpoint_sha256 mismatch! Report specifies '{cand_ckpt_sha}', "
-                        f"but actual file bytes yield '{actual_ckpt_sha}'."
-                    )
+            elif actual_ckpt_sha != cand_ckpt_sha:
+                rejection_reasons.append(
+                    f"Candidate checkpoint_sha256 mismatch! Report specifies '{cand_ckpt_sha}', "
+                    f"but actual file bytes yield '{actual_ckpt_sha}'."
+                )
 
+            _, full_ckpt, _ = verify_path_containment(ckpt_path, base_dir=base_dir)
             valid_ckpt, ckpt_meta, ckpt_errs = verify_checkpoint_provenance(
                 full_ckpt,
                 mode=TRAINING_MODE_PRODUCTION,

@@ -56,6 +56,8 @@ from training.common.checkpoint import (
 from scripts.promote_best_model import (
     evaluate_and_promote,
     verify_path_containment,
+    safe_read_json_contained,
+    safe_compute_file_sha256_contained,
     load_registry
 )
 
@@ -567,6 +569,136 @@ class TestStage207IntegrityHardening(unittest.TestCase):
         reg = load_registry(reg_file)
         self.assertEqual(reg["current_best_model"]["name"], "MoonSovereignModel")
         self.assertEqual(reg["current_best_model"]["composite_score"], 95.0)
+
+    def test_17_numeric_overflow_large_integers_and_floats(self):
+        """Verify recompute_aggregate_metrics produces controlled ValueError on huge ints and overflow floats."""
+        overflow_inputs = [
+            10**1000,
+            -10**1000,
+            2**2048,
+            -2**2048,
+            float("inf"),
+            float("-inf"),
+            float("nan"),
+            -0.0001,
+            100.0001,
+            10**20,
+            -10**20
+        ]
+        for val in overflow_inputs:
+            with self.subTest(val=val):
+                with self.assertRaises(ValueError, msg=f"Value {val} must produce a controlled ValueError"):
+                    recompute_aggregate_metrics([{"score": val, "output": "ok", "syntax_valid": True}])
+
+    def test_18_numeric_validation_string_overflow_and_boundaries(self):
+        """Verify numeric string overflow, invalid strings, booleans, and valid boundary values [0, 100]."""
+        invalid_strings = [
+            "1e500",
+            "-1e500",
+            "1" + "0" * 1000,
+            "nan",
+            "NaN",
+            "infinity",
+            "-infinity",
+            "inf",
+            "-inf",
+            "+inf",
+            "abc",
+            "",
+            "   ",
+            "1.2.3"
+        ]
+        for s in invalid_strings:
+            with self.subTest(string=s):
+                with self.assertRaises(ValueError, msg=f"String '{s}' must produce a controlled ValueError"):
+                    recompute_aggregate_metrics([{"score": s, "output": "ok", "syntax_valid": True}])
+
+        # Booleans must raise ValueError
+        with self.assertRaises(ValueError):
+            recompute_aggregate_metrics([{"score": True, "output": "ok", "syntax_valid": True}])
+        with self.assertRaises(ValueError):
+            recompute_aggregate_metrics([{"score": False, "output": "ok", "syntax_valid": True}])
+
+        # Valid boundaries 0 and 100 must succeed
+        res_0 = recompute_aggregate_metrics([{"score": 0, "output": "ok", "syntax_valid": True}])
+        self.assertEqual(res_0["composite_quality_score"], 0.0)
+
+        res_100 = recompute_aggregate_metrics([{"score": 100, "output": "ok", "syntax_valid": True}])
+        self.assertEqual(res_100["composite_quality_score"], 100.0)
+
+        res_0_f = recompute_aggregate_metrics([{"score": 0.0, "output": "ok", "syntax_valid": True}])
+        self.assertEqual(res_0_f["composite_quality_score"], 0.0)
+
+        res_100_f = recompute_aggregate_metrics([{"score": 100.0, "output": "ok", "syntax_valid": True}])
+        self.assertEqual(res_100_f["composite_quality_score"], 100.0)
+
+        res_str = recompute_aggregate_metrics([{"score": "95.5", "output": "ok", "syntax_valid": True}])
+        self.assertEqual(res_str["composite_quality_score"], 95.5)
+
+    def test_19_database_url_scheme_validation_and_rejection(self):
+        """Verify database URL scheme validation: unsupported schemes rejected, sqlite:// and postgresql:// accepted."""
+        unsupported_schemes = [
+            "mysql://user:pass@localhost:3306/db",
+            "ftp://files.internal/db",
+            "http://malicious.com/db",
+            "https://malicious.com/db",
+            "mongodb://localhost:27017/db",
+            "redis://127.0.0.1:6379/0",
+            "oracle://user:pass@host/xe",
+            "random_string_not_a_url",
+            "custom://scheme/path"
+        ]
+        for url in unsupported_schemes:
+            with self.subTest(url=url):
+                with self.assertRaises(ValueError, msg=f"Scheme in '{url}' must be rejected with ValueError"):
+                    Database(db_path=os.path.join(self.base_dir, "test.db"), db_url=url)
+
+        # sqlite:// accepted
+        sqlite_custom = os.path.join(self.base_dir, "custom_sqlite.db")
+        db_sqlite = Database(db_url=f"sqlite:///{sqlite_custom}")
+        self.assertFalse(db_sqlite.is_postgres)
+        self.assertEqual(os.path.abspath(db_sqlite.db_path), os.path.abspath(sqlite_custom))
+
+        # db_url=None and db_url="" select SQLite
+        db_none = Database(db_path=os.path.join(self.base_dir, "test_none.db"), db_url=None)
+        self.assertFalse(db_none.is_postgres)
+        self.assertIsNone(db_none.db_url)
+
+        db_empty = Database(db_path=os.path.join(self.base_dir, "test_empty.db"), db_url="")
+        self.assertFalse(db_empty.is_postgres)
+        self.assertIsNone(db_empty.db_url)
+
+    def test_20_safe_contained_file_reading_and_toctou_mitigation(self):
+        """Verify safe_read_json_contained and safe_compute_file_sha256_contained enforce path & symlink containment."""
+        valid_json_path = os.path.join(self.base_dir, "valid_data.json")
+        sample_data = {"key": "value", "score": 90.0}
+        with open(valid_json_path, "w", encoding="utf-8") as f:
+            json.dump(sample_data, f)
+
+        ok, data, err = safe_read_json_contained(valid_json_path, base_dir=self.base_dir)
+        self.assertTrue(ok)
+        self.assertEqual(data["key"], "value")
+        self.assertIsNone(err)
+
+        ok_h, hash_val, err_h = safe_compute_file_sha256_contained(valid_json_path, base_dir=self.base_dir)
+        self.assertTrue(ok_h)
+        self.assertEqual(len(hash_val), 64)
+        self.assertIsNone(err_h)
+
+        # Reject path outside base_dir
+        outside_path = os.path.join(tempfile.gettempdir(), "outside.json")
+        with open(outside_path, "w", encoding="utf-8") as f:
+            json.dump({"leak": True}, f)
+        try:
+            ok_out, _, err_out = safe_read_json_contained(outside_path, base_dir=self.base_dir)
+            self.assertFalse(ok_out)
+            self.assertTrue(
+                "escapes approved directory root" in err_out or "separate filesystem drive" in err_out,
+                f"Unexpected error reason: {err_out}"
+            )
+        finally:
+            if os.path.exists(outside_path):
+                os.remove(outside_path)
 
 if __name__ == "__main__":
     unittest.main()
