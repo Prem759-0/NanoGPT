@@ -12,7 +12,7 @@ import random
 import subprocess
 import numpy as np
 import torch
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Dict, Any, Optional, Tuple, List, Set
 from datetime import datetime, timezone
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -122,6 +122,7 @@ def deep_verify_production_manifest(
 
     errors: List[str] = []
     eligible_count = 0
+    seen_ids: Set[str] = set()
 
     with open(resolved_path, "r", encoding="utf-8") as f:
         for line_no, raw_line in enumerate(f, 1):
@@ -134,6 +135,20 @@ def deep_verify_production_manifest(
             except Exception as e:
                 errors.append(f"JSON decode error in '{manifest_path}' line {line_no}: {e}")
                 return False, 0, errors
+
+            if not isinstance(record, dict):
+                errors.append(f"Record in '{manifest_path}' line {line_no} is not a JSON object: {type(record).__name__}.")
+                return False, 0, errors
+
+            rec_id = str(record.get("id", "")).strip()
+            if not rec_id:
+                errors.append(f"Record in '{manifest_path}' line {line_no} is missing required 'id'.")
+                return False, 0, errors
+
+            if rec_id in seen_ids:
+                errors.append(f"Duplicate record id '{rec_id}' detected in '{manifest_path}' line {line_no}.")
+                return False, 0, errors
+            seen_ids.add(rec_id)
 
             rec_split = str(record.get("split", "")).strip().lower()
             if rec_split != expected_split.lower():

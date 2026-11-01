@@ -1,15 +1,20 @@
 """
 evaluation/security/evaluation_attestation.py
-Asymmetric Cryptographic Evaluation Provenance & Tamper-Proof Attestation Engine for Moon AI.
+Strict Asymmetric Cryptographic Evaluation Provenance & Tamper-Proof Attestation Engine for Moon AI.
 Binds candidate model evaluation scores cryptographically to checkpoint SHA-256,
-test suite hashes, evaluation manifests, and independent evaluator identities via Ed25519.
+test suite hashes, evaluation manifests, individual test results, and independent evaluator identities via Ed25519.
+
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
+Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
+Attestation Standard: RFC 8785 Compatible Canonical JSON Ed25519 Evaluation Attestation v2.0
 """
 import os
 import sys
+import re
 import json
+import hashlib
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.exceptions import InvalidSignature
@@ -18,7 +23,9 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 DEFAULT_EVALUATORS_PATH = os.path.join(PROJECT_ROOT, "evaluation", "security", "trusted_evaluators.json")
 
 EVAL_SUITE_VERSION_CURRENT = "1.0"
-EVAL_SOFTWARE_VERSION_CURRENT = "2.0.5"
+EVAL_SOFTWARE_VERSION_CURRENT = "2.0.6"
+MAX_ATTESTATION_AGE_DAYS = 730
+MAX_CLOCK_SKEW_SECONDS = 60
 
 def load_trusted_evaluators(evaluators_path: Optional[str] = None) -> Dict[str, Any]:
     """Loads registered trusted evaluators from secure keystore."""
@@ -31,6 +38,53 @@ def load_trusted_evaluators(evaluators_path: Optional[str] = None) -> Dict[str, 
             return data.get("trusted_evaluators", {})
     except Exception:
         return {}
+
+def compute_test_results_summary_sha256(test_results: List[Dict[str, Any]]) -> str:
+    """
+    Computes deterministic SHA-256 summary of individual evaluation test results.
+    Canonical format: RFC 8785 style sorted keys, no whitespace separators, UTF-8.
+    """
+    if not isinstance(test_results, list) or len(test_results) == 0:
+        return "none"
+    canonical_lines = []
+    for item in test_results:
+        if isinstance(item, dict):
+            canonical_lines.append(json.dumps(item, sort_keys=True, separators=(',', ':')))
+        else:
+            canonical_lines.append(str(item))
+    payload = "\n".join(canonical_lines).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest().lower()
+
+def recompute_aggregate_metrics(test_results: List[Dict[str, Any]]) -> Dict[str, float]:
+    """
+    Recomputes aggregate benchmark metrics from individual test results.
+    Returns: dict with composite_quality_score, non_empty_rate_pct, code_syntax_pct.
+    """
+    if not isinstance(test_results, list) or len(test_results) == 0:
+        return {
+            "composite_quality_score": 0.0,
+            "non_empty_rate_pct": 0.0,
+            "code_syntax_pct": 0.0
+        }
+    total = len(test_results)
+    non_empty_count = sum(
+        1 for t in test_results
+        if isinstance(t, dict) and bool(str(t.get("output", "") or t.get("response", "") or t.get("text", "")).strip())
+    )
+    syntax_count = sum(
+        1 for t in test_results
+        if isinstance(t, dict) and t.get("syntax_valid") is True
+    )
+    total_score = sum(
+        float(t.get("score", 0.0)) for t in test_results
+        if isinstance(t, dict) and t.get("score") is not None
+    )
+
+    return {
+        "composite_quality_score": round(total_score / total, 4),
+        "non_empty_rate_pct": round((non_empty_count / total) * 100.0, 4),
+        "code_syntax_pct": round((syntax_count / total) * 100.0, 4)
+    }
 
 def construct_canonical_evaluation_payload(
     evaluator_id: str,
@@ -122,7 +176,8 @@ def sign_evaluation_attestation(
 
 def verify_evaluation_attestation(
     report_data: Dict[str, Any],
-    evaluators_path: Optional[str] = None
+    evaluators_path: Optional[str] = None,
+    enforce_production_hashes: bool = False
 ) -> Tuple[bool, Optional[str]]:
     """
     Cryptographically verifies an evaluation report's attestation against trusted public keys.
@@ -159,17 +214,39 @@ def verify_evaluation_attestation(
     att_ts = str(att["timestamp"]).strip()
     att_sig_hex = str(att["signature"]).strip().lower()
 
+    # Signature format and length check (Task 2)
+    if len(att_sig_hex) != 128:
+        return False, f"Evaluation attestation signature has invalid length ({len(att_sig_hex)} chars; exactly 128 hex chars required)."
+    if not re.fullmatch(r"[0-9a-f]{128}", att_sig_hex):
+        return False, "Evaluation attestation signature contains invalid non-hex characters."
+
+    # Checkpoint SHA-256 format check (Task 2)
+    if len(att_ckpt_sha) != 64 or not re.fullmatch(r"[0-9a-f]{64}", att_ckpt_sha):
+        return False, f"Malformed checkpoint_sha256 in evaluation attestation '{att_ckpt_sha}' (must be 64-char lowercase hex)."
+
+    # Enforce production hash non-placeholder check (Task 2)
+    if enforce_production_hashes:
+        if att_dataset_sha in ("none", "null", "") or len(att_dataset_sha) != 64 or not re.fullmatch(r"[0-9a-f]{64}", att_dataset_sha):
+            return False, f"Production promotion rejects placeholder or malformed dataset_manifest_sha256 '{att_dataset_sha}'. 64-char hex SHA-256 required."
+        if att_test_sha in ("none", "null", "") or len(att_test_sha) != 64 or not re.fullmatch(r"[0-9a-f]{64}", att_test_sha):
+            return False, f"Production promotion rejects placeholder or malformed test_results_summary_sha256 '{att_test_sha}'. 64-char hex SHA-256 required."
+
     # Strict timestamp validation
     try:
+        if not (att_ts.endswith("Z") or "+00:00" in att_ts or att_ts.endswith("+00")):
+            return False, f"Evaluation attestation timestamp '{att_ts}' lacks explicit UTC timezone."
         att_dt = datetime.fromisoformat(att_ts.replace("Z", "+00:00"))
-        if att_dt.tzinfo is None:
+        if att_dt.tzinfo is None or att_dt.utcoffset() != timedelta(0):
             return False, f"Evaluation attestation timestamp '{att_ts}' lacks explicit UTC timezone."
     except Exception as e:
         return False, f"Malformed evaluation attestation timestamp '{att_ts}': {e}"
 
     now_utc = datetime.now(timezone.utc)
-    if att_dt > (now_utc + timedelta(seconds=60)):
+    if att_dt > (now_utc + timedelta(seconds=MAX_CLOCK_SKEW_SECONDS)):
         return False, f"Evaluation attestation timestamp '{att_ts}' is in the future."
+
+    if (now_utc - att_dt) > timedelta(days=MAX_ATTESTATION_AGE_DAYS):
+        return False, f"Evaluation attestation has expired: age ({((now_utc - att_dt).days)} days) exceeds {MAX_ATTESTATION_AGE_DAYS} days limit."
 
     # Bindings check against candidate report metrics
     rep_ckpt_sha = str(report_data.get("checkpoint_sha256", "")).strip().lower()
@@ -192,6 +269,22 @@ def verify_evaluation_attestation(
     if att_syntax != rep_syntax:
         return False, f"Evaluation attestation code_syntax_pct mismatch: attestation {att_syntax}, report {rep_syntax}."
 
+    # Verify individual test results if present in report
+    if "test_results" in report_data and isinstance(report_data["test_results"], list):
+        test_results = report_data["test_results"]
+        if len(test_results) > 0:
+            computed_test_sha = compute_test_results_summary_sha256(test_results)
+            if att_test_sha != "none" and att_test_sha != computed_test_sha:
+                return False, f"Individual test results hash mismatch: attestation specifies '{att_test_sha}', but actual test results yield '{computed_test_sha}'."
+
+            recomputed_metrics = recompute_aggregate_metrics(test_results)
+            if abs(recomputed_metrics["composite_quality_score"] - rep_score) > 0.01:
+                return False, f"Aggregate composite_quality_score {rep_score} does not match individual test results average {recomputed_metrics['composite_quality_score']}."
+            if abs(recomputed_metrics["non_empty_rate_pct"] - rep_non_empty) > 0.01:
+                return False, f"Aggregate non_empty_rate_pct {rep_non_empty} does not match individual test results {recomputed_metrics['non_empty_rate_pct']}."
+            if abs(recomputed_metrics["code_syntax_pct"] - rep_syntax) > 0.01:
+                return False, f"Aggregate code_syntax_pct {rep_syntax} does not match individual test results {recomputed_metrics['code_syntax_pct']}."
+
     # Keystore verification
     trusted_registry = load_trusted_evaluators(evaluators_path)
     if not trusted_registry:
@@ -201,35 +294,60 @@ def verify_evaluation_attestation(
     if not evaluator_info:
         return False, f"Unknown or untrusted evaluator_id: '{ev_id}'. Not in trusted evaluators keystore."
 
-    if evaluator_info.get("status") != "ACTIVE":
-        return False, f"Evaluator '{ev_id}' is not ACTIVE (status: '{evaluator_info.get('status')}')."
+    ev_status = str(evaluator_info.get("status", "")).strip().upper()
+    if ev_status in ("REVOKED", "SUSPENDED"):
+        return False, f"Evaluator '{ev_id}' is {ev_status} and cannot certify candidate models."
+    if ev_status != "ACTIVE":
+        return False, f"Evaluator '{ev_id}' is not ACTIVE (status: '{ev_status}')."
 
     if evaluator_info.get("algorithm") != "Ed25519":
         return False, f"Evaluator '{ev_id}' algorithm '{evaluator_info.get('algorithm')}' is invalid. Ed25519 required."
 
+    # Validity window
     valid_from = evaluator_info.get("valid_from")
-    if valid_from:
-        try:
-            from_dt = datetime.fromisoformat(valid_from.replace("Z", "+00:00"))
-            if att_dt < from_dt:
-                return False, f"Evaluation timestamp '{att_ts}' predates evaluator validity start '{valid_from}'."
-        except Exception:
-            return False, f"Evaluator '{ev_id}' has malformed valid_from in keystore."
+    if not valid_from or not isinstance(valid_from, str) or not valid_from.strip():
+        return False, f"Evaluator '{ev_id}' is missing required 'valid_from' timestamp in keystore."
 
     valid_until = evaluator_info.get("valid_until")
-    if valid_until:
-        try:
-            until_dt = datetime.fromisoformat(valid_until.replace("Z", "+00:00"))
-            if att_dt > until_dt:
-                return False, f"Evaluation timestamp '{att_ts}' is after evaluator expiration '{valid_until}'."
-            if now_utc > until_dt:
-                return False, f"Evaluator '{ev_id}' trust certificate expired on {valid_until}."
-        except Exception:
-            return False, f"Evaluator '{ev_id}' has malformed valid_until in keystore."
+    if not valid_until or not isinstance(valid_until, str) or not valid_until.strip():
+        return False, f"Evaluator '{ev_id}' is missing required 'valid_until' timestamp in keystore."
+
+    try:
+        if not (valid_from.endswith("Z") or "+00:00" in valid_from or valid_from.endswith("+00")):
+            return False, f"Evaluator '{ev_id}' valid_from timestamp '{valid_from}' lacks explicit UTC timezone."
+        from_dt = datetime.fromisoformat(valid_from.replace("Z", "+00:00"))
+        if from_dt.tzinfo is None or from_dt.utcoffset() != timedelta(0):
+            return False, f"Evaluator '{ev_id}' valid_from timestamp '{valid_from}' lacks explicit UTC timezone."
+    except Exception as e:
+        return False, f"Evaluator '{ev_id}' has malformed valid_from in keystore: {e}"
+
+    try:
+        if not (valid_until.endswith("Z") or "+00:00" in valid_until or valid_until.endswith("+00")):
+            return False, f"Evaluator '{ev_id}' valid_until timestamp '{valid_until}' lacks explicit UTC timezone."
+        until_dt = datetime.fromisoformat(valid_until.replace("Z", "+00:00"))
+        if until_dt.tzinfo is None or until_dt.utcoffset() != timedelta(0):
+            return False, f"Evaluator '{ev_id}' valid_until timestamp '{valid_until}' lacks explicit UTC timezone."
+    except Exception as e:
+        return False, f"Evaluator '{ev_id}' has malformed valid_until in keystore: {e}"
+
+    if from_dt >= until_dt:
+        return False, f"Evaluator '{ev_id}' has inverted validity window: valid_from '{valid_from}' >= valid_until '{valid_until}'."
+
+    if now_utc < from_dt:
+        return False, f"Evaluator '{ev_id}' trust certificate is not yet valid (valid_from: '{valid_from}')."
+
+    if now_utc > until_dt:
+        return False, f"Evaluator '{ev_id}' trust certificate expired on {valid_until}."
+
+    if att_dt < from_dt:
+        return False, f"Evaluation timestamp '{att_ts}' predates evaluator validity start '{valid_from}'."
+
+    if att_dt > until_dt:
+        return False, f"Evaluation timestamp '{att_ts}' exceeds evaluator validity end '{valid_until}'."
 
     pub_hex = evaluator_info.get("public_key") or evaluator_info.get("public_key_hex") or evaluator_info.get("verification_key")
-    if not pub_hex or len(pub_hex) != 64:
-        return False, f"Evaluator '{ev_id}' has invalid public_key_hex in keystore."
+    if not pub_hex or len(pub_hex) != 64 or not re.fullmatch(r"[0-9a-f]{64}", str(pub_hex).lower()):
+        return False, f"Evaluator '{ev_id}' has invalid or missing 64-char public_key in keystore."
 
     try:
         pub_bytes = bytes.fromhex(pub_hex)

@@ -110,13 +110,75 @@ def evaluate_and_promote(
     if cand_eligible is False:
         rejection_reasons.append("Candidate model has 'is_production_eligible: false'. Rejected from production.")
 
-    # Task 4: Cryptographic evaluation provenance and tamper-proof attestation
-    eval_ok, eval_err = verify_evaluation_attestation(cand, evaluators_path=evaluators_path)
+    has_dataset_manifest = "dataset_manifest_sha256" in cand or "dataset_manifest_path" in cand
+    has_test_results = "test_results_summary_sha256" in cand or "test_results" in cand or "test_results_path" in cand
+
+    # Task 4 & Stage 2.0.6: Cryptographic evaluation provenance and tamper-proof attestation
+    eval_ok, eval_err = verify_evaluation_attestation(
+        cand, evaluators_path=evaluators_path, enforce_production_hashes=(has_dataset_manifest or has_test_results)
+    )
     if not eval_ok:
         rejection_reasons.append(
             f"Evaluation report failed cryptographic attestation verification: {eval_err} "
             "Manually edited or unsigned evaluation reports are strictly prohibited."
         )
+
+    # Recompute evaluation manifest hash from disk
+    if has_dataset_manifest:
+        cand_manifest_path = cand.get("dataset_manifest_path")
+        cand_manifest_sha = str(cand.get("dataset_manifest_sha256", "")).strip().lower()
+        if not cand_manifest_sha or cand_manifest_sha in ("none", "null", ""):
+            rejection_reasons.append("Missing or placeholder 'dataset_manifest_sha256' in candidate evaluation report. Genuine 64-char hex SHA-256 required.")
+        elif cand_manifest_path:
+            full_manifest = os.path.normpath(os.path.join(PROJECT_ROOT, cand_manifest_path)) if not os.path.isabs(cand_manifest_path) else cand_manifest_path
+            if not os.path.isfile(full_manifest):
+                rejection_reasons.append(f"Evaluation dataset manifest not found on disk: '{cand_manifest_path}'")
+            else:
+                actual_manifest_sha = compute_file_sha256(full_manifest)
+                if actual_manifest_sha.lower() != cand_manifest_sha.lower():
+                    rejection_reasons.append(
+                        f"Evaluation dataset manifest SHA-256 mismatch! Report specifies '{cand_manifest_sha}', but actual file yields '{actual_manifest_sha}'."
+                    )
+
+    # Recompute test results summary hash and verify aggregate metrics
+    if has_test_results:
+        cand_test_sha = str(cand.get("test_results_summary_sha256", "")).strip().lower()
+        if not cand_test_sha or cand_test_sha in ("none", "null", ""):
+            rejection_reasons.append("Missing or placeholder 'test_results_summary_sha256' in candidate evaluation report. Genuine 64-char hex SHA-256 required.")
+        else:
+            test_results = cand.get("test_results")
+            if not test_results and cand.get("test_results_path"):
+                tr_path = cand["test_results_path"]
+                full_tr_path = os.path.normpath(os.path.join(PROJECT_ROOT, tr_path)) if not os.path.isabs(tr_path) else tr_path
+                if os.path.isfile(full_tr_path):
+                    try:
+                        with open(full_tr_path, "r", encoding="utf-8") as f:
+                            test_results = json.load(f)
+                    except Exception as e:
+                        rejection_reasons.append(f"Failed to read test_results_path '{tr_path}': {e}")
+            if test_results and isinstance(test_results, list):
+                from evaluation.security.evaluation_attestation import (
+                    compute_test_results_summary_sha256,
+                    recompute_aggregate_metrics
+                )
+                comp_test_sha = compute_test_results_summary_sha256(test_results)
+                if comp_test_sha.lower() != cand_test_sha.lower():
+                    rejection_reasons.append(
+                        f"Test results summary hash mismatch! Report specifies '{cand_test_sha}', but actual test results yield '{comp_test_sha}'."
+                    )
+                recomputed = recompute_aggregate_metrics(test_results)
+                if abs(recomputed["composite_quality_score"] - cand_score) > 0.01:
+                    rejection_reasons.append(
+                        f"Candidate composite_quality_score mismatch: report declared {cand_score}, but individual test results calculate to {recomputed['composite_quality_score']}."
+                    )
+                if abs(recomputed["non_empty_rate_pct"] - cand_non_empty) > 0.01:
+                    rejection_reasons.append(
+                        f"Candidate non_empty_rate_pct mismatch: report declared {cand_non_empty}%, but individual test results calculate to {recomputed['non_empty_rate_pct']}%."
+                    )
+                if abs(recomputed["code_syntax_pct"] - cand_syntax) > 0.01:
+                    rejection_reasons.append(
+                        f"Candidate code_syntax_pct mismatch: report declared {cand_syntax}%, but individual test results calculate to {recomputed['code_syntax_pct']}%."
+                    )
 
     ckpt_path = cand.get("checkpoint_path") or cand.get("checkpoint")
     cand_ckpt_sha = str(cand.get("checkpoint_sha256", "")).strip().lower()

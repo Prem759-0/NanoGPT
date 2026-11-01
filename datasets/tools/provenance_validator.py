@@ -367,8 +367,14 @@ def validate_provenance_record(
             dims["licence_verification_state"] = VERIFICATION_STATE_PENDING_MANUAL
         else:
             ver_status = license_ev.get("verification_status")
-            comm_ok = bool(license_ev.get("commercial_use_permitted", False))
-            if not comm_ok:
+            comm_ok = license_ev.get("commercial_use_permitted")
+            if type(comm_ok) is not bool:
+                dims["license_verified"] = False
+                dims["licence_verification_state"] = VERIFICATION_STATE_REJECTED
+                errors.append(
+                    f"External licence '{license_id}' commercial_use_permitted must be a strict boolean, got {type(comm_ok).__name__}."
+                )
+            elif comm_ok is not True:
                 dims["license_verified"] = False
                 dims["licence_verification_state"] = VERIFICATION_STATE_PENDING_MANUAL
                 errors.append(
