@@ -237,8 +237,8 @@ class MoonVideoDataset(Dataset):
                     continue
                 try:
                     data = json.loads(line)
-                except Exception:
-                    continue
+                except Exception as e:
+                    raise ValueError(f"JSON decode error in '{self.manifest_path}' line {line_no}: {e}")
 
                 if data.get("split", "train").lower() != self.split.lower():
                     continue
@@ -253,6 +253,12 @@ class MoonVideoDataset(Dataset):
                     any(path_val.endswith(ext) for ext in REAL_VIDEO_EXTENSIONS)
                     and not is_synth
                 )
+
+                if not self.allow_synthetic and is_synth:
+                    raise ValueError(
+                        f"STRICT PROVENANCE ERROR / STRICT VIDEO INTEGRITY ERROR: Record '{data.get('id')}' in '{self.manifest_path}' "
+                        f"line {line_no} is synthetic. Synthetic animations are strictly prohibited in production manifests."
+                    )
 
                 if is_real:
                     if not self.allow_synthetic:

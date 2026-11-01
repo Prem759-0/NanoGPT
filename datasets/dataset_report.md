@@ -1,5 +1,5 @@
 # Moon AI — Stage 2.0.2 Provenance Gate Hardening & Security Audit Report
-**Generated:** 2026-11-01T09:40:26.552790+00:00  
+**Generated:** 2026-11-01T10:23:35.403679+00:00  
 **Chief ML Systems Architect:** Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)  
 **Ownership Policy:** `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`  
 
@@ -22,7 +22,7 @@
 - **Unverified Records:** 37
 - **Pending Manual Verification:** 0
 - **Licence Verified Count:** 30
-- **Ownership Verified Count:** 7
+- **Ownership Verified Count:** 0
 - **Checksum Verified Count:** 37
 - **Production Eligible Count:** 0 / 500 (Shortfall: 500)
 - **Splits Breakdown:** `{"train": 0, "val": 0, "test": 0, "dev": 37}`
@@ -35,7 +35,7 @@
 - **Unverified Records:** 10
 - **Pending Manual Verification:** 0
 - **Licence Verified Count:** 8
-- **Ownership Verified Count:** 2
+- **Ownership Verified Count:** 0
 - **Checksum Verified Count:** 10
 - **Production Eligible Count:** 0 / 50 (Shortfall: 50)
 - **Splits Breakdown:** `{"train": 0, "val": 0, "test": 0, "dev": 10}`

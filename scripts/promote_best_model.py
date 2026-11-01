@@ -15,6 +15,8 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+from training.common.checkpoint import verify_checkpoint_provenance, TRAINING_MODE_PRODUCTION
+
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -84,6 +86,25 @@ def evaluate_and_promote(candidate_report_path: str, min_score_threshold: float 
     print("-" * 65)
 
     rejection_reasons = []
+
+    # Checkpoint provenance & training isolation gate
+    cand_mode = cand.get("training_mode")
+    cand_eligible = cand.get("is_production_eligible")
+    if cand_mode == "DEVELOPMENT_SYNTHETIC":
+        rejection_reasons.append("Candidate model is marked 'training_mode: DEVELOPMENT_SYNTHETIC' and cannot be promoted to production.")
+    if cand_eligible is False:
+        rejection_reasons.append("Candidate model has 'is_production_eligible: false'. Rejected from production.")
+
+    ckpt_path = cand.get("checkpoint_path") or cand.get("checkpoint")
+    if ckpt_path:
+        full_ckpt = os.path.normpath(os.path.join(PROJECT_ROOT, ckpt_path)) if not os.path.isabs(ckpt_path) else ckpt_path
+        if os.path.isfile(full_ckpt):
+            valid_ckpt, ckpt_meta, ckpt_errs = verify_checkpoint_provenance(full_ckpt, mode=TRAINING_MODE_PRODUCTION)
+            if not valid_ckpt:
+                rejection_reasons.append(f"Underlying checkpoint failed production provenance verification: {'; '.join(ckpt_errs)}")
+        elif "dev" in str(ckpt_path).lower():
+            rejection_reasons.append(f"Candidate checkpoint references development directory: '{ckpt_path}'")
+
     if cand_non_empty < 100.0:
         rejection_reasons.append(f"Non-empty rate ({cand_non_empty}%) is below 100% threshold.")
     if cand_syntax < 100.0:

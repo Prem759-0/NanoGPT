@@ -78,12 +78,14 @@ class TestAdversarialProvenance(unittest.TestCase):
             "sha256": self.real_img_sha,
             "split": "train",
             "is_synthetic": False,
+            "verification_state": "EXTERNALLY_VERIFIED",
             "owner_declaration": {
                 "declarant": "Prem Gaikwad",
                 "declaration_timestamp": now_iso,
                 "asset_id": "img_valid_001",
                 "asset_sha256": self.real_img_sha,
-                "rights_statement": "I certify that I am the sole author and owner of this original photograph and grant full sovereign training rights."
+                "rights_statement": "I certify that I am the sole author and owner of this original photograph and grant full sovereign training rights.",
+                "verification_state": "EXTERNALLY_VERIFIED"
             }
         }
 

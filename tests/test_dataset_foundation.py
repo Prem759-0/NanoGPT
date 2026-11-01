@@ -50,11 +50,13 @@ class TestDatasetFoundation(unittest.TestCase):
             "is_synthetic": False,
             "sha256": sha,
             "media_path": "data/images/img_test_01.png",
+            "verification_state": "EXTERNALLY_VERIFIED",
             "owner_declaration": {
                 "declarant": "Prem Gaikwad",
                 "declaration_timestamp": "2026-11-01T00:00:00Z",
                 "asset_sha256": sha,
-                "rights_statement": "I certify this is an original capture created by me."
+                "rights_statement": "I certify this is an original capture created by me.",
+                "verification_state": "EXTERNALLY_VERIFIED"
             }
         }
         ok, errors = validate_image_source_record(valid_record)

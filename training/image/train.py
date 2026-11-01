@@ -46,7 +46,9 @@ from training.common.metrics import MetricTracker
 from training.common.checkpoint import (
     save_checkpoint,
     load_checkpoint,
-    compute_file_sha256
+    compute_file_sha256,
+    TRAINING_MODE_PRODUCTION,
+    TRAINING_MODE_DEVELOPMENT
 )
 from training.common.experiment import ExperimentTracker
 from training.image.dataset import MoonImageDataset
@@ -86,12 +88,20 @@ def train(args):
     print("   Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)")
     print("=" * 70)
 
+    training_mode = TRAINING_MODE_DEVELOPMENT if args.allow_synthetic else TRAINING_MODE_PRODUCTION
+    if args.allow_synthetic:
+        norm_out = args.output_dir.replace("\\", "/").rstrip("/")
+        target_output_dir = norm_out if "dev" in norm_out.split("/") else f"{norm_out}/dev"
+    else:
+        target_output_dir = args.output_dir
+
     set_seed(args.seed)
     device, dtype, use_amp = setup_device(args.device, args.precision)
     print(f"Device:                   {device} ({torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'})")
     print(f"Compute Precision:        {dtype} (AMP enabled: {use_amp})")
+    print(f"Training Provenance Mode: {training_mode}")
     print(f"Manifest Path:            {args.manifest}")
-    print(f"Output Directory:         {args.output_dir}")
+    print(f"Output Directory:         {target_output_dir}")
     print(f"Gradient Accumulation:    {args.gradient_accumulation_steps} steps\n")
 
     manifest_full = os.path.normpath(os.path.join(PROJECT_ROOT, args.manifest))
@@ -200,7 +210,8 @@ def train(args):
                 scaler=scaler,
                 device=device.type,
                 restore_rng=True,
-                enforce_provenance=True
+                enforce_provenance=True,
+                mode=training_mode
             )
             start_step = resume_meta.get("step", 0)
             start_epoch = resume_meta.get("epoch", 0)
@@ -221,9 +232,10 @@ def train(args):
             "lr": args.lr,
             "precision": args.precision,
             "gradient_accumulation_steps": args.gradient_accumulation_steps,
-            "total_steps": total_steps
+            "total_steps": total_steps,
+            "training_mode": training_mode
         },
-        output_dir=os.path.join(PROJECT_ROOT, args.output_dir)
+        output_dir=os.path.join(PROJECT_ROOT, target_output_dir)
     )
 
     step = start_step
@@ -306,7 +318,7 @@ def train(args):
                     # Track and save best checkpoint based on validation loss
                     if val_loss < best_val_loss:
                         best_val_loss = val_loss
-                        best_ckpt_path = os.path.join(PROJECT_ROOT, args.output_dir, "best_moon_image.pt")
+                        best_ckpt_path = os.path.join(PROJECT_ROOT, target_output_dir, "best_moon_image.pt")
                         save_checkpoint(
                             model=model,
                             optimizer=optimizer,
@@ -321,7 +333,17 @@ def train(args):
                             output_path=best_ckpt_path,
                             manifest_path=manifest_full,
                             manifest_hash=manifest_hash,
-                            model_name="moon-image-v0"
+                            val_manifest_path=val_manifest_full,
+                            model_name="moon-image-v0",
+                            training_mode=training_mode,
+                            is_production_eligible=(training_mode == TRAINING_MODE_PRODUCTION),
+                            dataset_record_counts={
+                                "total": len(train_dataset) + (len(val_dataset) if val_dataset else 0),
+                                "train": len(train_dataset),
+                                "val": len(val_dataset) if val_dataset else 0
+                            },
+                            synthetic_sample_count=len(train_dataset) if args.allow_synthetic else 0,
+                            production_eligible_sample_count=0 if args.allow_synthetic else len(train_dataset)
                         )
                         exp_tracker.update_best("val_loss", best_val_loss, step)
                         print(f"  🏆 New Best Model Saved -> {os.path.relpath(best_ckpt_path, PROJECT_ROOT)}")
@@ -329,7 +351,7 @@ def train(args):
                 # Periodic Checkpoint Saving
                 if args.save_every > 0 and (step % args.save_every == 0):
                     periodic_ckpt_path = os.path.join(
-                        PROJECT_ROOT, args.output_dir, f"moon_image_step_{step}.pt"
+                        PROJECT_ROOT, target_output_dir, f"moon_image_step_{step}.pt"
                     )
                     save_checkpoint(
                         model=model,
@@ -345,7 +367,17 @@ def train(args):
                         output_path=periodic_ckpt_path,
                         manifest_path=manifest_full,
                         manifest_hash=manifest_hash,
-                        model_name="moon-image-v0"
+                        val_manifest_path=val_manifest_full,
+                        model_name="moon-image-v0",
+                        training_mode=training_mode,
+                        is_production_eligible=(training_mode == TRAINING_MODE_PRODUCTION),
+                        dataset_record_counts={
+                            "total": len(train_dataset) + (len(val_dataset) if val_dataset else 0),
+                            "train": len(train_dataset),
+                            "val": len(val_dataset) if val_dataset else 0
+                        },
+                        synthetic_sample_count=len(train_dataset) if args.allow_synthetic else 0,
+                        production_eligible_sample_count=0 if args.allow_synthetic else len(train_dataset)
                     )
                     print(f"  💾 Periodic Checkpoint Saved -> {os.path.relpath(periodic_ckpt_path, PROJECT_ROOT)}")
 
@@ -364,7 +396,7 @@ def train(args):
         print(f"\n✅ Training completed in {elapsed:.2f}s | Final Train Loss: {final_train_loss:.4f} | Best Val Loss: {best_val_loss:.4f}")
 
         # Final Checkpoint Save
-        final_ckpt_path = os.path.join(PROJECT_ROOT, args.output_dir, "moon_image_v0.pt")
+        final_ckpt_path = os.path.join(PROJECT_ROOT, target_output_dir, "moon_image_v0.pt")
         save_checkpoint(
             model=model,
             optimizer=optimizer,
@@ -379,7 +411,17 @@ def train(args):
             output_path=final_ckpt_path,
             manifest_path=manifest_full,
             manifest_hash=manifest_hash,
-            model_name="moon-image-v0"
+            val_manifest_path=val_manifest_full,
+            model_name="moon-image-v0",
+            training_mode=training_mode,
+            is_production_eligible=(training_mode == TRAINING_MODE_PRODUCTION),
+            dataset_record_counts={
+                "total": len(train_dataset) + (len(val_dataset) if val_dataset else 0),
+                "train": len(train_dataset),
+                "val": len(val_dataset) if val_dataset else 0
+            },
+            synthetic_sample_count=len(train_dataset) if args.allow_synthetic else 0,
+            production_eligible_sample_count=0 if args.allow_synthetic else len(train_dataset)
         )
         print(f"✅ Final Checkpoint saved to: {os.path.relpath(final_ckpt_path, PROJECT_ROOT)}")
         exp_tracker.finish(status="COMPLETED", checkpoint_path=final_ckpt_path)

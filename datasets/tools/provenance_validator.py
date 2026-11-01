@@ -23,6 +23,18 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+# Explicit Verification States (Task 4)
+VERIFICATION_STATE_SELF_DECLARED = "SELF_DECLARED"
+VERIFICATION_STATE_PENDING_MANUAL = "PENDING_MANUAL_VERIFICATION"
+VERIFICATION_STATE_EXTERNALLY_VERIFIED = "EXTERNALLY_VERIFIED"
+VERIFICATION_STATE_REJECTED = "REJECTED"
+VALID_VERIFICATION_STATES = {
+    VERIFICATION_STATE_SELF_DECLARED,
+    VERIFICATION_STATE_PENDING_MANUAL,
+    VERIFICATION_STATE_EXTERNALLY_VERIFIED,
+    VERIFICATION_STATE_REJECTED
+}
+
 PERMISSIBLE_LICENSES = {
     "CC0",
     "CC-BY-4.0",
@@ -63,11 +75,13 @@ GENERIC_CAPTION_PATTERNS = [
 def validate_safe_path(
     rel_path: str,
     base_dir: str = PROJECT_ROOT,
-    allowed_extensions: Optional[Set[str]] = None
+    allowed_extensions: Optional[Set[str]] = None,
+    must_exist: bool = False
 ) -> Tuple[bool, str, Optional[str]]:
     """
-    Validates that rel_path resolves strictly within base_dir without directory traversal.
-    Ensures safe extension.
+    Validates that rel_path resolves strictly within base_dir without directory traversal
+    or symlink escape.
+    Uses real path resolution, including symlink resolution, before containment checks.
     """
     if not rel_path or not isinstance(rel_path, str):
         return False, "", "Media path is empty or invalid."
@@ -77,25 +91,54 @@ def validate_safe_path(
         return False, "", f"Directory traversal detected in path: '{rel_path}'"
 
     # Reject absolute Windows paths or root paths
-    if os.path.isabs(rel_path) or (len(rel_path) > 1 and rel_path[1] == ":"):
+    if os.path.isabs(rel_path) or (len(rel_path) > 1 and rel_path[1] == ":") or rel_path.startswith("/") or rel_path.startswith("\\"):
         return False, "", f"Absolute paths are forbidden in manifests: '{rel_path}'"
 
-    resolved = os.path.normpath(os.path.join(base_dir, rel_path))
-    norm_base = os.path.normpath(base_dir)
+    # Preliminary path normalization
+    raw_joined = os.path.normpath(os.path.join(base_dir, rel_path))
+    real_base = os.path.realpath(os.path.abspath(base_dir))
+    real_resolved = os.path.realpath(raw_joined)
 
+    # 1. Structural containment check on normpath
+    norm_base = os.path.normpath(base_dir)
     try:
-        common = os.path.commonpath([norm_base, resolved])
-        if common != norm_base:
+        common_norm = os.path.commonpath([norm_base, raw_joined])
+        if common_norm != norm_base:
             return False, "", f"Path escapes base directory: '{rel_path}'"
     except Exception as e:
         return False, "", f"Path resolution error: {e}"
 
-    if allowed_extensions:
-        ext = os.path.splitext(resolved)[1].lower()
-        if ext not in allowed_extensions:
-            return False, resolved, f"File extension '{ext}' is not permitted. Allowed: {sorted(list(allowed_extensions))}"
+    # 2. Real path resolution (including symlink resolution) containment check
+    try:
+        common_real = os.path.commonpath([real_base, real_resolved])
+        if common_real != real_base:
+            return False, "", f"Path or symlink escapes base directory: '{rel_path}' resolves outside root -> '{real_resolved}'"
+    except Exception as e:
+        return False, "", f"Path resolution error: {e}"
 
-    return True, resolved, None
+    # 3. Explicit symlink inspection if link exists
+    if os.path.islink(raw_joined):
+        try:
+            target = os.readlink(raw_joined)
+            target_full = target if os.path.isabs(target) else os.path.normpath(os.path.join(os.path.dirname(raw_joined), target))
+            target_real = os.path.realpath(target_full)
+            common_sym = os.path.commonpath([real_base, target_real])
+            if common_sym != real_base:
+                return False, "", f"Symlink escapes base directory: '{rel_path}' points to '{target_real}' outside '{real_base}'"
+        except Exception as e:
+            return False, "", f"Symlink check error: {e}"
+
+    # 4. Allowed extension check
+    if allowed_extensions:
+        ext = os.path.splitext(real_resolved)[1].lower()
+        if ext not in allowed_extensions:
+            return False, real_resolved, f"File extension '{ext}' is not permitted. Allowed: {sorted(list(allowed_extensions))}"
+
+    # 5. File existence check if requested
+    if must_exist and not os.path.exists(real_resolved):
+        return False, "", f"Media file does not exist on disk: '{real_resolved}'"
+
+    return True, real_resolved, None
 
 def compute_actual_file_sha256(filepath: str) -> str:
     """Reads actual file bytes from disk and computes SHA-256."""
@@ -146,9 +189,14 @@ def validate_provenance_record(
     errors: List[str] = []
     dims = {
         "metadata_completeness": True,
+        "url_syntax_valid": True,
+        "asset_level_source_identified": True,
+        "url_accessibility": VERIFICATION_STATE_PENDING_MANUAL,
         "source_accessibility": True,
         "license_verified": True,
+        "licence_verification_state": VERIFICATION_STATE_PENDING_MANUAL,
         "ownership_verified": True,
+        "ownership_verification_state": VERIFICATION_STATE_PENDING_MANUAL,
         "safe_path_verified": True,
         "file_checksum_verified": True
     }
@@ -258,31 +306,45 @@ def validate_provenance_record(
             dims["metadata_completeness"] = False
 
     # =========================================================================
-    # DIMENSION 2: SOURCE ACCESSIBILITY & ASSET-LEVEL VERIFICATION
+    # DIMENSION 2: SOURCE ACCESSIBILITY & ASSET-LEVEL VERIFICATION (TASKS 4 & 5)
     # =========================================================================
     if source_url:
         low_url = source_url.lower()
-        # Reject generic github data directories
+        if not (low_url.startswith("http://") or low_url.startswith("https://") or low_url.startswith("owner://")):
+            errors.append(f"Invalid URL protocol '{source_url}'. Must start with http://, https://, or owner://.")
+            dims["url_syntax_valid"] = False
+            dims["source_accessibility"] = False
+        else:
+            dims["url_syntax_valid"] = True
+
         if "github.com/prem759-0/nanogpt/tree/main/data" in low_url or "github.com/prem759-0/nanogpt/tree" in low_url:
             errors.append(f"Fabricated internal repo URL detected: '{source_url}'. Self-referential folders cannot serve as asset-level source URLs.")
+            dims["asset_level_source_identified"] = False
             dims["source_accessibility"] = False
         elif low_url.startswith("owner://") and len(source_url.strip()) <= 8:
             errors.append("Bare 'owner://' URI provided without asset-level identifier.")
-            dims["source_accessibility"] = False
-        elif not (low_url.startswith("http://") or low_url.startswith("https://") or low_url.startswith("owner://")):
-            errors.append(f"Invalid URL protocol '{source_url}'. Must start with http://, https://, or owner://.")
+            dims["asset_level_source_identified"] = False
             dims["source_accessibility"] = False
         elif low_url in {"https://example.com", "http://example.com", "https://unsplash.com", "https://pixabay.com"}:
             errors.append(f"Generic domain root URL without asset-level identifier: '{source_url}'.")
+            dims["asset_level_source_identified"] = False
             dims["source_accessibility"] = False
+        else:
+            dims["asset_level_source_identified"] = True
+
+        # Task 5: Distinguish URL syntax from real network accessibility.
+        # Do not call a URL verified merely because it starts with HTTPS.
+        # In offline/no-network mode, record PENDING_MANUAL_VERIFICATION.
+        dims["url_accessibility"] = VERIFICATION_STATE_PENDING_MANUAL
+        dims["source_accessibility"] = dims["url_syntax_valid"] and dims["asset_level_source_identified"]
 
     # =========================================================================
-    # DIMENSION 3: LICENCE VERIFICATION
+    # DIMENSION 3: LICENCE VERIFICATION (TASK 4 & 5)
     # =========================================================================
-    # Do not treat mere string 'CustomSovereign' as proof of ownership or permission
     if license_id == "CustomSovereign":
-        # Sovereign license is verified via Dimension 4 (owner_declaration)
-        pass
+        # Governed by ownership verification
+        dims["license_verified"] = True
+        dims["licence_verification_state"] = VERIFICATION_STATE_SELF_DECLARED
     else:
         # Third-party / external open licenses (CC0, CC-BY, MIT, etc.)
         license_ev = record.get("license_evidence")
@@ -292,17 +354,23 @@ def validate_provenance_record(
                 "Must provide license URL, verification status, and commercial suitability evidence."
             )
             dims["license_verified"] = False
+            dims["licence_verification_state"] = VERIFICATION_STATE_PENDING_MANUAL
         else:
             ver_status = license_ev.get("verification_status")
-            if ver_status != "VERIFIED_PERMISSIBLE":
-                errors.append(f"Licence verification status is '{ver_status}'. Must be 'VERIFIED_PERMISSIBLE' for production eligibility.")
+            comm_ok = bool(license_ev.get("commercial_use_permitted", False))
+            if ver_status in (VERIFICATION_STATE_EXTERNALLY_VERIFIED, "VERIFIED_PERMISSIBLE") and comm_ok:
+                dims["license_verified"] = True
+                dims["licence_verification_state"] = VERIFICATION_STATE_EXTERNALLY_VERIFIED
+            else:
                 dims["license_verified"] = False
-            if not license_ev.get("commercial_use_permitted", False):
-                errors.append("Licence does not permit commercial/unrestricted use.")
-                dims["license_verified"] = False
+                dims["licence_verification_state"] = VERIFICATION_STATE_PENDING_MANUAL
+                errors.append(
+                    f"External licence claim remains blocked (status: '{ver_status}', commercial_use_permitted: {comm_ok}). "
+                    "Requires EXTERNALLY_VERIFIED or VERIFIED_PERMISSIBLE status with commercial suitability."
+                )
 
     # =========================================================================
-    # DIMENSION 4: OWNERSHIP VERIFICATION (FOR SELF-CREATED / SOVEREIGN ASSETS)
+    # DIMENSION 4: OWNERSHIP VERIFICATION (TASKS 4 & 5)
     # =========================================================================
     if license_id == "CustomSovereign" or (source_url and source_url.lower().startswith("owner://")):
         owner_decl = record.get("owner_declaration")
@@ -313,27 +381,66 @@ def validate_provenance_record(
                 "Explicit declaration with declarant, timestamp, matching asset SHA-256, and rights statement is required."
             )
             dims["ownership_verified"] = False
+            dims["ownership_verification_state"] = VERIFICATION_STATE_PENDING_MANUAL
         else:
             declarant = str(owner_decl.get("declarant", "")).strip()
             decl_ts = str(owner_decl.get("declaration_timestamp", "")).strip()
             decl_sha = str(owner_decl.get("asset_sha256", "")).strip().lower()
             decl_rights = str(owner_decl.get("rights_statement", "")).strip()
 
+            decl_valid = True
             if not declarant or declarant.lower() != creator.lower():
                 errors.append(f"Owner declaration declarant '{declarant}' does not match creator '{creator}'.")
                 dims["ownership_verified"] = False
+                dims["ownership_verification_state"] = VERIFICATION_STATE_REJECTED
+                decl_valid = False
 
             if not decl_ts or not validate_iso_timestamp(decl_ts):
                 errors.append(f"Owner declaration timestamp '{decl_ts}' is missing or not a valid ISO 8601 timestamp.")
                 dims["ownership_verified"] = False
+                dims["ownership_verification_state"] = VERIFICATION_STATE_REJECTED
+                decl_valid = False
 
             if not decl_sha or decl_sha != sha256_val:
                 errors.append(f"Owner declaration asset_sha256 ('{decl_sha}') does not match manifest SHA-256 ('{sha256_val}').")
                 dims["ownership_verified"] = False
+                dims["ownership_verification_state"] = VERIFICATION_STATE_REJECTED
+                decl_valid = False
 
             if not decl_rights or len(decl_rights) < 20:
                 errors.append("Owner declaration rights_statement is missing or insufficient.")
                 dims["ownership_verified"] = False
+                dims["ownership_verification_state"] = VERIFICATION_STATE_REJECTED
+                decl_valid = False
+
+            if decl_valid:
+                # Task 4: Never convert a self-declaration into independent ownership verification automatically.
+                # An owner declaration is by definition SELF_DECLARED unless independent external verification evidence is present.
+                is_ext_verified = (
+                    owner_decl.get("verification_state") == VERIFICATION_STATE_EXTERNALLY_VERIFIED
+                    or record.get("verification_state") == VERIFICATION_STATE_EXTERNALLY_VERIFIED
+                    or bool(record.get("independent_verification"))
+                    or bool(owner_decl.get("independent_verification"))
+                )
+                if is_ext_verified:
+                    dims["ownership_verified"] = True
+                    dims["ownership_verification_state"] = VERIFICATION_STATE_EXTERNALLY_VERIFIED
+                else:
+                    dims["ownership_verified"] = False
+                    dims["ownership_verification_state"] = VERIFICATION_STATE_SELF_DECLARED
+                    errors.append(
+                        "Self-declared ownership remains unverified (SELF_DECLARED). "
+                        "Self-attestation alone does not prove independent ownership. "
+                        "Asset remains blocked pending independent external verification."
+                    )
+    else:
+        # For third-party assets, ownership is tied to valid licence verification
+        if dims["license_verified"] and dims["licence_verification_state"] == VERIFICATION_STATE_EXTERNALLY_VERIFIED:
+            dims["ownership_verified"] = True
+            dims["ownership_verification_state"] = VERIFICATION_STATE_EXTERNALLY_VERIFIED
+        else:
+            dims["ownership_verified"] = False
+            dims["ownership_verification_state"] = VERIFICATION_STATE_PENDING_MANUAL
 
     # =========================================================================
     # DIMENSION 5: ACTUAL FILE CHECKSUM & SAFE PATH RESOLUTION (TASK 3)
@@ -359,7 +466,15 @@ def validate_provenance_record(
     # =========================================================================
     # OVERALL TRAINING ELIGIBILITY EVALUATION
     # =========================================================================
-    all_dims_pass = all(dims.values())
+    all_dims_pass = (
+        dims["metadata_completeness"]
+        and dims["url_syntax_valid"]
+        and dims["asset_level_source_identified"]
+        and dims["license_verified"]
+        and dims["ownership_verified"]
+        and dims["safe_path_verified"]
+        and dims["file_checksum_verified"]
+    )
     is_synth = record.get("is_synthetic", True)
 
     training_eligible = (
@@ -373,7 +488,11 @@ def validate_provenance_record(
         status = "VERIFIED_PRODUCTION_ELIGIBLE"
     elif is_synth:
         status = "QUARANTINED_SYNTHETIC"
-    elif not dims["license_verified"] or not dims["ownership_verified"]:
+    elif (dims["ownership_verification_state"] == VERIFICATION_STATE_SELF_DECLARED
+          or dims["ownership_verification_state"] == VERIFICATION_STATE_PENDING_MANUAL
+          or dims["licence_verification_state"] == VERIFICATION_STATE_PENDING_MANUAL
+          or not dims["license_verified"]
+          or not dims["ownership_verified"]):
         status = "PENDING_MANUAL_VERIFICATION"
     else:
         status = "REJECTED_INTEGRITY"
@@ -382,6 +501,9 @@ def validate_provenance_record(
         "is_valid": len(errors) == 0,
         "training_eligible": training_eligible,
         "status": status,
+        "ownership_verification_state": dims["ownership_verification_state"],
+        "licence_verification_state": dims["licence_verification_state"],
+        "url_accessibility": dims["url_accessibility"],
         "errors": errors,
         "dimensions": dims,
         "computed_sha256": computed_sha,
