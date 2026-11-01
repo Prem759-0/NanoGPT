@@ -129,7 +129,7 @@ def train(args):
     if len(train_dataset) == 0:
         raise ValueError(f"No training samples found in manifest '{args.manifest}' with split='train'.")
 
-    # Load validation set
+    # Load validation set (fails closed in production if genuine validation data is missing)
     try:
         val_dataset = MoonVideoDataset(
             manifest_path=manifest_full,
@@ -139,7 +139,12 @@ def train(args):
             frame_size=args.frame_size,
             allow_synthetic=args.allow_synthetic
         )
-    except Exception:
+    except Exception as err:
+        if not args.allow_synthetic:
+            raise ValueError(
+                f"STRICT VIDEO INTEGRITY ERROR: Production video training fails closed when genuine validation data is missing or unusable. "
+                f"Could not load split='val' from '{args.manifest}': {err}"
+            )
         try:
             val_dataset = MoonVideoDataset(
                 manifest_path=manifest_full,
@@ -151,6 +156,11 @@ def train(args):
             )
         except Exception:
             val_dataset = train_dataset
+
+    if not args.allow_synthetic and (val_dataset is None or len(val_dataset) == 0):
+        raise ValueError(
+            f"STRICT VIDEO INTEGRITY ERROR: Production video training requires at least 1 genuine validation video record. Found 0 in '{args.manifest}'."
+        )
 
     train_loader = DataLoader(
         train_dataset,

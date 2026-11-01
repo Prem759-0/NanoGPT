@@ -1,33 +1,43 @@
-# Moon AI — Sovereign Dataset Quality and Audit Report
-**Generated:** 2026-10-31T18:53:33.201307+00:00  
+# Moon AI — Stage 2.0 Dataset Quality & Adequacy Audit Report
+**Generated:** 2026-11-01T06:01:32.257686+00:00  
 **Chief ML Systems Architect:** Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)  
 **Ownership Policy:** `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`  
 
-## Executive Summary
-- **Overall Manifest Hygiene:** ✅ PASS
-- **Total Samples Cataloged:** 9
-- **Missing Media Files:** 0
-- **Corrupted Files:** 0
-- **Duplicate Files (SHA-256):** 0
-- **Train/Val/Test Split Leakages:** 0
+## Executive Summary & Quality Gate Status
+- **HYGIENE_VALID:** `✅ PASS` (Zero corrupted, missing, duplicate, or leaking files; all licenses verified)
+- **TRAINING_DATA_ADEQUATE:** `⚠️ INSUFFICIENT (PILOT COLLECTION IN PROGRESS)`
+
+> [!IMPORTANT]
+> A dataset passing file validation does NOT mean it is sufficient for production training.
+> Stage 2.0 explicitly decouples technical hygiene from statistical training adequacy.
 
 ## 1. Moon Image Dataset Audit
-- **Manifest:** `D:\Downloads\linkden post\ai\datasets\image\manifest.jsonl`
-- **Manifest SHA-256:** `8e65f42efb4656ee359be130c7c3afc3f1b1425894541a6ac38c5d5df8c56bc5`
-- **Record Count:** 7
-- **Unique Media Count:** 7
-- **Splits:** Train (5), Val (1), Test (1)
-- **Average Caption Length:** 128.4 chars
+- **Manifest:** `D:\Downloads\linkden post\ai\datasets\manifests\image_train.jsonl`
+- **Hygiene Status:** `✅ PASS`
+- **Adequacy Status:** `INSUFFICIENT` (20 / 500 pilot target)
+- **Shortfall to Pilot Target:** 480 genuine images required
+- **Genuine Source Media:** 20
+- **Synthetic / Dev Fixtures:** 0
+- **Category Distribution:** `{"landscapes": 2, "architecture": 2, "products": 2, "technology": 2, "people": 2, "animals": 2, "vehicles": 2, "food": 2, "illustration_design": 2, "abstract_scientific": 2}`
+- **Missing Files:** 0
+- **Exact Duplicates:** 0
+- **Near Duplicates (dHash <= 4):** 0
+- **Split Leakages:** 0
 
 ## 2. Moon Video Dataset Audit
-- **Manifest:** `D:\Downloads\linkden post\ai\datasets\video\manifest.jsonl`
-- **Manifest SHA-256:** `1235b9e69391f6f3546ae4d7214969a442182a6352c006e0f38006c08f273d67`
-- **Record Count:** 2
-- **Unique Media Count:** 2
-- **Splits:** Train (1), Val (1), Test (0)
-- **Average Caption Length:** 74.5 chars
+- **Manifest:** `D:\Downloads\linkden post\ai\datasets\manifests\video_train.jsonl`
+- **Hygiene Status:** `✅ PASS`
+- **Adequacy Status:** `INSUFFICIENT` (5 / 50 pilot target)
+- **Shortfall to Pilot Target:** 45 genuine video clips required
+- **Genuine Source Media:** 5
+- **Synthetic / Benchmark Fixtures:** 0
+- **Category Distribution:** `{"vehicles": 1, "landscapes": 1, "technology": 1, "architecture": 1, "abstract_scientific": 1}`
+- **Video FPS Distribution:** `{"8.0": 5}`
+- **Missing Files:** 0
+- **Corrupt Files:** 0
+- **Split Leakages:** 0
 
-## 3. Strict Compliance Assurance
-- Zero third-party proprietary datasets or scraped copyrighted works without open licenses.
-- Complete SHA-256 cryptographic provenance recorded in all training pipelines.
-- Synthetic dev media strictly quarantined from production training loops.
+## 3. Strict Sovereign Ownership Assurances
+- ZERO third-party pretrained weights (no SDXL, Flux, ModelScope, CLIP, T5).
+- ZERO automated labelling using proprietary vision-language APIs.
+- Complete cryptographic immutability and provenance tracking on all records.
