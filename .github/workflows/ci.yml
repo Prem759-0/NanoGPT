@@ -32,7 +32,11 @@ jobs:
           pip install -r requirements.txt
           pip install fastapi httpx Pillow numpy
 
-      - name: Run Zero-Trust Release Gate Test Suite (20 Scenarios)
+      - name: Run Asymmetric Trust & Checkpoint Attestation Test Suite (22 Scenarios)
+        run: |
+          python -m unittest tests/test_asymmetric_trust.py -v
+
+      - name: Run Zero-Trust Release Gate Test Suite
         run: |
           python -m unittest tests/test_zero_trust_release_gate.py -v
 
@@ -72,3 +76,4 @@ jobs:
         working-directory: frontend
         run: |
           npm run build
+

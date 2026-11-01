@@ -328,11 +328,34 @@ class TestCheckpointSecurityAndProvenance(unittest.TestCase):
 
     def test_genuine_fully_verified_fixture_passes_production_validation(self):
         """Verifies that an authentic, externally verified record passes the production validation path cleanly."""
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+        test_priv = ed25519.Ed25519PrivateKey.generate()
+        test_pub = test_priv.public_key().public_bytes_raw().hex()
+        keystore_path = os.path.join(self.base_dir, "test_keystore.json")
+        with open(keystore_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "schema_version": "2.0",
+                "authority": "Test Authority",
+                "policy": "ED25519_ASYMMETRIC_ONLY",
+                "trusted_verifiers": {
+                    "moon_compliance_authority_v1": {
+                        "verifier_id": "moon_compliance_authority_v1",
+                        "status": "ACTIVE",
+                        "algorithm": "Ed25519",
+                        "public_key": test_pub,
+                        "valid_from": "2026-01-01T00:00:00Z",
+                        "valid_until": "2030-01-01T00:00:00Z"
+                    }
+                }
+            }, f)
+
         att = sign_attestation(
             verifier_id="moon_compliance_authority_v1",
-            secret_key="4f8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a",
+            private_key=test_priv,
             record_id="img_fully_verified",
             asset_sha256=self.img_sha,
+            source_url="owner://declarations/img_fully_verified",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_fully_verified",
             license_id="CustomSovereign",
             commercial_use_permitted=True,
             timestamp="2026-11-01T00:00:00Z"
@@ -344,6 +367,7 @@ class TestCheckpointSecurityAndProvenance(unittest.TestCase):
             "category": "landscapes",
             "creator": "Prem Gaikwad",
             "source_url": "owner://declarations/img_fully_verified",
+            "ownership_evidence_reference": "LEGAL_EVIDENCE_REF_img_fully_verified",
             "license": "CustomSovereign",
             "sha256": self.img_sha,
             "is_synthetic": False,
@@ -353,12 +377,20 @@ class TestCheckpointSecurityAndProvenance(unittest.TestCase):
             "owner_declaration": {
                 "declarant": "Prem Gaikwad",
                 "declaration_timestamp": "2026-11-01T00:00:00Z",
+                "ownership_evidence_reference": "LEGAL_EVIDENCE_REF_img_fully_verified",
                 "asset_sha256": self.img_sha,
                 "rights_statement": "I certify this is an original capture created by me with full commercial rights.",
                 "verification_state": VERIFICATION_STATE_EXTERNALLY_VERIFIED
             }
         }
-        audit = validate_provenance_record(rec, modality="image", base_dir=self.base_dir, allow_synthetic=False, verify_file=True)
+        audit = validate_provenance_record(
+            rec,
+            modality="image",
+            base_dir=self.base_dir,
+            allow_synthetic=False,
+            verify_file=True,
+            verifiers_path=keystore_path
+        )
         self.assertTrue(audit["is_valid"], f"Errors: {audit['errors']}")
         self.assertTrue(audit["training_eligible"])
         self.assertEqual(audit["status"], "VERIFIED_PRODUCTION_ELIGIBLE")

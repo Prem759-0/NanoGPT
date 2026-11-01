@@ -61,6 +61,27 @@ class TestAdversarialProvenance(unittest.TestCase):
         with open(self.real_img_full, "rb") as f:
             self.real_img_sha = hashlib.sha256(f.read()).hexdigest()
 
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+        self.test_priv = ed25519.Ed25519PrivateKey.generate()
+        self.test_pub = self.test_priv.public_key().public_bytes_raw().hex()
+        self.custom_keystore_path = os.path.join(self.base_dir, "test_keystore.json")
+        with open(self.custom_keystore_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "schema_version": "2.0",
+                "authority": "Test Authority",
+                "policy": "ED25519_ASYMMETRIC_ONLY",
+                "trusted_verifiers": {
+                    "moon_compliance_authority_v1": {
+                        "verifier_id": "moon_compliance_authority_v1",
+                        "status": "ACTIVE",
+                        "algorithm": "Ed25519",
+                        "public_key": self.test_pub,
+                        "valid_from": "2026-01-01T00:00:00Z",
+                        "valid_until": "2030-01-01T00:00:00Z"
+                    }
+                }
+            }, f)
+
     def tearDown(self):
         self.tmpdir.cleanup()
 
@@ -68,9 +89,11 @@ class TestAdversarialProvenance(unittest.TestCase):
         now_iso = datetime.now(timezone.utc).isoformat()
         att = sign_attestation(
             verifier_id="moon_compliance_authority_v1",
-            secret_key="4f8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a",
+            private_key=self.test_priv,
             record_id="img_valid_001",
             asset_sha256=self.real_img_sha,
+            source_url="owner://declarations/img_valid_001",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_valid_001",
             license_id="CustomSovereign",
             commercial_use_permitted=True,
             timestamp=now_iso
@@ -83,6 +106,7 @@ class TestAdversarialProvenance(unittest.TestCase):
             "category": "landscapes",
             "creator": "Prem Gaikwad",
             "source_url": "owner://declarations/img_valid_001",
+            "ownership_evidence_reference": "LEGAL_EVIDENCE_REF_img_valid_001",
             "license": "CustomSovereign",
             "attribution": "Original photograph captured and owned by Prem Gaikwad",
             "sha256": self.real_img_sha,
@@ -94,6 +118,7 @@ class TestAdversarialProvenance(unittest.TestCase):
                 "declarant": "Prem Gaikwad",
                 "declaration_timestamp": now_iso,
                 "asset_id": "img_valid_001",
+                "ownership_evidence_reference": "LEGAL_EVIDENCE_REF_img_valid_001",
                 "asset_sha256": self.real_img_sha,
                 "rights_statement": "I certify that I am the sole author and owner of this original photograph and grant full sovereign training rights.",
                 "verification_state": "EXTERNALLY_VERIFIED"
@@ -203,7 +228,14 @@ class TestAdversarialProvenance(unittest.TestCase):
         rec["sha256"] = "1" * 64
         rec["owner_declaration"]["asset_sha256"] = "1" * 64
 
-        audit = validate_provenance_record(rec, modality="image", base_dir=self.base_dir, allow_synthetic=False, verify_file=True)
+        audit = validate_provenance_record(
+            rec,
+            modality="image",
+            base_dir=self.base_dir,
+            allow_synthetic=False,
+            verify_file=True,
+            verifiers_path=self.custom_keystore_path
+        )
         self.assertFalse(audit["is_valid"])
         self.assertFalse(audit["dimensions"]["file_checksum_verified"])
         self.assertTrue(any("SHA-256 mismatch" in e for e in audit["errors"]))
@@ -256,7 +288,14 @@ class TestAdversarialProvenance(unittest.TestCase):
     def test_accept_legitimate_verified_record(self):
         """Verifies that a fully compliant, verified record passes all 5 dimensions."""
         rec = self._build_valid_sovereign_record()
-        audit = validate_provenance_record(rec, modality="image", base_dir=self.base_dir, allow_synthetic=False, verify_file=True)
+        audit = validate_provenance_record(
+            rec,
+            modality="image",
+            base_dir=self.base_dir,
+            allow_synthetic=False,
+            verify_file=True,
+            verifiers_path=self.custom_keystore_path
+        )
 
         self.assertTrue(audit["is_valid"], f"Validation failed: {audit['errors']}")
         self.assertTrue(audit["training_eligible"])

@@ -392,10 +392,8 @@ def validate_provenance_record(
                 # Verify cryptographic attestation
                 is_valid_att, att_state, att_reason = verify_attestation(
                     attestation=att_bundle,
-                    record_id=rec_id,
+                    record=record,
                     actual_asset_sha256=sha256_val,
-                    license_id=license_id,
-                    commercial_use_permitted=True,
                     verifiers_path=verifiers_path
                 )
                 if is_valid_att:
@@ -479,10 +477,8 @@ def validate_provenance_record(
                     # Verify cryptographic attestation
                     is_valid_att, att_state, att_reason = verify_attestation(
                         attestation=att_bundle,
-                        record_id=rec_id,
+                        record=record,
                         actual_asset_sha256=sha256_val,
-                        license_id=license_id,
-                        commercial_use_permitted=True,
                         verifiers_path=verifiers_path
                     )
                     if is_valid_att:

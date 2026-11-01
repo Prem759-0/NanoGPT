@@ -25,7 +25,7 @@ VALID_TRAINING_MODES = {TRAINING_MODE_PRODUCTION, TRAINING_MODE_DEVELOPMENT}
 PROVENANCE_TAG = "moon_ai_random_init"
 ARCHITECT_TAG = "Prem Gaikwad (India 🇮🇳)"
 ARCHITECTURE_VERSION = "moon_arch_v1.0"
-SOFTWARE_VERSION = "2.0.3"
+SOFTWARE_VERSION = "2.0.5"
 
 def get_git_commit() -> str:
     """Retrieves current Git commit SHA, with fallback to known baseline."""
@@ -95,6 +95,88 @@ def count_manifest_records(filepath: str) -> int:
                 count += 1
     return count
 
+def deep_verify_production_manifest(
+    manifest_path: str,
+    expected_split: str,
+    base_dir: str = PROJECT_ROOT,
+    verifiers_path: Optional[str] = None
+) -> Tuple[bool, int, List[str]]:
+    """
+    Parses and cryptographically audits every single record in a production manifest:
+    1. Parse JSON line-by-line with exact line number error reporting.
+    2. Check split matches expected_split ('train' or 'val').
+    3. Reject any synthetic record (is_synthetic must be strictly False).
+    4. Call validate_provenance_record:
+       - Checks safe path and symlink containment (rejects directory traversal and escaping symlinks).
+       - Recomputes actual file byte SHA-256 on disk.
+       - Cryptographically validates Ed25519 attestation.
+       - Validates source URL and license evidence.
+    5. Returns (is_valid, production_eligible_count, list_of_errors).
+    """
+    resolved_path = os.path.normpath(os.path.join(base_dir, manifest_path)) if not os.path.isabs(manifest_path) else manifest_path
+    if not os.path.isfile(resolved_path):
+        return False, 0, [f"Manifest file not found on disk: '{manifest_path}'"]
+
+    import json
+    from datasets.tools.provenance_validator import validate_provenance_record
+
+    errors: List[str] = []
+    eligible_count = 0
+
+    with open(resolved_path, "r", encoding="utf-8") as f:
+        for line_no, raw_line in enumerate(f, 1):
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            try:
+                record = json.loads(line)
+            except Exception as e:
+                errors.append(f"JSON decode error in '{manifest_path}' line {line_no}: {e}")
+                return False, 0, errors
+
+            rec_split = str(record.get("split", "")).strip().lower()
+            if rec_split != expected_split.lower():
+                errors.append(
+                    f"Split mismatch in '{manifest_path}' line {line_no} for record '{record.get('id')}': "
+                    f"record has split='{rec_split}', expected '{expected_split}'."
+                )
+                return False, 0, errors
+
+            is_synth = record.get("is_synthetic")
+            if is_synth is not False:
+                errors.append(
+                    f"Synthetic record contamination in '{manifest_path}' line {line_no}: "
+                    f"record '{record.get('id')}' has is_synthetic={is_synth}. Production manifests strictly require is_synthetic: false."
+                )
+                return False, 0, errors
+
+            modality = "video" if ("video_path" in record or str(record.get("media_path", "")).endswith((".mp4", ".webm"))) else "image"
+
+            audit = validate_provenance_record(
+                record=record,
+                modality=modality,
+                base_dir=base_dir,
+                allow_synthetic=False,
+                verify_file=True,
+                verifiers_path=verifiers_path
+            )
+
+            if not audit["training_eligible"]:
+                errors.append(
+                    f"Record '{record.get('id')}' in '{manifest_path}' line {line_no} failed production verification "
+                    f"({audit['status']}): {'; '.join(audit['errors'])}"
+                )
+                return False, 0, errors
+
+            eligible_count += 1
+
+    if eligible_count == 0:
+        errors.append(f"Production manifest '{manifest_path}' contains 0 production-eligible records.")
+        return False, 0, errors
+
+    return len(errors) == 0, eligible_count, errors
+
 def save_checkpoint(
     model: torch.nn.Module,
     optimizer: Optional[torch.optim.Optimizer],
@@ -121,7 +203,9 @@ def save_checkpoint(
     architecture_version: str = ARCHITECTURE_VERSION,
     software_version: str = SOFTWARE_VERSION,
     git_commit: Optional[str] = None,
-    evaluation_status: str = "UNEVALUATED"
+    evaluation_status: str = "UNEVALUATED",
+    verifiers_path: Optional[str] = None,
+    base_dir: str = PROJECT_ROOT
 ) -> str:
     """
     Saves complete training checkpoint with verifiable provenance, strict training isolation,
@@ -183,7 +267,7 @@ def save_checkpoint(
             raise ValueError(
                 "CHECKPOINT SECURITY ERROR: manifest_path is strictly required for PRODUCTION_GENUINE checkpoints."
             )
-        resolved_manifest = os.path.normpath(os.path.join(PROJECT_ROOT, manifest_path)) if not os.path.isabs(manifest_path) else manifest_path
+        resolved_manifest = os.path.normpath(os.path.join(base_dir, manifest_path)) if not os.path.isabs(manifest_path) else manifest_path
         if not os.path.isfile(resolved_manifest):
             raise ValueError(
                 f"CHECKPOINT SECURITY ERROR: Production training manifest does not exist on disk: '{manifest_path}'."
@@ -193,7 +277,7 @@ def save_checkpoint(
             raise ValueError(
                 "CHECKPOINT SECURITY ERROR: val_manifest_path is strictly required for PRODUCTION_GENUINE checkpoints."
             )
-        resolved_val_manifest = os.path.normpath(os.path.join(PROJECT_ROOT, val_manifest_path)) if not os.path.isabs(val_manifest_path) else val_manifest_path
+        resolved_val_manifest = os.path.normpath(os.path.join(base_dir, val_manifest_path)) if not os.path.isabs(val_manifest_path) else val_manifest_path
         if not os.path.isfile(resolved_val_manifest):
             raise ValueError(
                 f"CHECKPOINT SECURITY ERROR: Production validation manifest does not exist on disk: '{val_manifest_path}'."
@@ -215,14 +299,14 @@ def save_checkpoint(
         calculated_val_manifest_hash = actual_val_sha
 
         # Verify manifests are not empty
-        train_count = count_manifest_records(resolved_manifest)
-        if train_count == 0:
+        train_rec_count = count_manifest_records(resolved_manifest)
+        if train_rec_count == 0:
             raise ValueError(
                 f"CHECKPOINT SECURITY ERROR: Production manifest '{manifest_path}' contains 0 records."
             )
 
-        val_count = count_manifest_records(resolved_val_manifest)
-        if val_count == 0:
+        val_rec_count = count_manifest_records(resolved_val_manifest)
+        if val_rec_count == 0:
             raise ValueError(
                 f"CHECKPOINT SECURITY ERROR: Production validation manifest '{val_manifest_path}' contains 0 records."
             )
@@ -230,6 +314,31 @@ def save_checkpoint(
         if production_eligible_sample_count <= 0:
             raise ValueError(
                 "CHECKPOINT SECURITY ERROR: production_eligible_sample_count must be > 0 for PRODUCTION_GENUINE checkpoint."
+            )
+
+        # Deep verify train manifest
+        train_valid, train_count, train_errors = deep_verify_production_manifest(
+            resolved_manifest, expected_split="train", base_dir=base_dir, verifiers_path=verifiers_path
+        )
+        if not train_valid:
+            raise ValueError(
+                f"CHECKPOINT SECURITY ERROR: Production training manifest failed deep verification: {'; '.join(train_errors)}"
+            )
+
+        # Deep verify val manifest
+        val_valid, val_count, val_errors = deep_verify_production_manifest(
+            resolved_val_manifest, expected_split="val", base_dir=base_dir, verifiers_path=verifiers_path
+        )
+        if not val_valid:
+            raise ValueError(
+                f"CHECKPOINT SECURITY ERROR: Production validation manifest failed deep verification: {'; '.join(val_errors)}"
+            )
+
+        if (train_count + val_count) != production_eligible_sample_count:
+            raise ValueError(
+                f"CHECKPOINT SECURITY ERROR: Verified production sample count mismatch! "
+                f"Manifests contain {train_count + val_count} verified samples ({train_count} train, {val_count} val), "
+                f"but production_eligible_sample_count was declared as {production_eligible_sample_count}."
             )
 
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
@@ -289,7 +398,8 @@ def verify_checkpoint_provenance(
     checkpoint_path: str,
     mode: str = TRAINING_MODE_PRODUCTION,
     recompute_manifests: bool = True,
-    base_dir: str = PROJECT_ROOT
+    base_dir: str = PROJECT_ROOT,
+    verifiers_path: Optional[str] = None
 ) -> Tuple[bool, Dict[str, Any], List[str]]:
     """
     Inspects checkpoint provenance and training isolation metadata on disk.
@@ -354,6 +464,11 @@ def verify_checkpoint_provenance(
             v_path = ckpt.get("val_manifest_path")
             v_hash = ckpt.get("val_manifest_hash", "")
 
+            m_verified = False
+            v_verified = False
+            m_count = 0
+            v_count = 0
+
             if not m_path:
                 errors.append("CHECKPOINT SECURITY ERROR: Production checkpoint is missing 'manifest_path'.")
             else:
@@ -367,8 +482,13 @@ def verify_checkpoint_provenance(
                             f"CHECKPOINT INTEGRITY ERROR: Training manifest hash drift detected! Checkpoint expected manifest_hash '{m_hash}', "
                             f"but actual disk file '{m_path}' has hash '{actual_m_sha}'."
                         )
-                    if count_manifest_records(res_m) == 0:
-                        errors.append(f"CHECKPOINT INTEGRITY ERROR: Production manifest '{m_path}' on disk is empty.")
+                    m_valid, m_count, m_errors = deep_verify_production_manifest(
+                        res_m, expected_split="train", base_dir=base_dir, verifiers_path=verifiers_path
+                    )
+                    if not m_valid:
+                        errors.extend([f"Training manifest verification failed: {err}" for err in m_errors])
+                    else:
+                        m_verified = True
 
             if not v_path:
                 errors.append("CHECKPOINT SECURITY ERROR: Production checkpoint is missing 'val_manifest_path'.")
@@ -383,8 +503,21 @@ def verify_checkpoint_provenance(
                             f"CHECKPOINT INTEGRITY ERROR: Validation manifest hash drift detected! Checkpoint expected val_manifest_hash '{v_hash}', "
                             f"but actual disk file '{v_path}' has hash '{actual_v_sha}'."
                         )
-                    if count_manifest_records(res_v) == 0:
-                        errors.append(f"CHECKPOINT INTEGRITY ERROR: Production validation manifest '{v_path}' on disk is empty.")
+                    v_valid, v_count, v_errors = deep_verify_production_manifest(
+                        res_v, expected_split="val", base_dir=base_dir, verifiers_path=verifiers_path
+                    )
+                    if not v_valid:
+                        errors.extend([f"Validation manifest verification failed: {err}" for err in v_errors])
+                    else:
+                        v_verified = True
+
+            if m_verified and v_verified:
+                if (m_count + v_count) != prod_sample_count:
+                    errors.append(
+                        f"CHECKPOINT INTEGRITY ERROR: Verified sample count mismatch! "
+                        f"Manifests contain {m_count + v_count} verified samples ({m_count} train, {v_count} val), "
+                        f"but checkpoint recorded production_eligible_sample_count={prod_sample_count}."
+                    )
 
     meta = {
         "model_name": ckpt.get("model_name", "unknown"),
@@ -422,7 +555,8 @@ def load_checkpoint(
     restore_rng: bool = True,
     enforce_provenance: bool = True,
     mode: str = TRAINING_MODE_PRODUCTION,
-    recompute_manifests: Optional[bool] = None
+    recompute_manifests: Optional[bool] = None,
+    verifiers_path: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Loads checkpoint, validates model provenance and training mode, and restores states.
@@ -433,7 +567,12 @@ def load_checkpoint(
 
     if enforce_provenance:
         do_recompute = (mode == TRAINING_MODE_PRODUCTION) if recompute_manifests is None else recompute_manifests
-        valid, meta, errors = verify_checkpoint_provenance(checkpoint_path, mode=mode, recompute_manifests=do_recompute)
+        valid, meta, errors = verify_checkpoint_provenance(
+            checkpoint_path,
+            mode=mode,
+            recompute_manifests=do_recompute,
+            verifiers_path=verifiers_path
+        )
         if not valid:
             raise ValueError(f"CHECKPOINT SECURITY ERROR: Failed verification on '{checkpoint_path}': {'; '.join(errors)}")
 

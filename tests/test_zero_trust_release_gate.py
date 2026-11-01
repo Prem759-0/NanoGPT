@@ -41,6 +41,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 import torch
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from datasets.security.attestation_engine import (
     sign_attestation,
@@ -64,8 +65,8 @@ from training.common.checkpoint import (
     PROVENANCE_TAG
 )
 from scripts.promote_best_model import evaluate_and_promote
+from evaluation.security.evaluation_attestation import sign_evaluation_attestation
 
-TRUSTED_KEY = "4f8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a"
 TRUSTED_VERIFIER_ID = "moon_compliance_authority_v1"
 
 class DummyTinyModel(torch.nn.Module):
@@ -91,19 +92,30 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         with open(self.img_full, "rb") as f:
             self.img_sha = hashlib.sha256(f.read()).hexdigest()
 
+        # Keys for Ed25519 verifiers
+        self.trusted_priv = ed25519.Ed25519PrivateKey.generate()
+        self.trusted_pub_hex = self.trusted_priv.public_key().public_bytes_raw().hex()
+
+        self.revoked_priv = ed25519.Ed25519PrivateKey.generate()
+        self.revoked_pub_hex = self.revoked_priv.public_key().public_bytes_raw().hex()
+
+        self.expired_priv = ed25519.Ed25519PrivateKey.generate()
+        self.expired_pub_hex = self.expired_priv.public_key().public_bytes_raw().hex()
+
         # Custom trusted verifiers keystore for adversarial tests
         self.custom_keystore_path = os.path.join(self.base_dir, "test_trusted_verifiers.json")
         self.custom_keystore = {
-            "schema_version": "1.0",
+            "schema_version": "2.0",
             "authority": "Test Security Board",
+            "policy": "ED25519_ASYMMETRIC_ONLY",
             "updated_at": "2026-11-01T00:00:00Z",
             "trusted_verifiers": {
                 TRUSTED_VERIFIER_ID: {
                     "verifier_id": TRUSTED_VERIFIER_ID,
                     "name": "Moon AI Independent Compliance & Rights Authority",
                     "status": "ACTIVE",
-                    "algorithm": "HMAC-SHA256",
-                    "verification_key": TRUSTED_KEY,
+                    "algorithm": "Ed25519",
+                    "public_key": self.trusted_pub_hex,
                     "valid_from": "2026-01-01T00:00:00Z",
                     "valid_until": "2030-01-01T00:00:00Z"
                 },
@@ -111,8 +123,8 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
                     "verifier_id": "revoked_verifier_v1",
                     "name": "Compromised Authority",
                     "status": "REVOKED",
-                    "algorithm": "HMAC-SHA256",
-                    "verification_key": "1111111111111111111111111111111111111111111111111111111111111111",
+                    "algorithm": "Ed25519",
+                    "public_key": self.revoked_pub_hex,
                     "valid_from": "2026-01-01T00:00:00Z",
                     "valid_until": "2030-01-01T00:00:00Z"
                 },
@@ -120,15 +132,40 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
                     "verifier_id": "expired_verifier_v1",
                     "name": "Expired Auditor",
                     "status": "ACTIVE",
-                    "algorithm": "HMAC-SHA256",
-                    "verification_key": "2222222222222222222222222222222222222222222222222222222222222222",
+                    "algorithm": "Ed25519",
+                    "public_key": self.expired_pub_hex,
                     "valid_from": "2020-01-01T00:00:00Z",
-                    "valid_until": "2021-01-01T00:00:00Z" # Expired!
+                    "valid_until": "2021-01-01T00:00:00Z"
                 }
             }
         }
         with open(self.custom_keystore_path, "w", encoding="utf-8") as f:
             json.dump(self.custom_keystore, f, indent=2)
+
+        # Custom trusted evaluators keystore for promotion tests
+        self.eval_priv = ed25519.Ed25519PrivateKey.generate()
+        self.eval_pub_hex = self.eval_priv.public_key().public_bytes_raw().hex()
+        self.eval_id = "test_evaluator_v1"
+        self.custom_evaluators_path = os.path.join(self.base_dir, "test_trusted_evaluators.json")
+        self.custom_evaluators = {
+            "schema_version": "2.0",
+            "authority": "Test Evaluation Board",
+            "policy": "ASYMMETRIC_ED25519_ONLY",
+            "updated_at": "2026-11-01T00:00:00Z",
+            "trusted_evaluators": {
+                self.eval_id: {
+                    "evaluator_id": self.eval_id,
+                    "name": "Test Independent Evaluator",
+                    "status": "ACTIVE",
+                    "algorithm": "Ed25519",
+                    "public_key": self.eval_pub_hex,
+                    "valid_from": "2026-01-01T00:00:00Z",
+                    "valid_until": "2030-01-01T00:00:00Z"
+                }
+            }
+        }
+        with open(self.custom_evaluators_path, "w", encoding="utf-8") as f:
+            json.dump(self.custom_evaluators, f, indent=2)
 
     def tearDown(self):
         self.tmpdir.cleanup()
@@ -142,6 +179,7 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
             "category": "landscapes",
             "creator": "Prem Gaikwad",
             "source_url": f"owner://declarations/{record_id}",
+            "ownership_evidence_reference": f"LEGAL_EVIDENCE_REF_{record_id}",
             "license": "CustomSovereign",
             "sha256": self.img_sha,
             "split": "train",
@@ -149,6 +187,7 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
             "owner_declaration": {
                 "declarant": "Prem Gaikwad",
                 "declaration_timestamp": "2026-11-01T00:00:00Z",
+                "ownership_evidence_reference": f"LEGAL_EVIDENCE_REF_{record_id}",
                 "asset_sha256": self.img_sha,
                 "rights_statement": "I certify that I captured this genuine photograph and hold all commercial rights."
             }
@@ -199,9 +238,11 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         rec = self._build_base_record("img_valid_att")
         att = sign_attestation(
             verifier_id=TRUSTED_VERIFIER_ID,
-            secret_key=TRUSTED_KEY,
+            private_key=self.trusted_priv,
             record_id="img_valid_att",
             asset_sha256=self.img_sha,
+            source_url="owner://declarations/img_valid_att",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_valid_att",
             license_id="CustomSovereign",
             commercial_use_permitted=True,
             timestamp="2026-11-01T00:00:00Z"
@@ -222,19 +263,21 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         self.assertEqual(audit["ownership_verification_state"], VERIFICATION_STATE_EXTERNALLY_VERIFIED)
 
     def test_04_forged_attestation_signature_fails_closed(self):
-        """4. Forged HMAC signature on an attestation bundle fails closed with REJECTED."""
+        """4. Forged Ed25519 signature on an attestation bundle fails closed with REJECTED."""
         rec = self._build_base_record("img_forged_sig")
         att = sign_attestation(
             verifier_id=TRUSTED_VERIFIER_ID,
-            secret_key=TRUSTED_KEY,
+            private_key=self.trusted_priv,
             record_id="img_forged_sig",
             asset_sha256=self.img_sha,
+            source_url="owner://declarations/img_forged_sig",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_forged_sig",
             license_id="CustomSovereign",
             commercial_use_permitted=True,
             timestamp="2026-11-01T00:00:00Z"
         )
         # Tamper with signature
-        att["signature"] = "deadbeef" * 8
+        att["signature"] = "deadbeef" * 16
         rec["attestation"] = att
 
         audit = validate_provenance_record(
@@ -252,11 +295,14 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
     def test_05_unknown_verifier_id_fails_closed(self):
         """5. Attestation signed by unknown or unregistered verifier_id fails closed."""
         rec = self._build_base_record("img_unknown_verifier")
+        rogue_priv = ed25519.Ed25519PrivateKey.generate()
         att = sign_attestation(
             verifier_id="unregistered_adversary_org",
-            secret_key="some_rogue_secret_key_1234567890123456",
+            private_key=rogue_priv,
             record_id="img_unknown_verifier",
             asset_sha256=self.img_sha,
+            source_url="owner://declarations/img_unknown_verifier",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_unknown_verifier",
             license_id="CustomSovereign",
             commercial_use_permitted=True,
             timestamp="2026-11-01T00:00:00Z"
@@ -280,9 +326,11 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         rec = self._build_base_record("img_revoked_verifier")
         att = sign_attestation(
             verifier_id="revoked_verifier_v1",
-            secret_key="1111111111111111111111111111111111111111111111111111111111111111",
+            private_key=self.revoked_priv,
             record_id="img_revoked_verifier",
             asset_sha256=self.img_sha,
+            source_url="owner://declarations/img_revoked_verifier",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_revoked_verifier",
             license_id="CustomSovereign",
             commercial_use_permitted=True,
             timestamp="2026-11-01T00:00:00Z"
@@ -306,9 +354,11 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         rec = self._build_base_record("img_expired_verifier")
         att = sign_attestation(
             verifier_id="expired_verifier_v1",
-            secret_key="2222222222222222222222222222222222222222222222222222222222222222",
+            private_key=self.expired_priv,
             record_id="img_expired_verifier",
             asset_sha256=self.img_sha,
+            source_url="owner://declarations/img_expired_verifier",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_expired_verifier",
             license_id="CustomSovereign",
             commercial_use_permitted=True,
             timestamp="2026-11-01T00:00:00Z"
@@ -334,9 +384,11 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         # Signed for other_sha, attached to rec with self.img_sha
         att = sign_attestation(
             verifier_id=TRUSTED_VERIFIER_ID,
-            secret_key=TRUSTED_KEY,
+            private_key=self.trusted_priv,
             record_id="img_asset_swap",
             asset_sha256=other_sha,
+            source_url="owner://declarations/img_asset_swap",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_asset_swap",
             license_id="CustomSovereign",
             commercial_use_permitted=True,
             timestamp="2026-11-01T00:00:00Z"
@@ -361,9 +413,11 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         # Attestation was issued for record_swap_b
         att = sign_attestation(
             verifier_id=TRUSTED_VERIFIER_ID,
-            secret_key=TRUSTED_KEY,
+            private_key=self.trusted_priv,
             record_id="img_record_swap_b",
             asset_sha256=self.img_sha,
+            source_url="owner://declarations/img_record_swap_a",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_record_swap_a",
             license_id="CustomSovereign",
             commercial_use_permitted=True,
             timestamp="2026-11-01T00:00:00Z"
@@ -388,9 +442,11 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         # Attestation was issued for CC0, but record declares CustomSovereign
         att = sign_attestation(
             verifier_id=TRUSTED_VERIFIER_ID,
-            secret_key=TRUSTED_KEY,
+            private_key=self.trusted_priv,
             record_id="img_license_swap",
             asset_sha256=self.img_sha,
+            source_url="owner://declarations/img_license_swap",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_license_swap",
             license_id="CC0",
             commercial_use_permitted=True,
             timestamp="2026-11-01T00:00:00Z"
@@ -414,9 +470,11 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         rec = self._build_base_record("img_non_commercial")
         att = sign_attestation(
             verifier_id=TRUSTED_VERIFIER_ID,
-            secret_key=TRUSTED_KEY,
+            private_key=self.trusted_priv,
             record_id="img_non_commercial",
             asset_sha256=self.img_sha,
+            source_url="owner://declarations/img_non_commercial",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_non_commercial",
             license_id="CustomSovereign",
             commercial_use_permitted=False, # Commercial forbidden!
             timestamp="2026-11-01T00:00:00Z"
@@ -442,10 +500,36 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
     def _create_valid_manifests(self):
         train_manifest = os.path.join(self.base_dir, "train.jsonl")
         val_manifest = os.path.join(self.base_dir, "val.jsonl")
+        rec_train = self._build_base_record("rec_train_001")
+        rec_train["split"] = "train"
+        rec_train["attestation"] = sign_attestation(
+            verifier_id=TRUSTED_VERIFIER_ID,
+            private_key=self.trusted_priv,
+            record_id="rec_train_001",
+            asset_sha256=self.img_sha,
+            source_url="owner://declarations/rec_train_001",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_rec_train_001",
+            license_id="CustomSovereign",
+            commercial_use_permitted=True,
+            timestamp="2026-11-01T00:00:00Z"
+        )
+        rec_val = self._build_base_record("rec_val_001")
+        rec_val["split"] = "val"
+        rec_val["attestation"] = sign_attestation(
+            verifier_id=TRUSTED_VERIFIER_ID,
+            private_key=self.trusted_priv,
+            record_id="rec_val_001",
+            asset_sha256=self.img_sha,
+            source_url="owner://declarations/rec_val_001",
+            ownership_evidence_reference="LEGAL_EVIDENCE_REF_rec_val_001",
+            license_id="CustomSovereign",
+            commercial_use_permitted=True,
+            timestamp="2026-11-01T00:00:00Z"
+        )
         with open(train_manifest, "w", encoding="utf-8") as f:
-            f.write(json.dumps({"id": "rec_001", "split": "train"}) + "\n")
+            f.write(json.dumps(rec_train) + "\n")
         with open(val_manifest, "w", encoding="utf-8") as f:
-            f.write(json.dumps({"id": "rec_002", "split": "val"}) + "\n")
+            f.write(json.dumps(rec_val) + "\n")
         return train_manifest, val_manifest
 
     def test_12_save_production_checkpoint_without_manifest_fails_closed(self):
@@ -576,11 +660,19 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
             manifest_path=train_p,
             val_manifest_path=val_p,
             synthetic_sample_count=0,
-            production_eligible_sample_count=1
+            production_eligible_sample_count=2,
+            verifiers_path=self.custom_keystore_path,
+            base_dir=self.base_dir
         )
 
         # Baseline verify: should pass
-        valid, meta, errs = verify_checkpoint_provenance(out_ckpt, mode=TRAINING_MODE_PRODUCTION, recompute_manifests=True, base_dir=self.base_dir)
+        valid, meta, errs = verify_checkpoint_provenance(
+            out_ckpt,
+            mode=TRAINING_MODE_PRODUCTION,
+            recompute_manifests=True,
+            base_dir=self.base_dir,
+            verifiers_path=self.custom_keystore_path
+        )
         self.assertTrue(valid, f"Initial verification failed: {errs}")
 
         # Adversarially alter the manifest on disk (manifest drift attack)
@@ -588,7 +680,13 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
             f.write(json.dumps({"id": "injected_unverified_record", "split": "train"}) + "\n")
 
         # Re-verify: must fail closed because actual hash drifted from checkpoint manifest_hash!
-        valid2, meta2, errs2 = verify_checkpoint_provenance(out_ckpt, mode=TRAINING_MODE_PRODUCTION, recompute_manifests=True, base_dir=self.base_dir)
+        valid2, meta2, errs2 = verify_checkpoint_provenance(
+            out_ckpt,
+            mode=TRAINING_MODE_PRODUCTION,
+            recompute_manifests=True,
+            base_dir=self.base_dir,
+            verifiers_path=self.custom_keystore_path
+        )
         self.assertFalse(valid2, "Manifest drift must fail checkpoint verification")
         self.assertTrue(any("manifest hash drift detected" in err for err in errs2))
 
@@ -610,7 +708,12 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         with open(rep_path, "w", encoding="utf-8") as f:
             json.dump(rep_data, f)
 
-        promoted = evaluate_and_promote(rep_path, registry_path=reg_path)
+        promoted = evaluate_and_promote(
+            rep_path,
+            registry_path=reg_path,
+            evaluators_path=self.custom_evaluators_path,
+            verifiers_path=self.custom_keystore_path
+        )
         self.assertFalse(promoted, "Promotion must be rejected when checkpoint_path is missing")
 
     def test_19_promote_candidate_without_checkpoint_sha256_rejected(self):
@@ -633,7 +736,9 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
             manifest_path=train_p,
             val_manifest_path=val_p,
             synthetic_sample_count=0,
-            production_eligible_sample_count=1
+            production_eligible_sample_count=2,
+            verifiers_path=self.custom_keystore_path,
+            base_dir=self.base_dir
         )
 
         rep_path = os.path.join(self.base_dir, "eval_bad_sha.json")
@@ -647,20 +752,52 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         }
         with open(rep_path, "w", encoding="utf-8") as f:
             json.dump(rep_data, f)
-        self.assertFalse(evaluate_and_promote(rep_path, registry_path=reg_path))
+        self.assertFalse(evaluate_and_promote(
+            rep_path,
+            registry_path=reg_path,
+            evaluators_path=self.custom_evaluators_path,
+            verifiers_path=self.custom_keystore_path,
+            base_dir=self.base_dir
+        ))
 
         # 2. Checkpoint SHA-256 mismatch (tampered checksum)
         rep_data["checkpoint_sha256"] = "f" * 64
         with open(rep_path, "w", encoding="utf-8") as f:
             json.dump(rep_data, f)
-        self.assertFalse(evaluate_and_promote(rep_path, registry_path=reg_path))
+        self.assertFalse(evaluate_and_promote(
+            rep_path,
+            registry_path=reg_path,
+            evaluators_path=self.custom_evaluators_path,
+            verifiers_path=self.custom_keystore_path,
+            base_dir=self.base_dir
+        ))
 
-        # 3. Correct SHA-256 passes promotion
+        # 3. Correct SHA-256 and valid signed evaluation attestation passes promotion
         actual_sha = compute_file_sha256(ckpt_path)
         rep_data["checkpoint_sha256"] = actual_sha
+        rep_data["evaluation_attestation"] = sign_evaluation_attestation(
+            evaluator_id=self.eval_id,
+            private_key=self.eval_priv,
+            checkpoint_sha256=actual_sha,
+            model_name="moon-promoted-test",
+            architecture_version="1.0",
+            composite_quality_score=98.0,
+            non_empty_rate_pct=100.0,
+            code_syntax_pct=100.0,
+            timestamp="2026-11-01T00:00:00Z"
+        )
         with open(rep_path, "w", encoding="utf-8") as f:
             json.dump(rep_data, f)
-        self.assertTrue(evaluate_and_promote(rep_path, registry_path=reg_path), "Valid candidate with matching SHA-256 must pass promotion")
+        self.assertTrue(
+            evaluate_and_promote(
+                rep_path,
+                registry_path=reg_path,
+                evaluators_path=self.custom_evaluators_path,
+                verifiers_path=self.custom_keystore_path,
+                base_dir=self.base_dir
+            ),
+            "Valid candidate with matching SHA-256 and signed attestation must pass promotion"
+        )
 
     def test_20_promote_candidate_with_development_checkpoint_rejected(self):
         """20. Model promotion strictly rejects reports pointing to DEVELOPMENT_SYNTHETIC checkpoints."""

@@ -40,38 +40,64 @@ from training.video.dataset import MoonVideoDataset
 class TestDatasetFoundation(unittest.TestCase):
     def test_image_source_metadata_validation(self):
         """Verifies validation of valid and invalid image metadata."""
-        sha = "a" * 64
-        att = sign_attestation(
-            verifier_id="moon_compliance_authority_v1",
-            secret_key="4f8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a",
-            record_id="img_test_01",
-            asset_sha256=sha,
-            license_id="CustomSovereign",
-            commercial_use_permitted=True,
-            timestamp="2026-11-01T00:00:00Z"
-        )
-        valid_record = {
-            "id": "img_test_01",
-            "category": "landscapes",
-            "license": "CustomSovereign",
-            "creator": "Prem Gaikwad",
-            "source_url": "https://raw.githubusercontent.com/Prem759-0/NanoGPT/main/data/images/img_test_01.png",
-            "caption": "A beautiful sunset over mountain peaks with dramatic clouds",
-            "is_synthetic": False,
-            "sha256": sha,
-            "media_path": "data/images/img_test_01.png",
-            "verification_state": "EXTERNALLY_VERIFIED",
-            "attestation": att,
-            "owner_declaration": {
-                "declarant": "Prem Gaikwad",
-                "declaration_timestamp": "2026-11-01T00:00:00Z",
-                "asset_sha256": sha,
-                "rights_statement": "I certify this is an original capture created by me.",
-                "verification_state": "EXTERNALLY_VERIFIED"
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+        test_priv = ed25519.Ed25519PrivateKey.generate()
+        test_pub = test_priv.public_key().public_bytes_raw().hex()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            keystore_path = os.path.join(tmpdir, "test_keystore.json")
+            with open(keystore_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "schema_version": "2.0",
+                    "authority": "Test Authority",
+                    "policy": "ED25519_ASYMMETRIC_ONLY",
+                    "trusted_verifiers": {
+                        "moon_compliance_authority_v1": {
+                            "verifier_id": "moon_compliance_authority_v1",
+                            "status": "ACTIVE",
+                            "algorithm": "Ed25519",
+                            "public_key": test_pub,
+                            "valid_from": "2026-01-01T00:00:00Z",
+                            "valid_until": "2030-01-01T00:00:00Z"
+                        }
+                    }
+                }, f)
+
+            sha = "a" * 64
+            att = sign_attestation(
+                verifier_id="moon_compliance_authority_v1",
+                private_key=test_priv,
+                record_id="img_test_01",
+                asset_sha256=sha,
+                source_url="https://raw.githubusercontent.com/Prem759-0/NanoGPT/main/data/images/img_test_01.png",
+                ownership_evidence_reference="LEGAL_EVIDENCE_REF_img_test_01",
+                license_id="CustomSovereign",
+                commercial_use_permitted=True,
+                timestamp="2026-11-01T00:00:00Z"
+            )
+            valid_record = {
+                "id": "img_test_01",
+                "category": "landscapes",
+                "license": "CustomSovereign",
+                "creator": "Prem Gaikwad",
+                "source_url": "https://raw.githubusercontent.com/Prem759-0/NanoGPT/main/data/images/img_test_01.png",
+                "ownership_evidence_reference": "LEGAL_EVIDENCE_REF_img_test_01",
+                "caption": "A beautiful sunset over mountain peaks with dramatic clouds",
+                "is_synthetic": False,
+                "sha256": sha,
+                "media_path": "data/images/img_test_01.png",
+                "verification_state": "EXTERNALLY_VERIFIED",
+                "attestation": att,
+                "owner_declaration": {
+                    "declarant": "Prem Gaikwad",
+                    "declaration_timestamp": "2026-11-01T00:00:00Z",
+                    "ownership_evidence_reference": "LEGAL_EVIDENCE_REF_img_test_01",
+                    "asset_sha256": sha,
+                    "rights_statement": "I certify this is an original capture created by me.",
+                    "verification_state": "EXTERNALLY_VERIFIED"
+                }
             }
-        }
-        ok, errors = validate_image_source_record(valid_record)
-        self.assertTrue(ok, f"Expected valid, got errors: {errors}")
+            ok, errors = validate_image_source_record(valid_record, verifiers_path=keystore_path)
+            self.assertTrue(ok, f"Expected valid, got errors: {errors}")
 
         # Invalid category and missing creator
         invalid_record = {

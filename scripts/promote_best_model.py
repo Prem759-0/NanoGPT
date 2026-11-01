@@ -21,6 +21,7 @@ from training.common.checkpoint import (
     TRAINING_MODE_PRODUCTION,
     TRAINING_MODE_DEVELOPMENT
 )
+from evaluation.security.evaluation_attestation import verify_evaluation_attestation
 
 if sys.platform == "win32":
     try:
@@ -62,7 +63,10 @@ def save_registry(data: Dict[str, Any], registry_path: Optional[str] = None):
 def evaluate_and_promote(
     candidate_report_path: str,
     min_score_threshold: float = 60.0,
-    registry_path: Optional[str] = None
+    registry_path: Optional[str] = None,
+    evaluators_path: Optional[str] = None,
+    verifiers_path: Optional[str] = None,
+    base_dir: str = PROJECT_ROOT
 ) -> bool:
     """
     Evaluates candidate model evaluation report against promotion criteria.
@@ -106,6 +110,14 @@ def evaluate_and_promote(
     if cand_eligible is False:
         rejection_reasons.append("Candidate model has 'is_production_eligible: false'. Rejected from production.")
 
+    # Task 4: Cryptographic evaluation provenance and tamper-proof attestation
+    eval_ok, eval_err = verify_evaluation_attestation(cand, evaluators_path=evaluators_path)
+    if not eval_ok:
+        rejection_reasons.append(
+            f"Evaluation report failed cryptographic attestation verification: {eval_err} "
+            "Manually edited or unsigned evaluation reports are strictly prohibited."
+        )
+
     ckpt_path = cand.get("checkpoint_path") or cand.get("checkpoint")
     cand_ckpt_sha = str(cand.get("checkpoint_sha256", "")).strip().lower()
 
@@ -126,7 +138,13 @@ def evaluate_and_promote(
                         f"but actual file bytes yield '{actual_ckpt_sha}'."
                     )
 
-            valid_ckpt, ckpt_meta, ckpt_errs = verify_checkpoint_provenance(full_ckpt, mode=TRAINING_MODE_PRODUCTION, recompute_manifests=True)
+            valid_ckpt, ckpt_meta, ckpt_errs = verify_checkpoint_provenance(
+                full_ckpt,
+                mode=TRAINING_MODE_PRODUCTION,
+                recompute_manifests=True,
+                base_dir=base_dir,
+                verifiers_path=verifiers_path
+            )
             if not valid_ckpt:
                 rejection_reasons.append(f"Underlying checkpoint failed production provenance verification: {'; '.join(ckpt_errs)}")
             else:
