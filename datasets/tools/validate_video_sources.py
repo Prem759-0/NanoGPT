@@ -5,7 +5,7 @@ Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 
 Enforces:
 1. Permissible open video licenses.
-2. Verified creator and source URL.
+2. Verified creator and verifiable source URL.
 3. Informative scene caption + motion description.
 4. Valid camera motion label matching architectural vocabulary.
 5. Rejection of synthetic still-image animations in genuine manifests.
@@ -55,7 +55,9 @@ VALID_VIDEO_CATEGORIES = {
     "abstract_scientific"
 }
 
-def validate_video_source_record(record: Dict[str, Any]) -> Tuple[bool, List[str]]:
+SUSPICIOUS_CREATORS = {"unknown", "anonymous", "none", "n/a", "internet", "various", "ai"}
+
+def validate_video_source_record(record: Dict[str, Any], allow_synthetic: bool = False) -> Tuple[bool, List[str]]:
     """
     Validates a single video metadata record.
     Returns (is_valid, list_of_errors).
@@ -88,10 +90,19 @@ def validate_video_source_record(record: Dict[str, Any]) -> Tuple[bool, List[str
     creator = str(record.get("creator", "")).strip()
     if not creator:
         errors.append("Missing required 'creator' field.")
+    elif creator.lower() in SUSPICIOUS_CREATORS and license_id != "PublicDomain":
+        errors.append(f"Suspicious generic creator '{creator}'. Must provide verifiable attribution.")
 
     source_url = str(record.get("source_url", "")).strip()
     if not source_url:
         errors.append("Missing required 'source_url' field.")
+    elif not (source_url.startswith("http://") or source_url.startswith("https://") or source_url.startswith("owner://")):
+        errors.append(f"Invalid source_url protocol '{source_url}'. Must start with http://, https://, or owner://.")
+    elif "github.com/prem759-0/nanogpt/tree/main/data" in source_url.lower():
+        errors.append(
+            f"Fabricated internal repo URL detected: '{source_url}'. "
+            "Self-referential local data folders cannot serve as asset-level source URLs."
+        )
 
     # 5. Scene Caption & Motion Description
     caption = str(record.get("caption", "")).strip()
@@ -109,8 +120,11 @@ def validate_video_source_record(record: Dict[str, Any]) -> Tuple[bool, List[str
 
     # 7. Synthetic Check
     is_synth = record.get("is_synthetic", False)
-    if is_synth:
-        errors.append("Record is marked as synthetic. Synthetic animations cannot be admitted to genuine video training manifests.")
+    if is_synth and not allow_synthetic:
+        split = record.get("split", "train").lower()
+        if split in ("train", "val", "test"):
+            errors.append(
+                "Record is marked as synthetic. Synthetic animations cannot be admitted to genuine video training manifests."
+            )
 
     return len(errors) == 0, errors
-

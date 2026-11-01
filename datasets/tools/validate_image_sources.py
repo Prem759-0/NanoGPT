@@ -5,9 +5,10 @@ Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 
 Enforces strict compliance:
 1. Permissible open licenses only.
-2. Verified creator and source URL attribution.
+2. Verified creator and verifiable source URL attribution.
 3. Quality captions (rejects empty/generic prefixes).
 4. Balanced category taxonomy validation.
+5. Strict rejection of synthetic fixtures from genuine production manifests.
 """
 import os
 import sys
@@ -50,7 +51,7 @@ GENERIC_CAPTION_PATTERNS = [
 
 SUSPICIOUS_CREATORS = {"unknown", "anonymous", "none", "n/a", "internet", "various", "ai"}
 
-def validate_image_source_record(record: Dict[str, Any]) -> Tuple[bool, List[str]]:
+def validate_image_source_record(record: Dict[str, Any], allow_synthetic: bool = False) -> Tuple[bool, List[str]]:
     """
     Validates a single image metadata record against licensing and hygiene rules.
     Returns (is_valid, list_of_errors).
@@ -89,6 +90,13 @@ def validate_image_source_record(record: Dict[str, Any]) -> Tuple[bool, List[str
     source_url = str(record.get("source_url", "")).strip()
     if not source_url:
         errors.append("Missing required 'source_url' field.")
+    elif not (source_url.startswith("http://") or source_url.startswith("https://") or source_url.startswith("owner://")):
+        errors.append(f"Invalid source_url protocol '{source_url}'. Must start with http://, https://, or owner://.")
+    elif "github.com/prem759-0/nanogpt/tree/main/data" in source_url.lower():
+        errors.append(
+            f"Fabricated internal repo URL detected: '{source_url}'. "
+            "Self-referential local data folders cannot serve as asset-level source URLs."
+        )
 
     # 5. Caption Check
     caption = str(record.get("caption", "")).strip()
@@ -102,5 +110,14 @@ def validate_image_source_record(record: Dict[str, Any]) -> Tuple[bool, List[str
                 errors.append(f"Generic uninformative caption detected: '{caption}'")
                 break
 
-    return len(errors) == 0, errors
+    # 6. Strict Synthetic Segregation
+    is_synth = record.get("is_synthetic", False)
+    if is_synth and not allow_synthetic:
+        split = record.get("split", "train").lower()
+        if split in ("train", "val", "test"):
+            errors.append(
+                "Record is marked as synthetic. Synthetic procedural fixtures are strictly prohibited "
+                "from genuine production training/validation/test manifests."
+            )
 
+    return len(errors) == 0, errors

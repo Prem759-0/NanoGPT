@@ -1,43 +1,38 @@
-# Moon AI — Stage 2.0 Dataset Quality & Adequacy Audit Report
-**Generated:** 2026-11-01T06:01:32.257686+00:00  
+# Moon AI — Stage 2.0.1 Dataset Provenance & Adequacy Audit Report
+**Generated:** 2026-11-01T08:57:44.336505+00:00  
 **Chief ML Systems Architect:** Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)  
 **Ownership Policy:** `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`  
 
 ## Executive Summary & Quality Gate Status
-- **HYGIENE_VALID:** `✅ PASS` (Zero corrupted, missing, duplicate, or leaking files; all licenses verified)
-- **TRAINING_DATA_ADEQUATE:** `⚠️ INSUFFICIENT (PILOT COLLECTION IN PROGRESS)`
+- **HYGIENE_VALID:** `✅ PASS` (Zero corrupted, missing, duplicate, or leaking files)
+- **GENUINE_DATA_PRESENT:** `⚠️ NO (0 verified genuine samples)`
+- **TRAINING_DATA_ADEQUATE:** `⚠️ INSUFFICIENT (TRAINING BLOCKED PENDING GENUINE MEDIA COLLECTION)`
 
 > [!IMPORTANT]
-> A dataset passing file validation does NOT mean it is sufficient for production training.
-> Stage 2.0 explicitly decouples technical hygiene from statistical training adequacy.
+> Stage 2.0.1 strictly decouples technical hygiene from genuine training data adequacy.
+> All procedural drawing fixtures are quarantined as `is_synthetic=True` in synthetic dev manifests.
+> Production training manifests contain 0 records until verified genuine media is ingested.
 
 ## 1. Moon Image Dataset Audit
-- **Manifest:** `D:\Downloads\linkden post\ai\datasets\manifests\image_train.jsonl`
+- **Genuine Production Media:** 0 / 500 pilot target (Shortfall: 500)
+- **Quarantined Synthetic Dev Fixtures:** 37
+- **Splits Breakdown:** `{"train": 0, "val": 0, "test": 0, "dev": 37}`
 - **Hygiene Status:** `✅ PASS`
-- **Adequacy Status:** `INSUFFICIENT` (20 / 500 pilot target)
-- **Shortfall to Pilot Target:** 480 genuine images required
-- **Genuine Source Media:** 20
-- **Synthetic / Dev Fixtures:** 0
-- **Category Distribution:** `{"landscapes": 2, "architecture": 2, "products": 2, "technology": 2, "people": 2, "animals": 2, "vehicles": 2, "food": 2, "illustration_design": 2, "abstract_scientific": 2}`
-- **Missing Files:** 0
-- **Exact Duplicates:** 0
-- **Near Duplicates (dHash <= 4):** 0
-- **Split Leakages:** 0
+- **Adequacy Status:** `INSUFFICIENT (0 genuine samples)`
 
 ## 2. Moon Video Dataset Audit
-- **Manifest:** `D:\Downloads\linkden post\ai\datasets\manifests\video_train.jsonl`
+- **Genuine Production Media:** 0 / 50 pilot target (Shortfall: 50)
+- **Quarantined Synthetic Dev Fixtures:** 10
+- **Splits Breakdown:** `{"train": 0, "val": 0, "test": 0, "dev": 10}`
 - **Hygiene Status:** `✅ PASS`
-- **Adequacy Status:** `INSUFFICIENT` (5 / 50 pilot target)
-- **Shortfall to Pilot Target:** 45 genuine video clips required
-- **Genuine Source Media:** 5
-- **Synthetic / Benchmark Fixtures:** 0
-- **Category Distribution:** `{"vehicles": 1, "landscapes": 1, "technology": 1, "architecture": 1, "abstract_scientific": 1}`
-- **Video FPS Distribution:** `{"8.0": 5}`
-- **Missing Files:** 0
-- **Corrupt Files:** 0
-- **Split Leakages:** 0
+- **Adequacy Status:** `INSUFFICIENT (0 genuine clips)`
 
-## 3. Strict Sovereign Ownership Assurances
+## 3. Moon Chat & Code Corpus Audit
+- **Chat Corpus:** 4 development examples (123 tokens) — `INSUFFICIENT (DEV EXAMPLES ONLY)`
+- **Code Corpus:** 3 development examples (111 tokens) — `INSUFFICIENT (DEV EXAMPLES ONLY)`
+
+## 4. Strict Sovereign Ownership Assurances
 - ZERO third-party pretrained weights (no SDXL, Flux, ModelScope, CLIP, T5).
-- ZERO automated labelling using proprietary vision-language APIs.
-- Complete cryptographic immutability and provenance tracking on all records.
+- ZERO external generative APIs (no Pollinations, OpenAI, Anthropic, Replicate).
+- 100% Random Weight Initialization for all architectures.
+- Complete provenance tracking and fail-closed gates active.

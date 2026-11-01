@@ -130,9 +130,12 @@ def train(args):
         raise ValueError(f"No training samples found in manifest '{args.manifest}' with split='train'.")
 
     # Load validation set (fails closed in production if genuine validation data is missing)
+    val_manifest_path = getattr(args, 'val_manifest', None) or args.manifest
+    val_manifest_full = os.path.normpath(os.path.join(PROJECT_ROOT, val_manifest_path))
+
     try:
         val_dataset = MoonVideoDataset(
-            manifest_path=manifest_full,
+            manifest_path=val_manifest_full,
             base_dir=PROJECT_ROOT,
             split="val",
             num_frames=args.num_frames,
@@ -143,7 +146,7 @@ def train(args):
         if not args.allow_synthetic:
             raise ValueError(
                 f"STRICT VIDEO INTEGRITY ERROR: Production video training fails closed when genuine validation data is missing or unusable. "
-                f"Could not load split='val' from '{args.manifest}': {err}"
+                f"Could not load split='val' from '{val_manifest_path}': {err}"
             )
         try:
             val_dataset = MoonVideoDataset(
@@ -396,7 +399,8 @@ def train(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Moon Video Spatiotemporal Model.")
-    parser.add_argument("--manifest", type=str, default="datasets/video/manifest.jsonl")
+    parser.add_argument("--manifest", type=str, default="datasets/manifests/video_train.jsonl")
+    parser.add_argument("--val_manifest", type=str, default="datasets/manifests/video_val.jsonl")
     parser.add_argument("--frame_size", type=int, default=128)
     parser.add_argument("--num_frames", type=int, default=8)
     parser.add_argument("--batch_size", type=int, default=1)

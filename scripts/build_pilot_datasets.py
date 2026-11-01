@@ -467,80 +467,58 @@ def build_all():
     import shutil
     shutil.rmtree(tmp_staging, ignore_errors=True)
 
-    # 3. Write Separated Versioned Manifests
-    print("\n[3/4] Writing separated train, val, and test manifests to datasets/manifests/...")
-    for split_name in ["train", "val", "test"]:
-        img_split_records = [r for r in image_records if r["split"] == split_name]
-        img_out = os.path.join(MANIFESTS_DIR, f"image_{split_name}.jsonl")
-        with open(img_out, "w", encoding="utf-8") as f:
-            for r in img_split_records:
-                f.write(json.dumps(r) + "\n")
-        print(f"  • {os.path.relpath(img_out, PROJECT_ROOT)}: {len(img_split_records)} records")
+    # 3. Quarantined Synthetic Development Manifests Only
+    # In accordance with Stage 2.0.1, procedural fixtures are strictly synthetic and
+    # NEVER overwrite production manifests (image_train.jsonl, video_train.jsonl, etc.)
+    print("\n[3/4] Writing quarantined synthetic development manifests...")
+    synth_img_records = []
+    for r in image_records:
+        r_copy = dict(r)
+        r_copy["is_synthetic"] = True
+        r_copy["source_type"] = "procedural_synthetic_fixture"
+        r_copy["provenance_type"] = "synthetic_dev_fixture"
+        r_copy["source_url"] = "internal://scripts/build_synthetic_fixtures.py"
+        r_copy["split"] = "dev"
+        synth_img_records.append(r_copy)
 
-        vid_split_records = [r for r in video_records if r["split"] == split_name]
-        vid_out = os.path.join(MANIFESTS_DIR, f"video_{split_name}.jsonl")
-        with open(vid_out, "w", encoding="utf-8") as f:
-            for r in vid_split_records:
-                f.write(json.dumps(r) + "\n")
-        print(f"  • {os.path.relpath(vid_out, PROJECT_ROOT)}: {len(vid_split_records)} records")
+    with open(os.path.join(MANIFESTS_DIR, "synthetic_image_dev.jsonl"), "w", encoding="utf-8") as f:
+        for r in synth_img_records:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    print(f"  • Quarantined {len(synth_img_records)} procedural images to synthetic_image_dev.jsonl")
 
-    # 4. Chat and Code Datasets
-    print("\n[4/4] Writing sovereign Chat and Code corpora...")
-    chat_train_records = [
-        {"id": "chat_01", "prompt": "Who created you?", "response": "I am Moon AI, a sovereign intelligence system engineered from first principles by Chief ML Systems Architect Prem Gaikwad in India 🇮🇳.", "category": "identity", "license": "CustomSovereign", "split": "train"},
-        {"id": "chat_02", "prompt": "What are your core architectural components?", "response": "Moon AI consists of four sovereign specialist engines: Moon Image (Latent Diffusion), Moon Video (Spatiotemporal UNet3D), Moon Chat (Causal Autoregressive Transformer), and Moon Code (Fill-in-the-Middle Coding Transformer), unified via Moon Core.", "category": "architecture", "license": "CustomSovereign", "split": "train"},
-        {"id": "chat_03", "prompt": "Explain photosynthesis in simple terms.", "response": "Photosynthesis is the biological process by which green plants, algae, and certain bacteria convert sunlight, water, and carbon dioxide into chemical energy (glucose) while releasing oxygen as a byproduct.", "category": "science", "license": "CustomSovereign", "split": "train"}
+    synth_vid_records = []
+    for r in video_records:
+        r_copy = dict(r)
+        r_copy["is_synthetic"] = True
+        r_copy["source_type"] = "procedural_synthetic_fixture"
+        r_copy["provenance_type"] = "synthetic_dev_fixture"
+        r_copy["source_url"] = "internal://scripts/build_synthetic_fixtures.py"
+        r_copy["split"] = "dev"
+        synth_vid_records.append(r_copy)
+
+    with open(os.path.join(MANIFESTS_DIR, "synthetic_video_dev.jsonl"), "w", encoding="utf-8") as f:
+        for r in synth_vid_records:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    print(f"  • Quarantined {len(synth_vid_records)} procedural videos to synthetic_video_dev.jsonl")
+
+    # 4. Chat and Code Dev Manifests
+    print("\n[4/4] Writing sovereign Chat and Code development fixtures...")
+    chat_dev_records = [
+        {"id": "chat_dev_01", "prompt": "Who created you?", "response": "I am Moon AI, a sovereign intelligence system engineered from first principles by Chief ML Systems Architect Prem Gaikwad in India 🇮🇳.", "category": "identity", "license": "CustomSovereign", "split": "dev", "is_dev_fixture": True, "source_type": "dev_example_fixture", "notes": "Development example only. Not a production training corpus."},
+        {"id": "chat_dev_02", "prompt": "What are your core architectural components?", "response": "Moon AI consists of four sovereign specialist engines: Moon Image (Latent Diffusion), Moon Video (Spatiotemporal UNet3D), Moon Chat (Causal Autoregressive Transformer), and Moon Code (Fill-in-the-Middle Coding Transformer), unified via Moon Core.", "category": "architecture", "license": "CustomSovereign", "split": "dev", "is_dev_fixture": True, "source_type": "dev_example_fixture", "notes": "Development example only. Not a production training corpus."}
     ]
-    chat_val_records = [
-        {"id": "chat_val_01", "prompt": "What is the speed of light in a vacuum?", "response": "The speed of light in a vacuum is exactly 299,792,458 meters per second (approximately 300,000 kilometers per second).", "category": "physics", "license": "CustomSovereign", "split": "val"}
+    with open(os.path.join(MANIFESTS_DIR, "synthetic_chat_dev.jsonl"), "w", encoding="utf-8") as f:
+        for r in chat_dev_records:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    code_dev_records = [
+        {"id": "code_dev_01", "language": "python", "prompt": "Write a Python function to compute the Fibonacci sequence up to n terms.", "code": "def fibonacci(n: int):\n    if n <= 0:\n        return []\n    seq = [0, 1]\n    while len(seq) < n:\n        seq.append(seq[-1] + seq[-2])\n    return seq[:n]", "test_case": "assert fibonacci(5) == [0, 1, 1, 2, 3]", "license": "MIT", "split": "dev", "is_dev_fixture": True, "source_type": "dev_example_fixture", "notes": "Development example only. Not a production training corpus."}
     ]
+    with open(os.path.join(MANIFESTS_DIR, "synthetic_code_dev.jsonl"), "w", encoding="utf-8") as f:
+        for r in code_dev_records:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
-    with open(os.path.join(MANIFESTS_DIR, "chat_train.jsonl"), "w", encoding="utf-8") as f:
-        for r in chat_train_records:
-            f.write(json.dumps(r) + "\n")
-    with open(os.path.join(MANIFESTS_DIR, "chat_val.jsonl"), "w", encoding="utf-8") as f:
-        for r in chat_val_records:
-            f.write(json.dumps(r) + "\n")
-
-    code_train_records = [
-        {"id": "code_01", "language": "python", "prompt": "Write a Python function to compute the Fibonacci sequence up to n terms.", "code": "def fibonacci(n: int):\n    if n <= 0:\n        return []\n    seq = [0, 1]\n    while len(seq) < n:\n        seq.append(seq[-1] + seq[-2])\n    return seq[:n]", "test_case": "assert fibonacci(5) == [0, 1, 1, 2, 3]", "license": "MIT", "split": "train"},
-        {"id": "code_02", "language": "typescript", "prompt": "Write a TypeScript function to check if a string is a palindrome.", "code": "function isPalindrome(str: string): boolean {\n  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, '');\n  return clean === clean.split('').reverse().join('');\n}", "test_case": "assert(isPalindrome('Racecar') === true)", "license": "MIT", "split": "train"}
-    ]
-    code_val_records = [
-        {"id": "code_val_01", "language": "python", "prompt": "Write a binary search implementation.", "code": "def binary_search(arr, target):\n    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1", "test_case": "assert binary_search([1, 2, 4, 8], 4) == 2", "license": "MIT", "split": "val"}
-    ]
-
-    with open(os.path.join(MANIFESTS_DIR, "code_train.jsonl"), "w", encoding="utf-8") as f:
-        for r in code_train_records:
-            f.write(json.dumps(r) + "\n")
-    with open(os.path.join(MANIFESTS_DIR, "code_val.jsonl"), "w", encoding="utf-8") as f:
-        for r in code_val_records:
-            f.write(json.dumps(r) + "\n")
-
-    # 5. Isolate Legacy Synthetic Benchmarks
-    legacy_img_manifest = os.path.join(PROJECT_ROOT, "datasets", "image", "manifest.jsonl")
-    if os.path.isfile(legacy_img_manifest):
-        with open(legacy_img_manifest, "r", encoding="utf-8") as f_in, \
-             open(os.path.join(MANIFESTS_DIR, "synthetic_image_dev.jsonl"), "w", encoding="utf-8") as f_out:
-            for line in f_in:
-                if line.strip():
-                    item = json.loads(line.strip())
-                    item["is_synthetic"] = True
-                    item["source_type"] = "procedural_synthetic_seed"
-                    f_out.write(json.dumps(item) + "\n")
-
-    legacy_vid_manifest = os.path.join(PROJECT_ROOT, "datasets", "video", "manifest.jsonl")
-    if os.path.isfile(legacy_vid_manifest):
-        with open(legacy_vid_manifest, "r", encoding="utf-8") as f_in, \
-             open(os.path.join(MANIFESTS_DIR, "synthetic_video_dev.jsonl"), "w", encoding="utf-8") as f_out:
-            for line in f_in:
-                if line.strip():
-                    item = json.loads(line.strip())
-                    item["is_synthetic"] = True
-                    item["source_type"] = "procedural_benchmark_fixture"
-                    f_out.write(json.dumps(item) + "\n")
-
-    print("\n✅ Stage 2.0 Balanced Pilot Dataset Foundation successfully built!")
+    print("\n✅ Synthetic fixtures updated. Production manifests remain strictly empty (0 genuine samples).")
 
 if __name__ == "__main__":
     build_all()
