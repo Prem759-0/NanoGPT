@@ -16,7 +16,7 @@ if PROJECT_ROOT not in sys.path:
 from backend.engines.moon_image.model import MoonImageModel
 from backend.engines.moon_image.config import MoonImageConfig
 from backend.engines.moon_image.text_encoder import SimpleTextTokenizer
-from training.common.checkpoint import save_checkpoint, load_checkpoint
+from training.common.checkpoint import save_checkpoint, load_checkpoint, TRAINING_MODE_DEVELOPMENT
 
 class TestImagePipeline(unittest.TestCase):
     def setUp(self):
@@ -75,7 +75,8 @@ class TestImagePipeline(unittest.TestCase):
                 config_dict=self.config.__dict__,
                 output_path=ckpt_path,
                 manifest_hash=test_manifest_hash,
-                manifest_path="datasets/image/manifest.jsonl"
+                manifest_path="datasets/image/manifest.jsonl",
+                training_mode=TRAINING_MODE_DEVELOPMENT
             )
             self.assertTrue(os.path.isfile(ckpt_path))
 
@@ -86,7 +87,8 @@ class TestImagePipeline(unittest.TestCase):
             meta = load_checkpoint(
                 checkpoint_path=ckpt_path,
                 model=new_model,
-                optimizer=new_optimizer
+                optimizer=new_optimizer,
+                mode=TRAINING_MODE_DEVELOPMENT
             )
 
             self.assertEqual(meta["step"], 42)
