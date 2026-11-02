@@ -7,6 +7,7 @@ Zero pretrained Hugging Face tokenizers.
 Zero external third-party vocabulary files.
 Trained from scratch from raw byte statistics and deterministic pair merges.
 Byte-level fallback ensures 100% vocabulary coverage with zero <unk> tokens.
+Supports ChatML formatting and fine-grained assistant-only loss masking.
 """
 
 import json
@@ -177,17 +178,14 @@ class SovereignTokenizer:
 
     def decode_tokens(self, tokens: List[int]) -> str:
         """Decodes token IDs back into UTF-8 text."""
-        # Unpack merged tokens recursively into raw byte values
         byte_list: List[int] = []
         for tok in tokens:
             if tok in self.id_to_special:
-                # Append special token string representation as UTF-8
                 spec_str = self.id_to_special[tok]
                 byte_list.extend(spec_str.encode("utf-8"))
             elif self.byte_offset <= tok < self.byte_offset + 256:
                 byte_list.append(tok - self.byte_offset)
             else:
-                # Merged token
                 sub_bytes = self._unpack_token_to_bytes(tok)
                 byte_list.extend(sub_bytes)
 
@@ -219,7 +217,21 @@ class SovereignTokenizer:
 
     def encode_chat(self, messages: List[Dict[str, str]], add_generation_prompt: bool = False) -> List[int]:
         """Encodes multi-turn conversation into token IDs with special token boundaries."""
+        tokens, _ = self.encode_chat_with_loss_mask(messages, add_generation_prompt=add_generation_prompt)
+        return tokens
+
+    def encode_chat_with_loss_mask(
+        self,
+        messages: List[Dict[str, str]],
+        add_generation_prompt: bool = False
+    ) -> Tuple[List[int], List[bool]]:
+        """
+        Encodes a multi-turn conversation into token IDs alongside a boolean loss_mask.
+        loss_mask[i] is True ONLY for assistant response tokens (content and closing <|im_end|>\n).
+        System prompts, user prompts, and turn header prefixes (<|im_start|>role\n) have loss_mask=False.
+        """
         tokens: List[int] = []
+        loss_mask: List[bool] = []
         im_start = self.special_to_id["<|im_start|>"]
         im_end = self.special_to_id["<|im_end|>"]
 
@@ -227,17 +239,46 @@ class SovereignTokenizer:
             role = msg.get("role", "user")
             content = msg.get("content", "")
 
+            # Start of turn tag: not a target token
             tokens.append(im_start)
-            tokens.extend(self.encode_text(f"{role}\n"))
-            tokens.extend(self.encode_text(content))
+            loss_mask.append(False)
+
+            # Role prefix (e.g. "user\n" or "assistant\n"): not a target token
+            role_tokens = self.encode_text(f"{role}\n")
+            tokens.extend(role_tokens)
+            loss_mask.extend([False] * len(role_tokens))
+
+            # Content tokens
+            content_tokens = self.encode_text(content)
+            tokens.extend(content_tokens)
+            if role == "assistant":
+                loss_mask.extend([True] * len(content_tokens))
+            else:
+                loss_mask.extend([False] * len(content_tokens))
+
+            # End of turn tag (<|im_end|>)
             tokens.append(im_end)
-            tokens.extend(self.encode_text("\n"))
+            if role == "assistant":
+                loss_mask.append(True)
+            else:
+                loss_mask.append(False)
+
+            # Closing newline
+            nl_tokens = self.encode_text("\n")
+            tokens.extend(nl_tokens)
+            if role == "assistant":
+                loss_mask.extend([True] * len(nl_tokens))
+            else:
+                loss_mask.extend([False] * len(nl_tokens))
 
         if add_generation_prompt:
             tokens.append(im_start)
-            tokens.extend(self.encode_text("assistant\n"))
+            loss_mask.append(False)
+            gen_tokens = self.encode_text("assistant\n")
+            tokens.extend(gen_tokens)
+            loss_mask.extend([False] * len(gen_tokens))
 
-        return tokens
+        return tokens, loss_mask
 
     def save(self, filepath: str):
         """Saves tokenizer state to JSON."""

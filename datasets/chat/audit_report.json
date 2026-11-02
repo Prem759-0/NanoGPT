@@ -1,28 +1,28 @@
 {
   "report_metadata": {
     "title": "Moon AI \u2014 Sovereign Chat Dataset Audit Report",
-    "timestamp": "2026-11-01T18:08:56.912238+00:00",
+    "timestamp": "2026-11-02T16:06:18.076090+00:00",
     "architect": "Prem Gaikwad (Chief ML Systems Architect, India \ud83c\uddee\ud83c\uddf3)",
     "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
     "model_track": "moon-chat-v0",
     "status": "READY_FOR_PILOT_TRAINING"
   },
   "summary": {
-    "total_records": 10,
-    "train_records": 8,
-    "val_records": 1,
-    "test_records": 1,
-    "total_tokens": 4296,
-    "mean_tokens_per_dialogue": 429.6,
-    "median_tokens_per_dialogue": 431.0,
-    "min_tokens_per_dialogue": 311,
-    "max_tokens_per_dialogue": 494,
-    "total_turns": 40,
+    "total_records": 22,
+    "train_records": 18,
+    "val_records": 2,
+    "test_records": 2,
+    "total_tokens": 9445,
+    "mean_tokens_per_dialogue": 429.32,
+    "median_tokens_per_dialogue": 431.5,
+    "min_tokens_per_dialogue": 304,
+    "max_tokens_per_dialogue": 576,
+    "total_turns": 88,
     "mean_turns_per_dialogue": 4
   },
   "integrity_verification": {
-    "total_records_checked": 10,
-    "cryptographic_hashes_verified": 10,
+    "total_records_checked": 22,
+    "cryptographic_hashes_verified": 22,
     "hash_mismatches": 0,
     "hash_failures_list": [],
     "cross_split_leakage_detected": false,
@@ -31,21 +31,25 @@
     "leakage_val_test_count": 0
   },
   "license_distribution": {
-    "Public Domain": 4,
-    "CustomSovereign": 2,
-    "CC0-1.0": 2,
-    "MIT": 2
+    "CustomSovereign": 6,
+    "CC-BY-SA-4.0": 15,
+    "CC0-1.0": 1
   },
   "category_distribution": {
-    "cryptography": 1,
-    "mathematics": 1,
+    "beginner_educational": 1,
     "physics": 1,
-    "science": 1,
-    "machine_learning": 1,
-    "computer_science": 2,
+    "computer_science": 3,
+    "cryptography": 1,
+    "mathematics": 3,
+    "programming_fundamentals": 2,
+    "distributed_systems": 1,
+    "instruction_following": 1,
+    "science": 2,
     "software_engineering": 1,
+    "general_conversation": 2,
     "operating_systems": 1,
-    "sovereign_identity": 1
+    "sovereign_identity": 2,
+    "reasoning_explanations": 1
   },
   "tokenizer_info": {
     "type": "byte_level_bpe_scratch",

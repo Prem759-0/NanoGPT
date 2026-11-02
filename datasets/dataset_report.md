@@ -1,5 +1,5 @@
 # Moon AI — Stage 2.0.2 Provenance Gate Hardening & Security Audit Report
-**Generated:** 2026-11-01T10:23:35.403679+00:00  
+**Generated:** 2026-11-02T17:26:42.307297+00:00  
 **Chief ML Systems Architect:** Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)  
 **Ownership Policy:** `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`  
 
@@ -42,7 +42,7 @@
 - **Adequacy Status:** `INSUFFICIENT (0 production-eligible video clips)`
 
 ## 3. Moon Chat & Code Corpus Audit
-- **Chat Corpus:** 4 development examples (123 tokens) — `INSUFFICIENT (DEV EXAMPLES ONLY)`
+- **Chat Corpus:** 24 development examples (123 tokens) — `INSUFFICIENT (DEV EXAMPLES ONLY)`
 - **Code Corpus:** 3 development examples (111 tokens) — `INSUFFICIENT (DEV EXAMPLES ONLY)`
 
 ## 4. Strict Sovereign Ownership Assurances

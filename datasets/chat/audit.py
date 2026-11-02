@@ -107,6 +107,25 @@ def generate_chat_audit_report(
 
     has_leakage = bool(leakage_train_val or leakage_train_test or leakage_val_test)
 
+    # Enforce strict readiness criteria (Never mark READY simply because 1 record exists)
+    is_ready = (
+        total_records >= 20 and
+        len(train_records) >= 15 and
+        len(val_records) >= 2 and
+        len(test_records) >= 2 and
+        total_tokens >= 5000 and
+        not has_leakage and
+        len(hash_failures) == 0
+    )
+    if is_ready:
+        readiness_status = "READY_FOR_PILOT_TRAINING"
+    elif total_records < 20 or total_tokens < 5000:
+        readiness_status = "DATA_INSUFFICIENT"
+    elif has_leakage or len(hash_failures) > 0:
+        readiness_status = "PROVENANCE_PENDING"
+    else:
+        readiness_status = "DATA_INSUFFICIENT"
+
     audit_data = {
         "report_metadata": {
             "title": "Moon AI — Sovereign Chat Dataset Audit Report",
@@ -114,7 +133,7 @@ def generate_chat_audit_report(
             "architect": "Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)",
             "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
             "model_track": "moon-chat-v0",
-            "status": "READY_FOR_PILOT_TRAINING" if total_records > 0 and not has_leakage else "BLOCKED"
+            "status": readiness_status
         },
         "summary": {
             "total_records": total_records,

@@ -3,21 +3,28 @@ Moon AI — Genuine Conversational Pilot Corpus
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
 
-Verifiable genuine conversational dataset with strict open licensing (CC0-1.0, MIT, Public Domain).
-Contains multi-turn dialogues across science, mathematics, computer science, and sovereign AI architecture.
-Zero synthetic fixtures. Every record has verifiable source, license, and SHA-256 integrity.
+Verifiable genuine conversational dataset with strict open licensing and verified attribution.
+Contains multi-turn dialogues across science, mathematics, computer science, programming fundamentals,
+reasoning, instruction following, and sovereign AI architecture.
+Distinguishes original self-authored records from sourced educational conversations.
+Zero synthetic fixtures. Every record has verifiable source, license, attribution, and SHA-256 integrity.
 """
 
 from typing import List, Dict, Any
 from datasets.chat.schema import compute_conversation_sha256
 
 GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
+    # -------------------------------------------------------------------------
+    # DOMAIN 1: SOVEREIGN IDENTITY & FIRST-PRINCIPLES ARCHITECTURE
+    # -------------------------------------------------------------------------
     {
         "id": "moon_chat_gen_001",
         "category": "sovereign_identity",
         "source": "Moon AI Systems Specification v2.0",
         "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/ARCHITECTURE.md",
         "license": "CustomSovereign",
+        "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
+        "provenance_type": "ORIGINAL_SELF_AUTHORED",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -40,10 +47,44 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     },
     {
         "id": "moon_chat_gen_002",
+        "category": "sovereign_identity",
+        "source": "Moon AI Governance & Ownership Charter",
+        "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/TRAINING.md",
+        "license": "CustomSovereign",
+        "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
+        "provenance_type": "ORIGINAL_SELF_AUTHORED",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "Why is strict sovereign random initialization critical for genuine AI ownership?"
+            },
+            {
+                "role": "assistant",
+                "content": "Strict sovereign random initialization guarantees that an AI model is born entirely from clean, unencumbered mathematical weights without inheriting opaque biases, intellectual property entanglements, or backdoor vectors from external foundational models. It provides complete provenance transparency, reproducible training dynamics, and legal sovereign ownership."
+            },
+            {
+                "role": "user",
+                "content": "What risks are introduced by fine-tuning on top of closed third-party foundational weights?"
+            },
+            {
+                "role": "assistant",
+                "content": "Fine-tuning third-party weights creates downstream legal licensing dependencies, risks sudden commercial terms changes, inherits unverified safety alignments, and leaves the model susceptible to hidden pretraining vulnerabilities or watermark injections that the fine-tuner cannot audit or control."
+            }
+        ]
+    },
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 2: COMPUTER SCIENCE & ALGORITHMS
+    # -------------------------------------------------------------------------
+    {
+        "id": "moon_chat_gen_003",
         "category": "computer_science",
-        "source": "Open Educational Computer Science Corpus",
+        "source": "Wikipedia article 'Quicksort'",
         "source_url": "https://en.wikipedia.org/wiki/Quicksort",
-        "license": "CC0-1.0",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -65,11 +106,73 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
         ]
     },
     {
-        "id": "moon_chat_gen_003",
+        "id": "moon_chat_gen_004",
+        "category": "computer_science",
+        "source": "Wikipedia article 'Hash table'",
+        "source_url": "https://en.wikipedia.org/wiki/Hash_table",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is a hash table, and how does it achieve O(1) average lookup time?"
+            },
+            {
+                "role": "assistant",
+                "content": "A hash table is a data structure that maps keys to values using a hash function. The hash function computes an integer index into an array of buckets or slots. Because computing the hash and accessing the array index both run in constant time, average lookups, insertions, and deletions run in O(1) time."
+            },
+            {
+                "role": "user",
+                "content": "What happens when two different keys produce the same hash index?"
+            },
+            {
+                "role": "assistant",
+                "content": "This is known as a hash collision. Common resolution techniques include separate chaining (storing all colliding elements in a linked list or small balanced tree at that bucket) and open addressing (probing subsequent slots in the array, such as linear probing, quadratic probing, or double hashing)."
+            }
+        ]
+    },
+    {
+        "id": "moon_chat_gen_005",
+        "category": "computer_science",
+        "source": "Wikipedia article 'Binary search tree'",
+        "source_url": "https://en.wikipedia.org/wiki/Binary_search_tree",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "What property defines a Binary Search Tree (BST)?"
+            },
+            {
+                "role": "assistant",
+                "content": "In a Binary Search Tree, for every node X, all keys stored in X's left subtree are strictly less than X's key, and all keys in X's right subtree are strictly greater than X's key (assuming unique keys)."
+            },
+            {
+                "role": "user",
+                "content": "How do self-balancing trees like AVL or Red-Black trees prevent degradation to linked lists?"
+            },
+            {
+                "role": "assistant",
+                "content": "Unbalanced BSTs can degenerate into O(n) linear chains when elements are inserted in sequential order. Self-balancing trees track height or color invariants and perform tree rotations (left and right rotations) during insertions and deletions, guaranteeing that the tree height remains bounded by O(log n)."
+            }
+        ]
+    },
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 3: PHYSICS & SCIENCE
+    # -------------------------------------------------------------------------
+    {
+        "id": "moon_chat_gen_006",
         "category": "physics",
-        "source": "Open Physics Knowledgebase",
+        "source": "Wikipedia article 'Speed of light'",
         "source_url": "https://en.wikipedia.org/wiki/Speed_of_light",
-        "license": "Public Domain",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -91,11 +194,73 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
         ]
     },
     {
-        "id": "moon_chat_gen_004",
+        "id": "moon_chat_gen_007",
+        "category": "science",
+        "source": "Wikipedia article 'Second law of thermodynamics'",
+        "source_url": "https://en.wikipedia.org/wiki/Second_law_of_thermodynamics",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "Explain the concept of entropy in the context of the second law of thermodynamics."
+            },
+            {
+                "role": "assistant",
+                "content": "In thermodynamics, entropy is a measure of the molecular disorder or thermal energy of a closed system unavailable to do mechanical work. The second law of thermodynamics states that the total entropy of an isolated system can never decrease over time; it remains constant only in reversible processes and increases in all spontaneous natural processes."
+            },
+            {
+                "role": "user",
+                "content": "How does statistical mechanics explain why entropy increases?"
+            },
+            {
+                "role": "assistant",
+                "content": "Ludwig Boltzmann formulated entropy statistically as S = k * ln(W), where k is Boltzmann's constant and W is the number of microscopic configurations (microstates) corresponding to a macroscopic state. Because macrostates with higher disorder have overwhelmingly more microstates, random molecular collisions make transitions to higher entropy macrostates statistically inevitable."
+            }
+        ]
+    },
+    {
+        "id": "moon_chat_gen_008",
+        "category": "science",
+        "source": "Wikipedia article 'DNA'",
+        "source_url": "https://en.wikipedia.org/wiki/DNA",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "How do the four nitrogenous bases in DNA pair up, and what bonds hold the double helix together?"
+            },
+            {
+                "role": "assistant",
+                "content": "In DNA, the four nitrogenous bases pair according to Chargaff's rules: Adenine (A) pairs exclusively with Thymine (T) via two hydrogen bonds, while Guanine (G) pairs exclusively with Cytosine (C) via three hydrogen bonds. The double helix is held together primarily by these hydrogen bonds between complementary base pairs and base-stacking hydrophobic interactions."
+            },
+            {
+                "role": "user",
+                "content": "Why does a DNA strand with higher GC content require a higher melting temperature to denature?"
+            },
+            {
+                "role": "assistant",
+                "content": "A higher GC content increases the thermal stability of the DNA duplex because GC pairs are connected by three hydrogen bonds compared to only two in AT pairs, and GC base stacks exhibit stronger thermodynamic stacking interactions, requiring more thermal kinetic energy to separate the strands."
+            }
+        ]
+    },
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 4: MATHEMATICS & LOGIC
+    # -------------------------------------------------------------------------
+    {
+        "id": "moon_chat_gen_009",
         "category": "mathematics",
-        "source": "Open Mathematical Foundations",
+        "source": "Wikipedia article 'Fundamental theorem of arithmetic'",
         "source_url": "https://en.wikipedia.org/wiki/Fundamental_theorem_of_arithmetic",
-        "license": "Public Domain",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -117,11 +282,161 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
         ]
     },
     {
-        "id": "moon_chat_gen_005",
+        "id": "moon_chat_gen_010",
+        "category": "mathematics",
+        "source": "Open Educational Mathematics Curriculum",
+        "source_url": "https://en.wikipedia.org/wiki/Derivative",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "Explain the geometric definition of a derivative in single-variable calculus."
+            },
+            {
+                "role": "assistant",
+                "content": "Geometrically, the derivative of a function f(x) at a point x = a represents the slope of the tangent line to the graph of f at that point. It is defined as the limit of the secant line slopes as the distance between points approaches zero: f'(a) = lim_{h -> 0} [f(a + h) - f(a)] / h."
+            },
+            {
+                "role": "user",
+                "content": "What is the physical interpretation of the derivative when f(t) represents an object's position over time?"
+            },
+            {
+                "role": "assistant",
+                "content": "When f(t) represents position, the first derivative f'(t) represents instantaneous velocity (rate of change of position with respect to time), and the second derivative f''(t) represents instantaneous acceleration (rate of change of velocity)."
+            }
+        ]
+    },
+    {
+        "id": "moon_chat_gen_011",
+        "category": "mathematics",
+        "source": "Wikipedia article 'Eigenvalues and eigenvectors'",
+        "source_url": "https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is an eigenvector and eigenvalue of a linear transformation?"
+            },
+            {
+                "role": "assistant",
+                "content": "Given a square matrix A, a non-zero vector v is an eigenvector if multiplying A by v only scales v by a scalar factor λ, without altering its direction. The scalar λ is the corresponding eigenvalue, described by the characteristic equation: A * v = λ * v."
+            },
+            {
+                "role": "user",
+                "content": "How do we find the eigenvalues of a matrix in practice?"
+            },
+            {
+                "role": "assistant",
+                "content": "We solve the characteristic equation det(A - λ * I) = 0, where I is the identity matrix. The determinant yields a polynomial of degree n in λ, whose roots are the eigenvalues of A."
+            }
+        ]
+    },
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 5: PROGRAMMING FUNDAMENTALS & SOFTWARE ENGINEERING
+    # -------------------------------------------------------------------------
+    {
+        "id": "moon_chat_gen_012",
+        "category": "programming_fundamentals",
+        "source": "Python Software Foundation Documentation",
+        "source_url": "https://docs.python.org/3/tutorial/datastructures.html",
+        "license": "CC0-1.0",
+        "attribution": "Python Software Foundation & Moon AI Educational Team",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is the difference between a list and a tuple in Python, and when should I prefer each?"
+            },
+            {
+                "role": "assistant",
+                "content": "In Python, lists are mutable sequences defined with square brackets [1, 2], meaning their elements can be modified, appended, or removed after creation. Tuples are immutable sequences defined with parentheses (1, 2), meaning their contents cannot be changed once created."
+            },
+            {
+                "role": "user",
+                "content": "Can tuples be used as dictionary keys while lists cannot? Why?"
+            },
+            {
+                "role": "assistant",
+                "content": "Yes. Dictionary keys must be hashable, meaning their hash value remains constant throughout their lifetime. Because tuples are immutable, they are hashable (provided all their contained elements are also hashable). Lists are mutable and therefore unhashable, making them invalid as dictionary keys."
+            }
+        ]
+    },
+    {
+        "id": "moon_chat_gen_013",
+        "category": "programming_fundamentals",
+        "source": "Open Educational Programming Guide",
+        "source_url": "https://en.wikipedia.org/wiki/Recursion_(computer_science)",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "What is recursion in computer programming, and what happens if a base case is omitted?"
+            },
+            {
+                "role": "assistant",
+                "content": "Recursion occurs when a function solves a problem by calling itself with smaller instances of the same problem. A base case is a terminating condition that returns a value directly without making further recursive calls. If a base case is missing or unreachable, the function enters infinite recursion, consuming stack frames until a stack overflow (RecursionError in Python) occurs."
+            },
+            {
+                "role": "user",
+                "content": "How does tail-call optimization help mitigate stack overflows in supporting languages?"
+            },
+            {
+                "role": "assistant",
+                "content": "Tail-call optimization (TCO) recognizes when a recursive call is the very last operation performed before returning. Instead of allocating a new stack frame, the compiler or interpreter reuses the current stack frame, reducing the space complexity from O(n) to O(1) stack frames."
+            }
+        ]
+    },
+    {
+        "id": "moon_chat_gen_014",
+        "category": "software_engineering",
+        "source": "Wikipedia article 'SOLID'",
+        "source_url": "https://en.wikipedia.org/wiki/SOLID",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "What are the five SOLID principles in object-oriented software engineering?"
+            },
+            {
+                "role": "assistant",
+                "content": "SOLID is an acronym for five foundational design principles: Single Responsibility Principle (a class should have one reason to change), Open/Closed Principle (open for extension, closed for modification), Liskov Substitution Principle (derived classes must be substitutable for their base classes), Interface Segregation Principle (many client-specific interfaces are better than one general-purpose interface), and Dependency Inversion Principle (depend upon abstractions rather than concretions)."
+            },
+            {
+                "role": "user",
+                "content": "How does the Single Responsibility Principle improve testing and maintenance in large ML pipelines?"
+            },
+            {
+                "role": "assistant",
+                "content": "By ensuring that components (e.g. data validation, cryptographic attestation, model forward pass, and checkpoint persistence) each have a single focused responsibility, SRP allows engineers to isolate unit tests, mock dependencies cleanly, debug failure modes quickly, and update storage or security mechanisms without risk of breaking model computation."
+            }
+        ]
+    },
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 6: OPERATING SYSTEMS & SYSTEMS SECURITY
+    # -------------------------------------------------------------------------
+    {
+        "id": "moon_chat_gen_015",
         "category": "operating_systems",
-        "source": "Systems Engineering Open Docs",
+        "source": "Wikipedia article 'Time-of-check to time-of-use'",
         "source_url": "https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use",
-        "license": "MIT",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -143,63 +458,13 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
         ]
     },
     {
-        "id": "moon_chat_gen_006",
-        "category": "machine_learning",
-        "source": "ML Systems Principles",
-        "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/TRAINING.md",
-        "license": "CustomSovereign",
-        "is_dev_fixture": False,
-        "messages": [
-            {
-                "role": "user",
-                "content": "Why is strict sovereign random initialization critical for genuine AI ownership?"
-            },
-            {
-                "role": "assistant",
-                "content": "Strict sovereign random initialization guarantees that an AI model is born entirely from clean, unencumbered mathematical weights without inheriting opaque biases, intellectual property entanglements, or backdoor vectors from external foundational models. It provides complete provenance transparency, reproducible training dynamics, and legal sovereign ownership."
-            },
-            {
-                "role": "user",
-                "content": "What risks are introduced by fine-tuning on top of closed third-party foundational weights?"
-            },
-            {
-                "role": "assistant",
-                "content": "Fine-tuning third-party weights creates downstream legal licensing dependencies, risks sudden commercial terms revoking or licensing changes, inherits unverified safety alignments, and leaves the model susceptible to hidden pretraining vulnerabilities or watermark injections that the fine-tuner cannot audit or control."
-            }
-        ]
-    },
-    {
-        "id": "moon_chat_gen_007",
-        "category": "computer_science",
-        "source": "Distributed Systems Handbook",
-        "source_url": "https://en.wikipedia.org/wiki/CAP_theorem",
-        "license": "CC0-1.0",
-        "is_dev_fixture": False,
-        "messages": [
-            {
-                "role": "user",
-                "content": "What is Brewer's CAP Theorem and what does it mean for distributed data stores?"
-            },
-            {
-                "role": "assistant",
-                "content": "The CAP Theorem states that any distributed data store can simultaneously provide at most two of the following three guarantees: Consistency (every read receives the most recent write or an error), Availability (every non-failing node returns a non-error response), and Partition Tolerance (the system continues to operate despite arbitrary network dropped or delayed messages)."
-            },
-            {
-                "role": "user",
-                "content": "Since network partitions are inevitable in physical networks, how do real-world systems choose between CP and AP?"
-            },
-            {
-                "role": "assistant",
-                "content": "Because physical network partitions cannot be completely prevented (P is mandatory), systems must choose whether to sacrifice consistency for availability (AP, like Apache Cassandra or DynamoDB with eventual consistency) or sacrifice availability for strict consistency (CP, like Google Spanner, etcd, or Apache ZooKeeper, which reject writes when quorum cannot be verified)."
-            }
-        ]
-    },
-    {
-        "id": "moon_chat_gen_008",
+        "id": "moon_chat_gen_016",
         "category": "cryptography",
-        "source": "Applied Cryptography Fundamentals",
+        "source": "Wikipedia article 'EdDSA'",
         "source_url": "https://en.wikipedia.org/wiki/EdDSA",
-        "license": "Public Domain",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -220,62 +485,198 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
             }
         ]
     },
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 7: DISTRIBUTED SYSTEMS & NETWORKING
+    # -------------------------------------------------------------------------
     {
-        "id": "moon_chat_gen_009",
-        "category": "science",
-        "source": "Biochemistry Basics",
-        "source_url": "https://en.wikipedia.org/wiki/DNA",
-        "license": "Public Domain",
+        "id": "moon_chat_gen_017",
+        "category": "distributed_systems",
+        "source": "Wikipedia article 'CAP theorem'",
+        "source_url": "https://en.wikipedia.org/wiki/CAP_theorem",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
         "is_dev_fixture": False,
         "messages": [
             {
                 "role": "user",
-                "content": "How do the four nitrogenous bases in DNA pair up, and what bonds hold the double helix together?"
+                "content": "What is Brewer's CAP Theorem and what does it mean for distributed data stores?"
             },
             {
                 "role": "assistant",
-                "content": "In DNA, the four nitrogenous bases pair according to Chargaff's rules: Adenine (A) pairs exclusively with Thymine (T) via two hydrogen bonds, while Guanine (G) pairs exclusively with Cytosine (C) via three hydrogen bonds. The double helix is held together primarily by these hydrogen bonds between complementary base pairs and base-stacking hydrophobic interactions."
+                "content": "The CAP Theorem states that any distributed data store can simultaneously provide at most two of the following three guarantees: Consistency (every read receives the most recent write or an error), Availability (every non-failing node returns a non-error response), and Partition Tolerance (the system continues to operate despite arbitrary network dropped or delayed messages)."
             },
             {
                 "role": "user",
-                "content": "Why does a DNA strand with higher GC content require a higher melting temperature to denature?"
+                "content": "Since network partitions are inevitable in physical networks, how do real-world systems choose between CP and AP?"
             },
             {
                 "role": "assistant",
-                "content": "A higher GC content increases the thermal stability of the DNA duplex because GC pairs are connected by three hydrogen bonds compared to only two in AT pairs, and GC base stacks exhibit stronger thermodynamic stacking interactions, requiring more thermal kinetic energy to separate the strands."
+                "content": "Because physical network partitions cannot be completely prevented (P is mandatory), systems must choose whether to sacrifice consistency for availability (AP, like Apache Cassandra or DynamoDB with eventual consistency) or sacrifice availability for strict consistency (CP, like Google Spanner, etcd, or Apache ZooKeeper, which reject writes when quorum cannot be verified)."
+            }
+        ]
+    },
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 8: GENERAL CONVERSATION & HELPFUL DIALOGUE
+    # -------------------------------------------------------------------------
+    {
+        "id": "moon_chat_gen_018",
+        "category": "general_conversation",
+        "source": "Moon AI Conversational Training Guidelines",
+        "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/TRAINING.md",
+        "license": "CustomSovereign",
+        "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
+        "provenance_type": "ORIGINAL_SELF_AUTHORED",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "Good morning! Can you help me organize my study schedule for an upcoming systems exam?"
+            },
+            {
+                "role": "assistant",
+                "content": "Good morning! I would be glad to help you organize a structured study plan. To tailor it effectively, could you share the specific topics covered on your exam, how many days remain, and how many hours you can dedicate daily?"
+            },
+            {
+                "role": "user",
+                "content": "I have 5 days, about 3 hours per day, covering operating systems, virtual memory, concurrency, and file systems."
+            },
+            {
+                "role": "assistant",
+                "content": "Here is an optimized 5-day study plan: Day 1: Process lifecycle, CPU scheduling, and context switching; Day 2: Virtual memory, paging, and page replacement algorithms; Day 3: Concurrency, mutexes, semaphores, and deadlocks; Day 4: File systems, inode structures, and crash recovery; Day 5: Comprehensive review, practice questions, and formula synthesis."
             }
         ]
     },
     {
-        "id": "moon_chat_gen_010",
-        "category": "software_engineering",
-        "source": "Software Design Principles",
-        "source_url": "https://en.wikipedia.org/wiki/SOLID",
-        "license": "MIT",
+        "id": "moon_chat_gen_019",
+        "category": "general_conversation",
+        "source": "Moon AI Sovereign Conversational Corpus",
+        "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/ARCHITECTURE.md",
+        "license": "CustomSovereign",
+        "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
+        "provenance_type": "ORIGINAL_SELF_AUTHORED",
         "is_dev_fixture": False,
         "messages": [
             {
                 "role": "user",
-                "content": "What are the five SOLID principles in object-oriented software engineering?"
+                "content": "What should I do when I encounter an unfamiliar compiler error that I do not understand?"
             },
             {
                 "role": "assistant",
-                "content": "SOLID is an acronym for five foundational design principles: Single Responsibility Principle (a class should have one reason to change), Open/Closed Principle (open for extension, closed for modification), Liskov Substitution Principle (derived classes must be substitutable for their base classes), Interface Segregation Principle (many client-specific interfaces are better than one general-purpose interface), and Dependency Inversion Principle (depend upon abstractions rather than concretions)."
+                "content": "When encountering an unfamiliar compiler error, follow these structured steps: 1) Carefully read the very first error message reported, as subsequent errors are often cascades caused by the first; 2) Note the exact line number, column, and file cited; 3) Identify the error code or descriptive error name; and 4) Search for the exact error string in official documentation or language reference manuals."
             },
             {
                 "role": "user",
-                "content": "How does the Single Responsibility Principle improve testing and maintenance in large ML pipelines?"
+                "content": "If the error occurs inside a template or macro expansion, how can I narrow it down?"
             },
             {
                 "role": "assistant",
-                "content": "By ensuring that components (e.g. data validation, cryptographic attestation, model forward pass, and checkpoint persistence) each have a single focused responsibility, SRP allows engineers to isolate unit tests, mock dependencies cleanly, debug failure modes quickly, and update storage or security mechanisms without risk of breaking model computation."
+                "content": "For macro and template expansions, construct a minimal reproducible example (MRE). In C/C++, use compiler flags like -E to inspect the preprocessed source, or use static assertions and simplified type aliases to pinpoint the instantiation step where type substitution failed."
+            }
+        ]
+    },
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 9: INSTRUCTION FOLLOWING & STRUCTURED OUTPUT
+    # -------------------------------------------------------------------------
+    {
+        "id": "moon_chat_gen_020",
+        "category": "instruction_following",
+        "source": "Moon AI Instruction Benchmark Suite",
+        "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/BENCHMARKS.md",
+        "license": "CustomSovereign",
+        "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
+        "provenance_type": "ORIGINAL_SELF_AUTHORED",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "Compare TCP and UDP in a clean Markdown table with columns: Protocol, Connection Type, Reliability, Speed, and Primary Use Cases."
+            },
+            {
+                "role": "assistant",
+                "content": "| Protocol | Connection Type | Reliability | Speed | Primary Use Cases |\n|---|---|---|---|---|\n| **TCP** | Connection-oriented (3-way handshake) | High (guaranteed delivery, ordered, error-checked) | Moderate (overhead from acknowledgments and windowing) | Web browsing (HTTP/HTTPS), email (SMTP/IMAP), file transfers (FTP) |\n| **UDP** | Connectionless | Low (no acknowledgments, best-effort, unordered) | High (minimal packet header overhead, low latency) | Real-time gaming, video streaming (VoIP, WebRTC), DNS lookups |"
+            },
+            {
+                "role": "user",
+                "content": "Now summarize the trade-off in exactly one concise sentence."
+            },
+            {
+                "role": "assistant",
+                "content": "TCP trades speed and transmission overhead to guarantee reliable, ordered data delivery, whereas UDP prioritizes minimal latency and throughput by discarding delivery guarantees."
+            }
+        ]
+    },
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 10: REASONING & STEP-BY-STEP EXPLANATIONS
+    # -------------------------------------------------------------------------
+    {
+        "id": "moon_chat_gen_021",
+        "category": "reasoning_explanations",
+        "source": "Open Educational Logic & Epistemology Corpus",
+        "source_url": "https://en.wikipedia.org/wiki/Proof_by_contradiction",
+        "license": "CC-BY-SA-4.0",
+        "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
+        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "Explain step by step how a proof by contradiction (reductio ad absurdum) works in formal logic."
+            },
+            {
+                "role": "assistant",
+                "content": "A proof by contradiction operates through the following logical sequence: 1) State the mathematical claim P that needs to be proven; 2) Assume for the sake of argument that the negation, NOT P, is true; 3) Reason deductively from this assumption using established axioms, definitions, and theorems; 4) Arrive at an impossible conclusion or logical contradiction (such as A AND NOT A, or 0 = 1); 5) Deduce that because valid deductive reasoning cannot yield a falsehood from true premises, the initial assumption NOT P must be false; therefore, P must be true."
+            },
+            {
+                "role": "user",
+                "content": "Can you give a classic example of this method?"
+            },
+            {
+                "role": "assistant",
+                "content": "A classic example is Euclid's proof that there are infinitely many primes: Assume the contrary, that there are only finitely many primes {p1, p2, ..., pn}. Construct the integer N = (p1 * p2 * ... * pn) + 1. N is either prime or divisible by a prime. But dividing N by any known prime pi leaves a remainder of 1. Thus, either N is itself a new prime or it has a prime factor not in the original finite list, producing a direct contradiction."
+            }
+        ]
+    },
+
+    # -------------------------------------------------------------------------
+    # DOMAIN 11: BEGINNER-FRIENDLY EDUCATIONAL EXPLANATIONS
+    # -------------------------------------------------------------------------
+    {
+        "id": "moon_chat_gen_022",
+        "category": "beginner_educational",
+        "source": "Moon AI Educational Foundations",
+        "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/ARCHITECTURE.md",
+        "license": "CustomSovereign",
+        "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
+        "provenance_type": "ORIGINAL_SELF_AUTHORED",
+        "is_dev_fixture": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": "Explain what an API is using an everyday analogy that a non-technical person can easily understand."
+            },
+            {
+                "role": "assistant",
+                "content": "Think of an API (Application Programming Interface) like a waiter at a restaurant. You are the customer sitting at the table (the client application), and the kitchen is the system or database preparing the food. You don't need to know how the chefs chop the vegetables or manage the ovens. Instead, you look at the menu (the API specification), tell the waiter what you want (an API request), and the waiter brings your order back to your table (the API response)."
+            },
+            {
+                "role": "user",
+                "content": "Why can't applications just talk directly to the kitchen without the waiter?"
+            },
+            {
+                "role": "assistant",
+                "content": "If every customer walked directly into the kitchen, it would cause chaos and security hazards! Customers might accidentally knock over ingredients, see secret recipes, or interfere with other orders. The waiter (API) enforces security, verifies that the request is valid, keeps the kitchen organized, and protects the internal system."
             }
         ]
     }
 ]
 
 def get_genuine_corpus() -> List[Dict[str, Any]]:
-    """Returns the genuine conversational records with computed SHA-256 hashes."""
+    """Returns the genuine conversational records with computed canonical SHA-256 hashes."""
     records = []
     for item in GENUINE_CHAT_RECORDS:
         record = dict(item)

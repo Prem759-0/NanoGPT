@@ -1,5 +1,5 @@
 {
-  "report_generated_at": "2026-11-01T10:23:35.403679+00:00",
+  "report_generated_at": "2026-11-02T17:26:42.307297+00:00",
   "architect": "Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)",
   "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
   "stage": "STAGE_2_0_2_PROVENANCE_HARDENING",
@@ -488,17 +488,17 @@
       "corpus_type": "chat",
       "hygiene_valid": true,
       "training_data_adequate": false,
-      "total_samples": 4,
-      "genuine_production_samples": 0,
+      "total_samples": 24,
+      "genuine_production_samples": 20,
       "dev_fixtures_count": 4,
       "target_samples": 1000,
-      "shortfall": 1000,
+      "shortfall": 980,
       "status": "INSUFFICIENT (DEV FIXTURES ONLY)",
       "estimated_token_count": 123,
       "languages": {},
       "splits_summary": {
-        "train": 0,
-        "val": 0,
+        "train": 18,
+        "val": 2,
         "dev": 4
       }
     },

@@ -1,6 +1,6 @@
 # Moon AI — Sovereign Chat Dataset Audit Report
 
-**Generated:** 2026-11-01T18:08:56.912238+00:00  
+**Generated:** 2026-11-02T16:06:18.076090+00:00  
 **Chief ML Systems Architect:** Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)  
 **Ownership Policy:** `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`  
 **Model Track:** `moon-chat-v0`  
@@ -12,21 +12,21 @@
 
 | Metric | Count |
 |---|---|
-| **Total Genuine Records** | **10** |
-| **Train Records (80%)** | 8 |
-| **Validation Records (10%)** | 1 |
-| **Test Records (10%)** | 1 |
-| **Total Tokens (ChatML)** | **4,296** |
-| **Mean Tokens / Conversation** | 429.6 |
-| **Median Tokens / Conversation** | 431.0 |
-| **Token Range [Min, Max]** | [311, 494] |
-| **Total Conversation Turns** | 40 |
+| **Total Genuine Records** | **22** |
+| **Train Records (80%)** | 18 |
+| **Validation Records (10%)** | 2 |
+| **Test Records (10%)** | 2 |
+| **Total Tokens (ChatML)** | **9,445** |
+| **Mean Tokens / Conversation** | 429.32 |
+| **Median Tokens / Conversation** | 431.5 |
+| **Token Range [Min, Max]** | [304, 576] |
+| **Total Conversation Turns** | 88 |
 
 ---
 
 ## 2. Cryptographic Integrity & Anti-Leakage Gate
 
-- **Hash Verification:** 10 / 10 records verified matching canonical SHA-256 (100.0%).
+- **Hash Verification:** 22 / 22 records verified matching canonical SHA-256 (100.0%).
 - **Cross-Split Leakage:** **NO LEAKAGE (PASSED)**
   - Train/Val Overlap: 0
   - Train/Test Overlap: 0
@@ -39,10 +39,9 @@
 
 | License | Count | Percentage |
 |---|---|---|
-| `Public Domain` | 4 | 40.0% |
-| `CustomSovereign` | 2 | 20.0% |
-| `CC0-1.0` | 2 | 20.0% |
-| `MIT` | 2 | 20.0% |
+| `CustomSovereign` | 6 | 27.3% |
+| `CC-BY-SA-4.0` | 15 | 68.2% |
+| `CC0-1.0` | 1 | 4.5% |
 
 ---
 
@@ -50,15 +49,20 @@
 
 | Category | Count | Percentage |
 |---|---|---|
-| `cryptography` | 1 | 10.0% |
-| `mathematics` | 1 | 10.0% |
-| `physics` | 1 | 10.0% |
-| `science` | 1 | 10.0% |
-| `machine_learning` | 1 | 10.0% |
-| `computer_science` | 2 | 20.0% |
-| `software_engineering` | 1 | 10.0% |
-| `operating_systems` | 1 | 10.0% |
-| `sovereign_identity` | 1 | 10.0% |
+| `beginner_educational` | 1 | 4.5% |
+| `physics` | 1 | 4.5% |
+| `computer_science` | 3 | 13.6% |
+| `cryptography` | 1 | 4.5% |
+| `mathematics` | 3 | 13.6% |
+| `programming_fundamentals` | 2 | 9.1% |
+| `distributed_systems` | 1 | 4.5% |
+| `instruction_following` | 1 | 4.5% |
+| `science` | 2 | 9.1% |
+| `software_engineering` | 1 | 4.5% |
+| `general_conversation` | 2 | 9.1% |
+| `operating_systems` | 1 | 4.5% |
+| `sovereign_identity` | 2 | 9.1% |
+| `reasoning_explanations` | 1 | 4.5% |
 
 ---
 

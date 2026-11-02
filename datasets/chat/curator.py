@@ -90,9 +90,10 @@ def split_chat_dataset(
     if n_total == 0:
         return [], [], []
 
-    # Calculate split sizes
-    n_val = max(1, int(n_total * val_ratio)) if n_total >= 3 else 0
-    n_test = max(1, int(n_total * test_ratio)) if n_total >= 3 else 0
+    # Calculate split sizes: ensure at least 2 in val and test when n_total >= 20
+    min_eval = 2 if n_total >= 20 else (1 if n_total >= 3 else 0)
+    n_val = max(min_eval, int(n_total * val_ratio)) if n_total >= 3 else 0
+    n_test = max(min_eval, int(n_total * test_ratio)) if n_total >= 3 else 0
     n_train = n_total - n_val - n_test
 
     train_set = shuffled[:n_train]

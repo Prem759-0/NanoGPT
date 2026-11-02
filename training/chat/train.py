@@ -97,15 +97,22 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
         torch.cuda.manual_seed_all(seed)
 
     # Load Sovereign Tokenizer
-    tok_path = os.path.join(PROJECT_ROOT, cfg["paths"]["tokenizer_path"])
+    tok_path = cfg["paths"]["tokenizer_path"]
+    if not os.path.isabs(tok_path):
+        tok_path = os.path.join(PROJECT_ROOT, tok_path)
     if not os.path.exists(tok_path):
         raise FileNotFoundError(f"Sovereign tokenizer not found at: {tok_path}. Run scripts/build_chat_dataset.py first.")
     tokenizer = SovereignTokenizer.load(tok_path)
     print(f"Loaded Sovereign Tokenizer: {tokenizer.vocab_size} tokens")
 
     # Instantiate datasets
-    train_manifest = os.path.join(PROJECT_ROOT, cfg["paths"]["train_manifest"])
-    val_manifest = os.path.join(PROJECT_ROOT, cfg["paths"]["val_manifest"])
+    train_manifest = cfg["paths"]["train_manifest"]
+    if not os.path.isabs(train_manifest):
+        train_manifest = os.path.join(PROJECT_ROOT, train_manifest)
+
+    val_manifest = cfg["paths"]["val_manifest"]
+    if not os.path.isabs(val_manifest):
+        val_manifest = os.path.join(PROJECT_ROOT, val_manifest)
 
     m_cfg = cfg["model"]
     block_size = m_cfg["block_size"]
@@ -116,6 +123,8 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
 
     if len(train_dataset) == 0:
         raise ValueError("Train dataset is empty! Populate datasets/manifests/chat_train.jsonl first.")
+    if len(val_dataset) == 0:
+        raise ValueError("Validation dataset is empty! Failing closed to prevent misleading zero validation loss.")
 
     batch_size = cfg["training"]["batch_size"]
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
@@ -216,6 +225,8 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
 
     # Evaluation
     print("\nRunning validation evaluation...")
+    if len(val_dataset) == 0:
+        raise ValueError("Validation dataset is empty! Failing closed.")
     model.eval()
     val_loss = 0.0
     val_steps = 0
@@ -229,11 +240,15 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
                 _, loss = model(x, y)
             val_loss += loss.item()
             val_steps += 1
-    mean_val_loss = val_loss / max(1, val_steps)
+    if val_steps == 0:
+        raise RuntimeError("Validation evaluation produced 0 steps! Cannot compute validation metrics.")
+    mean_val_loss = val_loss / val_steps
     print(f"Final Validation Loss: {mean_val_loss:.4f}")
 
     # Save Sovereign Checkpoint
-    checkpoint_dir = os.path.join(PROJECT_ROOT, cfg["paths"]["checkpoint_dir"])
+    checkpoint_dir = cfg["paths"]["checkpoint_dir"]
+    if not os.path.isabs(checkpoint_dir):
+        checkpoint_dir = os.path.join(PROJECT_ROOT, checkpoint_dir)
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_path = os.path.join(checkpoint_dir, cfg["paths"]["checkpoint_name"])
 

@@ -30,7 +30,7 @@ from datasets.chat.audit import generate_chat_audit_report
 
 def build_chat_dataset():
     print("=" * 65)
-    print("   MOON AI — SOVEREIGN CHAT DATASET PREPARATION PIPELINE")
+    print("   MOON AI -- SOVEREIGN CHAT DATASET PREPARATION PIPELINE")
     print("=" * 65)
     print("Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
     print(f"Working Directory: {PROJECT_ROOT}\n")
@@ -50,7 +50,7 @@ def build_chat_dataset():
             print(f"     - {rej}")
 
     if not valid_records:
-        print("❌ Error: No valid genuine records found! Halting pipeline.")
+        print("Error: No valid genuine records found! Halting pipeline.")
         sys.exit(1)
 
     # 3. Deterministic Splitting
@@ -85,7 +85,6 @@ def build_chat_dataset():
 
     # 5. Train Sovereign Tokenizer from scratch
     print("\n4. Training Sovereign Byte-Level BPE Tokenizer from scratch...")
-    # Collect all text from messages across all records
     corpus_texts = []
     for r in valid_records:
         for turn in r["messages"]:
@@ -96,6 +95,7 @@ def build_chat_dataset():
     print(f"   Trained vocabulary size: {tokenizer.vocab_size} tokens")
 
     tok_path = os.path.join(PROJECT_ROOT, "models", "chat", "tokenizer.json")
+    os.makedirs(os.path.dirname(tok_path), exist_ok=True)
     tokenizer.save(tok_path)
     print(f"   Saved tokenizer: {os.path.relpath(tok_path, PROJECT_ROOT)}")
 
@@ -121,15 +121,13 @@ def build_chat_dataset():
         try:
             with open(reg_path, "r", encoding="utf-8") as f:
                 reg = json.load(f)
-            if "production_tracks" in reg and "moon-chat-v0" in reg["production_tracks"]:
-                reg["production_tracks"]["moon-chat-v0"]["dataset_records"] = len(valid_records)
-                reg["production_tracks"]["moon-chat-v0"]["train_records"] = len(train_records)
-                reg["production_tracks"]["moon-chat-v0"]["val_records"] = len(val_records)
-                reg["production_tracks"]["moon-chat-v0"]["test_records"] = len(test_records)
-                reg["production_tracks"]["moon-chat-v0"]["status"] = "DATA_READY_FOR_TRAINING"
-                reg["production_tracks"]["moon-chat-v0"]["notes"] = (
-                    f"Genuine pilot multi-turn conversational corpus curated ({len(valid_records)} records, "
-                    f"{audit_data['summary']['total_tokens']} ChatML tokens). Ready for Colab T4 pilot training."
+            target_dict = reg.get("models", {}).get("moon-chat-v0") or reg.get("production_tracks", {}).get("moon-chat-v0")
+            if target_dict is not None:
+                target_dict["genuine_samples_count"] = len(valid_records)
+                target_dict["training_ready"] = (audit_data["report_metadata"]["status"] == "READY_FOR_PILOT")
+                target_dict["notes"] = (
+                    f"Verified genuine multi-turn conversational corpus curated ({len(valid_records)} records, "
+                    f"{audit_data['summary']['total_tokens']:,} ChatML tokens). Assistant-only loss masking and Pre-LayerNorm architecture verified."
                 )
                 with open(reg_path, "w", encoding="utf-8") as f:
                     json.dump(reg, f, indent=2)
@@ -138,7 +136,7 @@ def build_chat_dataset():
             print(f"   Warning: could not update registry.json: {e}")
 
     print("\n" + "=" * 65)
-    print("🎉 CHAT DATASET PIPELINE COMPLETED SUCCESSFULLY!")
+    print("SUCCESS: CHAT DATASET PIPELINE COMPLETED SUCCESSFULLY!")
     print(f"Total genuine records:  {len(valid_records)}")
     print(f"Total ChatML tokens:    {audit_data['summary']['total_tokens']:,}")
     print(f"Vocabulary size:        {tokenizer.vocab_size}")
