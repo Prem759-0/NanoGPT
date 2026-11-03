@@ -1,11 +1,13 @@
 {
   "report_metadata": {
     "title": "Moon AI \u2014 Sovereign Chat Dataset Audit Report",
-    "timestamp": "2026-11-02T16:06:18.076090+00:00",
+    "timestamp": "2026-11-02T18:21:46.517981+00:00",
     "architect": "Prem Gaikwad (Chief ML Systems Architect, India \ud83c\uddee\ud83c\uddf3)",
     "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
     "model_track": "moon-chat-v0",
-    "status": "READY_FOR_PILOT_TRAINING"
+    "status": "ENGINEERING_SMOKE_TEST_ONLY",
+    "training_ready": false,
+    "smoke_test_ready": true
   },
   "summary": {
     "total_records": 22,
@@ -29,6 +31,10 @@
     "leakage_train_val_count": 0,
     "leakage_train_test_count": 0,
     "leakage_val_test_count": 0
+  },
+  "provenance_distribution": {
+    "ORIGINAL_SELF_AUTHORED_QA": 6,
+    "SOURCE_DERIVED_EDUCATIONAL_SUMMARY": 16
   },
   "license_distribution": {
     "CustomSovereign": 6,

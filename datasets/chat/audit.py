@@ -57,6 +57,7 @@ def generate_chat_audit_report(
     token_counts: List[int] = []
     turn_counts: List[int] = []
     license_dist: Dict[str, int] = {}
+    provenance_dist: Dict[str, int] = {}
     category_dist: Dict[str, int] = {}
     verified_hashes = 0
     hash_failures: List[str] = []
@@ -79,9 +80,11 @@ def generate_chat_audit_report(
     for rec in all_records:
         rec_id = rec.get("id", "unknown")
         lic = rec.get("license", "unknown")
+        prov = rec.get("provenance_type", "unspecified")
         cat = rec.get("category", "uncategorized")
 
         license_dist[lic] = license_dist.get(lic, 0) + 1
+        provenance_dist[prov] = provenance_dist.get(prov, 0) + 1
         category_dist[cat] = category_dist.get(cat, 0) + 1
 
         messages = rec.get("messages", [])
@@ -107,24 +110,16 @@ def generate_chat_audit_report(
 
     has_leakage = bool(leakage_train_val or leakage_train_test or leakage_val_test)
 
-    # Enforce strict readiness criteria (Never mark READY simply because 1 record exists)
-    is_ready = (
-        total_records >= 20 and
-        len(train_records) >= 15 and
-        len(val_records) >= 2 and
-        len(test_records) >= 2 and
-        total_tokens >= 5000 and
-        not has_leakage and
-        len(hash_failures) == 0
-    )
-    if is_ready:
-        readiness_status = "READY_FOR_PILOT_TRAINING"
-    elif total_records < 20 or total_tokens < 5000:
+    # Distinct readiness statuses
+    if total_records < 10 or total_tokens < 2000:
         readiness_status = "DATA_INSUFFICIENT"
     elif has_leakage or len(hash_failures) > 0:
         readiness_status = "PROVENANCE_PENDING"
+    elif total_records < 500 or total_tokens < 100000:
+        # Code pipeline execution verified, but data scale is insufficient for meaningful pilot training
+        readiness_status = "ENGINEERING_SMOKE_TEST_ONLY"
     else:
-        readiness_status = "DATA_INSUFFICIENT"
+        readiness_status = "READY_FOR_PILOT"
 
     audit_data = {
         "report_metadata": {
@@ -133,7 +128,9 @@ def generate_chat_audit_report(
             "architect": "Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)",
             "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
             "model_track": "moon-chat-v0",
-            "status": readiness_status
+            "status": readiness_status,
+            "training_ready": (readiness_status == "READY_FOR_PILOT"),
+            "smoke_test_ready": (readiness_status in ("ENGINEERING_SMOKE_TEST_ONLY", "READY_FOR_PILOT"))
         },
         "summary": {
             "total_records": total_records,
@@ -158,6 +155,7 @@ def generate_chat_audit_report(
             "leakage_train_test_count": len(leakage_train_test),
             "leakage_val_test_count": len(leakage_val_test)
         },
+        "provenance_distribution": provenance_dist,
         "license_distribution": license_dist,
         "category_distribution": category_dist,
         "tokenizer_info": {
@@ -182,6 +180,8 @@ def generate_chat_audit_report(
 **Ownership Policy:** `{audit_data['report_metadata']['ownership_policy']}`  
 **Model Track:** `{audit_data['report_metadata']['model_track']}`  
 **Status:** **{audit_data['report_metadata']['status']}**  
+**Engineering Smoke Test Capable:** **{audit_data['report_metadata']['smoke_test_ready']}**  
+**Production Pilot Ready:** **{audit_data['report_metadata']['training_ready']}**  
 
 ---
 
@@ -212,8 +212,18 @@ def generate_chat_audit_report(
 
 ---
 
-## 3. License Distribution
+## 3. Provenance & Licensing Distribution
 
+### Provenance Types
+| Provenance Type | Count | Percentage |
+|---|---|---|
+"""
+        for prov, count in provenance_dist.items():
+            pct = round((count / total_records) * 100, 1) if total_records > 0 else 0
+            md_content += f"| `{prov}` | {count} | {pct}% |\n"
+
+        md_content += """
+### Licenses
 | License | Count | Percentage |
 |---|---|---|
 """

@@ -4,7 +4,8 @@ Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
 
 Trains Moon Chat (Causal Autoregressive Transformer) from purely random weights.
-Compatible with Google Colab NVIDIA T4 (15.3 GB VRAM).
+Enforces strict training safety gates, reports dataset exposure metrics,
+and cleanly isolates engineering smoke tests from production runs.
 Zero third-party pretrained weights, zero external APIs.
 """
 
@@ -37,34 +38,63 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
 from model import GPTConfig, GPT
 from datasets.chat.tokenizer import SovereignTokenizer
 from training.chat.dataset import SovereignChatDataset
+from training.chat.readiness_gate import ChatReadinessGate, STATUS_READY_FOR_PILOT
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Moon AI Sovereign Chat Training Engine")
     parser.add_argument("--config", type=str, default="training/chat/config.yaml", help="Path to training config YAML")
     parser.add_argument("--max-iters", type=int, default=None, help="Override maximum training iterations")
     parser.add_argument("--device", type=str, default=None, help="Device to use (cuda, cpu, mps)")
-    parser.add_argument("--dry-run", action="store_true", help="Run 2 iterations to verify pipeline integrity")
+    parser.add_argument("--dry-run", action="store_true", help="Run 1 iteration to verify pipeline integrity")
+    parser.add_argument("--smoke-test", action="store_true", help="Run 1 iteration engineering smoke test without production checkpointing")
     return parser.parse_args()
 
 def get_lr(it: int, warmup_iters: int, max_iters: int, lr: float, min_lr: float) -> float:
-    # 1) linear warmup for warmup_iters steps
     if it < warmup_iters:
         return lr * it / warmup_iters
-    # 2) if it > max_iters, return min learning rate
     if it > max_iters:
         return min_lr
-    # 3) in between, use cosine decay down to min learning rate
     decay_ratio = (it - warmup_iters) / (max_iters - warmup_iters)
     assert 0 <= decay_ratio <= 1
-    coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0 to 1
+    coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
     return min_lr + coeff * (lr - min_lr)
 
-def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, device_override: Optional[str] = None, dry_run: bool = False):
+def train_moon_chat(
+    config_path: str,
+    max_iters_override: Optional[int] = None,
+    device_override: Optional[str] = None,
+    dry_run: bool = False,
+    smoke_test: bool = False,
+    custom_ckpt_path: Optional[str] = None
+) -> Dict[str, Any]:
+    is_smoke_test = dry_run or smoke_test
+
     print("=" * 65)
-    print("   MOON AI — SOVEREIGN CHAT MODEL TRAINING (moon-chat-v0)")
+    print("   MOON AI -- SOVEREIGN CHAT MODEL TRAINING (moon-chat-v0)")
     print("=" * 65)
-    print("Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
-    print("Pretrained Weights: STRICTLY PROHIBITED (Random Gaussian Init Only)\n")
+    print("Ownership Policy:   STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
+    print("Pretrained Weights: STRICTLY PROHIBITED (Random Gaussian Init Only)")
+    print(f"Execution Mode:     {'ENGINEERING SMOKE TEST' if is_smoke_test else 'PRODUCTION PILOT RUN'}\n")
+
+    # Readiness Gate Check: Block production training if not READY_FOR_PILOT
+    if not is_smoke_test:
+        gate = ChatReadinessGate()
+        gate_res = gate.run_all_checks()
+        if gate_res["status"] != STATUS_READY_FOR_PILOT:
+            print("!" * 65)
+            print("❌ PRODUCTION PILOT TRAINING BLOCKED BY READINESS GATE")
+            print("!" * 65)
+            print(f"Current Status:   {gate_res['status']} (Required: {STATUS_READY_FOR_PILOT})")
+            print(f"Blockers ({len(gate_res['blockers'])}):")
+            for b in gate_res["blockers"]:
+                print(f"  • {b}")
+            print("\nMeaningful pilot training for a 25.7M model requires at least 500 records and 100,000+ tokens.")
+            print("To verify pipeline mechanics without producing a production checkpoint, pass --smoke-test.")
+            print("!" * 65 + "\n")
+            raise RuntimeError(
+                f"Production pilot training blocked by readiness gate (status: {gate_res['status']}). "
+                f"Use --smoke-test to execute pipeline verification only."
+            )
 
     # Load configuration
     abs_config_path = os.path.abspath(config_path)
@@ -105,7 +135,7 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
     tokenizer = SovereignTokenizer.load(tok_path)
     print(f"Loaded Sovereign Tokenizer: {tokenizer.vocab_size} tokens")
 
-    # Instantiate datasets
+    # Instantiate datasets with multi-window chunking
     train_manifest = cfg["paths"]["train_manifest"]
     if not os.path.isabs(train_manifest):
         train_manifest = os.path.join(PROJECT_ROOT, train_manifest)
@@ -119,7 +149,6 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
 
     train_dataset = SovereignChatDataset(train_manifest, tokenizer, block_size=block_size)
     val_dataset = SovereignChatDataset(val_manifest, tokenizer, block_size=block_size)
-    print(f"Train samples: {len(train_dataset)} | Val samples: {len(val_dataset)}")
 
     if len(train_dataset) == 0:
         raise ValueError("Train dataset is empty! Populate datasets/manifests/chat_train.jsonl first.")
@@ -129,6 +158,26 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
     batch_size = cfg["training"]["batch_size"]
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
+
+    # Dataset Exposure Analysis
+    t_cfg = cfg["training"]
+    max_iters = 1 if is_smoke_test else (max_iters_override or t_cfg["max_iters"])
+    grad_accum_steps = 1 if is_smoke_test else t_cfg.get("gradient_accumulation_steps", 1)
+
+    unique_records = train_dataset.get_unique_record_count()
+    total_train_windows = len(train_dataset)
+    supervised_tokens = train_dataset.get_total_supervised_tokens()
+    effective_samples = max_iters * batch_size * grad_accum_steps
+    dataset_passes = effective_samples / max(1, total_train_windows)
+
+    print("\nDataset Exposure & Accounting Metrics:")
+    print(f"  • Unique conversation records:       {unique_records}")
+    print(f"  • Multi-window training chunks:      {total_train_windows} (val: {len(val_dataset)})")
+    print(f"  • Supervised assistant target tokens: {supervised_tokens:,}")
+    print(f"  • Planned sample exposures:          {effective_samples:,} (iters: {max_iters}, batch: {batch_size}, accum: {grad_accum_steps})")
+    print(f"  • Effective dataset passes (epochs): {dataset_passes:.1f}")
+    if dataset_passes > 10 and not is_smoke_test:
+        print(f"  ⚠️ HIGH OVERFITTING RISK: {dataset_passes:.1f} passes over {unique_records} unique records!")
 
     # Initialize Model from Random Gaussian Weights ONLY
     gpt_conf = GPTConfig(
@@ -149,7 +198,6 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
     print(f"Model architecture initialized: {total_params:,} parameters ({total_params / 1e6:.2f}M)")
 
     # Optimizer
-    t_cfg = cfg["training"]
     learning_rate = t_cfg["learning_rate"]
     min_lr = t_cfg.get("min_lr", learning_rate / 10.0)
     optimizer = torch.optim.AdamW(
@@ -159,13 +207,6 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
         weight_decay=t_cfg["weight_decay"]
     )
 
-    max_iters = max_iters_override or t_cfg["max_iters"]
-    if dry_run:
-        max_iters = 1
-        grad_accum_steps = 1
-        print("Dry run requested: executing 1 iteration with grad_accum_steps=1 to verify pipeline.", flush=True)
-    else:
-        grad_accum_steps = t_cfg.get("gradient_accumulation_steps", 1)
     use_amp = device == "cuda" and t_cfg.get("mixed_precision") == "fp16"
     scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
 
@@ -175,9 +216,9 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
     iter_num = 0
     t0 = time.time()
     train_iter = iter(train_loader)
+    accum_loss = 0.0
 
     while iter_num < max_iters:
-        # Determine learning rate
         lr = get_lr(iter_num, t_cfg.get("warmup_iters", 50), max_iters, learning_rate, min_lr)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
@@ -218,15 +259,13 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
 
         iter_num += 1
 
-        if iter_num % 10 == 0 or iter_num == max_iters or dry_run:
+        if iter_num % 10 == 0 or iter_num == max_iters or is_smoke_test:
             dt = time.time() - t0
             t0 = time.time()
             print(f"Iter {iter_num:4d}/{max_iters} | Loss: {accum_loss:.4f} | LR: {lr:.6f} | Time: {dt*1000:.1f}ms")
 
     # Evaluation
     print("\nRunning validation evaluation...")
-    if len(val_dataset) == 0:
-        raise ValueError("Validation dataset is empty! Failing closed.")
     model.eval()
     val_loss = 0.0
     val_steps = 0
@@ -245,14 +284,23 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
     mean_val_loss = val_loss / val_steps
     print(f"Final Validation Loss: {mean_val_loss:.4f}")
 
-    # Save Sovereign Checkpoint
-    checkpoint_dir = cfg["paths"]["checkpoint_dir"]
-    if not os.path.isabs(checkpoint_dir):
-        checkpoint_dir = os.path.join(PROJECT_ROOT, checkpoint_dir)
-    os.makedirs(checkpoint_dir, exist_ok=True)
-    checkpoint_path = os.path.join(checkpoint_dir, cfg["paths"]["checkpoint_name"])
+    # Determine checkpoint destination (Smoke test checkpoints are isolated and marked unpromotable)
+    if custom_ckpt_path:
+        checkpoint_path = custom_ckpt_path
+        os.makedirs(os.path.dirname(os.path.abspath(checkpoint_path)), exist_ok=True)
+    else:
+        checkpoint_dir = cfg["paths"]["checkpoint_dir"]
+        if not os.path.isabs(checkpoint_dir):
+            checkpoint_dir = os.path.join(PROJECT_ROOT, checkpoint_dir)
+        os.makedirs(checkpoint_dir, exist_ok=True)
+
+        ckpt_filename = "smoke_test_ckpt.pt" if is_smoke_test else cfg["paths"]["checkpoint_name"]
+        checkpoint_path = os.path.join(checkpoint_dir, ckpt_filename)
 
     checkpoint_payload = {
+        "status": "ENGINEERING_SMOKE_TEST_ONLY" if is_smoke_test else "PILOT_TRAINED",
+        "is_production_trained": not is_smoke_test,
+        "promotable": not is_smoke_test,
         "model": model.state_dict(),
         "model_args": {
             "block_size": gpt_conf.block_size,
@@ -272,7 +320,14 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
             "architect": "Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)",
             "final_train_loss": accum_loss,
             "final_val_loss": mean_val_loss,
-            "iterations": iter_num
+            "iterations": iter_num,
+            "is_production_trained": not is_smoke_test,
+            "status": "ENGINEERING_SMOKE_TEST_ONLY" if is_smoke_test else "PILOT_TRAINED",
+            "notes": (
+                "Engineering smoke test checkpoint only. Unpromotable to production."
+                if is_smoke_test
+                else "Pilot trained checkpoint."
+            )
         },
         "iter_num": iter_num,
         "best_val_loss": mean_val_loss
@@ -280,24 +335,35 @@ def train_moon_chat(config_path: str, max_iters_override: Optional[int] = None, 
 
     torch.save(checkpoint_payload, checkpoint_path)
 
-    # Compute SHA-256 of checkpoint
     with open(checkpoint_path, "rb") as f:
         ckpt_sha256 = hashlib.sha256(f.read()).hexdigest()
 
     ckpt_size_mb = os.path.getsize(checkpoint_path) / (1024 * 1024)
 
-    print(f"\n🎉 Checkpoint saved successfully!")
-    print(f"Path:    {os.path.relpath(checkpoint_path, PROJECT_ROOT)}")
+    print("\n" + "=" * 65)
+    print(f"Checkpoint saved: {'[SMOKE TEST UNPROMOTABLE]' if is_smoke_test else '[PRODUCTION PILOT]'}")
+    try:
+        display_path = os.path.relpath(checkpoint_path, PROJECT_ROOT)
+    except ValueError:
+        display_path = checkpoint_path
+    print(f"Path:    {display_path}")
     print(f"Size:    {ckpt_size_mb:.2f} MB")
     print(f"SHA-256: {ckpt_sha256}")
     print("=" * 65)
 
     return {
+        "status": "COMPLETED_SMOKE_TEST" if is_smoke_test else "COMPLETED_PRODUCTION_PILOT",
         "checkpoint_path": checkpoint_path,
         "checkpoint_sha256": ckpt_sha256,
         "parameters": total_params,
         "final_val_loss": mean_val_loss,
-        "iterations": iter_num
+        "iterations": iter_num,
+        "total_iterations": iter_num,
+        "unique_records": unique_records,
+        "chunks_generated": len(train_dataset),
+        "supervised_tokens": train_dataset.get_total_supervised_tokens(),
+        "is_smoke_test": is_smoke_test,
+        "effective_dataset_passes": dataset_passes
     }
 
 if __name__ == "__main__":
@@ -306,5 +372,6 @@ if __name__ == "__main__":
         config_path=args.config,
         max_iters_override=args.max_iters,
         device_override=args.device,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        smoke_test=args.smoke_test
     )

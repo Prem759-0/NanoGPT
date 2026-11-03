@@ -312,11 +312,19 @@ class TestStage211ReadinessRepair(unittest.TestCase):
     # 7. Strict Readiness Gate Evaluation
     def test_strict_readiness_gate(self):
         """Readiness gate must pass with verified corpus and fail closed when scale is insufficient."""
-        gate = ChatReadinessGate()
+        # Configured with pilot threshold
+        gate = ChatReadinessGate(pilot_min_records=20, pilot_min_tokens=5000)
         res = gate.run_all_checks()
         self.assertTrue(res["passed"], f"Readiness gate failed: {res['blockers']}")
         self.assertEqual(res["status"], STATUS_READY_FOR_PILOT)
         self.assertEqual(len(res["blockers"]), 0)
+
+        # Default strict gate marks small 22-record corpus as smoke-test ready only
+        gate_default = ChatReadinessGate()
+        res_default = gate_default.run_all_checks()
+        self.assertEqual(res_default["status"], "ENGINEERING_SMOKE_TEST_ONLY")
+        self.assertTrue(res_default["smoke_test_passed"])
+        self.assertFalse(res_default["passed"])
 
         # Scale check: must fail if total records < 20
         with tempfile.TemporaryDirectory() as empty_dir:

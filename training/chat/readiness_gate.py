@@ -4,20 +4,22 @@ Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
 
 Comprehensive gate validating:
-1. Cryptographic provenance, source tracking, and attribution.
+1. Cryptographic provenance, source tracking, attribution, and revision metadata.
 2. Verified open licensing (CC-BY-SA-4.0 for Wikipedia, CC0, MIT, CustomSovereign).
 3. Complete synthetic fixture isolation.
-4. Scale criteria (minimum record counts and token thresholds).
-5. Adequate independent validation and blind test splits.
-6. Zero cross-split leakage (exact hash and normalized prompt).
-7. Pure-sovereign tokenizer integrity.
-8. Architecture consistency between registry, config, and model implementation.
-9. Forward/backward/optimizer assistant-only loss masking verification.
-10. Checkpoint save, reload, and SHA-256 bit-for-bit integrity.
+4. Scale criteria explicitly justified by model size:
+   - Engineering Smoke Test: >= 10 records, >= 2,000 tokens (tests code execution only).
+   - Meaningful Pilot Training: >= 500 records, >= 100,000 tokens (required for READY_FOR_PILOT).
+5. Adequate independent validation and blind test splits (zero cross-split leakage).
+6. Pure-sovereign tokenizer integrity and multi-window chunking validity.
+7. Architecture consistency between registry, config, and model implementation.
+8. Forward/backward/optimizer assistant-only loss masking verification.
+9. Checkpoint save, reload, and SHA-256 bit-for-bit integrity.
 
 Outputs explicit status:
 - DATA_INSUFFICIENT
 - PROVENANCE_PENDING
+- ENGINEERING_SMOKE_TEST_ONLY
 - READY_FOR_PILOT
 - PILOT_TRAINED
 - EVALUATION_PASSED
@@ -42,24 +44,45 @@ from datasets.chat.schema import (
     compute_conversation_sha256,
     normalize_text,
     APPROVED_LICENSES,
-    ALLOWED_PROVENANCE_TYPES
+    ALLOWED_PROVENANCE_TYPES,
+    PROVENANCE_ORIGINAL_SELF_AUTHORED_QA,
+    PROVENANCE_SOURCE_DERIVED_SUMMARY,
+    PROVENANCE_GENUINE_HUMAN_CONVERSATION,
+    PROVENANCE_SYNTHETIC_DEV_FIXTURE,
+    PROVENANCE_PENDING
 )
 from datasets.chat.tokenizer import SovereignTokenizer
 from model import GPTConfig, GPT
 from training.chat.dataset import SovereignChatDataset
 
-# Strict Minimum Scale Thresholds for Pilot Readiness
-MIN_TOTAL_RECORDS = 20
-MIN_TRAIN_RECORDS = 15
-MIN_VAL_RECORDS = 2
-MIN_TEST_RECORDS = 2
-MIN_TOTAL_TOKENS = 5000
-
+# Explicit status taxonomy
 STATUS_DATA_INSUFFICIENT = "DATA_INSUFFICIENT"
 STATUS_PROVENANCE_PENDING = "PROVENANCE_PENDING"
+STATUS_ENGINEERING_SMOKE_TEST_ONLY = "ENGINEERING_SMOKE_TEST_ONLY"
 STATUS_READY_FOR_PILOT = "READY_FOR_PILOT"
 STATUS_PILOT_TRAINED = "PILOT_TRAINED"
 STATUS_EVALUATION_PASSED = "EVALUATION_PASSED"
+
+# Scale criteria for Engineering Smoke Test (Code pipeline verification only)
+SMOKE_TEST_MIN_TOTAL_RECORDS = 10
+SMOKE_TEST_MIN_TRAIN_RECORDS = 8
+SMOKE_TEST_MIN_VAL_RECORDS = 1
+SMOKE_TEST_MIN_TEST_RECORDS = 1
+SMOKE_TEST_MIN_TOTAL_TOKENS = 2000
+
+# Backward compatibility aliases
+MIN_TOTAL_RECORDS = SMOKE_TEST_MIN_TOTAL_RECORDS
+MIN_TRAIN_RECORDS = SMOKE_TEST_MIN_TRAIN_RECORDS
+MIN_VAL_RECORDS = SMOKE_TEST_MIN_VAL_RECORDS
+MIN_TEST_RECORDS = SMOKE_TEST_MIN_TEST_RECORDS
+MIN_TOTAL_TOKENS = SMOKE_TEST_MIN_TOTAL_TOKENS
+
+# Scale criteria for Meaningful Pilot Training (25.7M parameter model)
+PILOT_MIN_TOTAL_RECORDS = 500
+PILOT_MIN_TRAIN_RECORDS = 400
+PILOT_MIN_VAL_RECORDS = 50
+PILOT_MIN_TEST_RECORDS = 50
+PILOT_MIN_TOTAL_TOKENS = 100000
 
 def load_jsonl(path: str) -> List[Dict[str, Any]]:
     records = []
@@ -75,11 +98,18 @@ def load_jsonl(path: str) -> List[Dict[str, Any]]:
 class ChatReadinessGate:
     """
     Evaluates whether moon-chat-v0 is genuinely ready for pilot training.
-    Never marks READY_FOR_PILOT simply because one record exists.
+    Distinguishes engineering smoke test capability from genuine pilot training readiness.
     """
 
-    def __init__(self, root_dir: str = PROJECT_ROOT):
+    def __init__(
+        self,
+        root_dir: str = PROJECT_ROOT,
+        pilot_min_records: int = PILOT_MIN_TOTAL_RECORDS,
+        pilot_min_tokens: int = PILOT_MIN_TOTAL_TOKENS
+    ):
         self.root_dir = root_dir
+        self.pilot_min_records = pilot_min_records
+        self.pilot_min_tokens = pilot_min_tokens
         self.train_manifest = os.path.join(root_dir, "datasets", "manifests", "chat_train.jsonl")
         self.val_manifest = os.path.join(root_dir, "datasets", "manifests", "chat_val.jsonl")
         self.test_manifest = os.path.join(root_dir, "datasets", "manifests", "chat_test.jsonl")
@@ -88,11 +118,12 @@ class ChatReadinessGate:
         self.registry_path = os.path.join(root_dir, "models", "registry.json")
 
     def run_all_checks(self) -> Dict[str, Any]:
-        """Runs the complete battery of 10 readiness checks."""
+        """Runs the complete battery of readiness checks."""
         results = {
             "checks": {},
             "status": STATUS_DATA_INSUFFICIENT,
             "passed": False,
+            "smoke_test_passed": False,
             "blockers": []
         }
 
@@ -102,32 +133,21 @@ class ChatReadinessGate:
         test_recs = load_jsonl(self.test_manifest)
         all_recs = train_recs + val_recs + test_recs
 
-        # CHECK 1: Scale Thresholds
-        scale_ok = True
-        scale_errs = []
-        if len(all_recs) < MIN_TOTAL_RECORDS:
-            scale_ok = False
-            scale_errs.append(f"Total genuine records ({len(all_recs)}) < minimum threshold ({MIN_TOTAL_RECORDS}).")
-        if len(train_recs) < MIN_TRAIN_RECORDS:
-            scale_ok = False
-            scale_errs.append(f"Train records ({len(train_recs)}) < minimum threshold ({MIN_TRAIN_RECORDS}).")
-        if len(val_recs) < MIN_VAL_RECORDS:
-            scale_ok = False
-            scale_errs.append(f"Validation records ({len(val_recs)}) < minimum threshold ({MIN_VAL_RECORDS}).")
-        if len(test_recs) < MIN_TEST_RECORDS:
-            scale_ok = False
-            scale_errs.append(f"Test records ({len(test_recs)}) < minimum threshold ({MIN_TEST_RECORDS}).")
-
-        results["checks"]["scale_thresholds"] = {
-            "passed": scale_ok,
-            "total_records": len(all_recs),
-            "train_records": len(train_recs),
-            "val_records": len(val_recs),
-            "test_records": len(test_recs),
-            "errors": scale_errs
-        }
-        if not scale_ok:
-            results["blockers"].extend(scale_errs)
+        # CHECK 1: Engineering Smoke Test Minimum Scale
+        smoke_scale_ok = True
+        smoke_errs = []
+        if len(all_recs) < SMOKE_TEST_MIN_TOTAL_RECORDS:
+            smoke_scale_ok = False
+            smoke_errs.append(f"Total genuine records ({len(all_recs)}) < smoke test threshold ({SMOKE_TEST_MIN_TOTAL_RECORDS}).")
+        if len(train_recs) < SMOKE_TEST_MIN_TRAIN_RECORDS:
+            smoke_scale_ok = False
+            smoke_errs.append(f"Train records ({len(train_recs)}) < smoke test threshold ({SMOKE_TEST_MIN_TRAIN_RECORDS}).")
+        if len(val_recs) < SMOKE_TEST_MIN_VAL_RECORDS:
+            smoke_scale_ok = False
+            smoke_errs.append(f"Validation records ({len(val_recs)}) < smoke test threshold ({SMOKE_TEST_MIN_VAL_RECORDS}).")
+        if len(test_recs) < SMOKE_TEST_MIN_TEST_RECORDS:
+            smoke_scale_ok = False
+            smoke_errs.append(f"Test records ({len(test_recs)}) < smoke test threshold ({SMOKE_TEST_MIN_TEST_RECORDS}).")
 
         # CHECK 2: Provenance & Attribution Integrity
         prov_ok = True
@@ -200,9 +220,9 @@ class ChatReadinessGate:
                 for rec in all_recs:
                     t_ids = tokenizer.encode_chat(rec.get("messages", []))
                     total_tokens += len(t_ids)
-                if total_tokens < MIN_TOTAL_TOKENS:
+                if total_tokens < SMOKE_TEST_MIN_TOTAL_TOKENS:
                     tok_ok = False
-                    tok_errs.append(f"Total tokens ({total_tokens}) < minimum required ({MIN_TOTAL_TOKENS}).")
+                    tok_errs.append(f"Total tokens ({total_tokens}) < smoke test threshold ({SMOKE_TEST_MIN_TOTAL_TOKENS}).")
             except Exception as e:
                 tok_ok = False
                 tok_errs.append(f"Tokenizer failed verification: {e}")
@@ -251,6 +271,8 @@ class ChatReadinessGate:
         # CHECK 6: Assistant-Only Loss Masking & Forward/Backward/Optimizer Dry Run
         dry_run_ok = True
         dry_run_errs = []
+        model = None
+        gpt_cfg = None
         if tokenizer and os.path.exists(self.train_manifest) and os.path.exists(self.val_manifest):
             try:
                 ds = SovereignChatDataset(self.train_manifest, tokenizer, block_size=128)
@@ -261,7 +283,6 @@ class ChatReadinessGate:
                     raise ValueError("Validation dataset produced 0 samples.")
 
                 x, y = ds[0]
-                # Verify assistant-only masking: at least some y tokens must be -1, and some must be >= 0
                 has_masked = (y == -1).any().item()
                 has_active = (y >= 0).any().item()
                 if not (has_masked and has_active):
@@ -299,7 +320,7 @@ class ChatReadinessGate:
         # CHECK 7: Checkpoint Save, Reload, and Bit-for-Bit Hash Integrity
         ckpt_ok = True
         ckpt_errs = []
-        if dry_run_ok:
+        if dry_run_ok and model is not None and gpt_cfg is not None:
             try:
                 with tempfile.TemporaryDirectory() as tmp_dir:
                     test_ckpt_path = os.path.join(tmp_dir, "test_gate_ckpt.pt")
@@ -307,20 +328,10 @@ class ChatReadinessGate:
                     payload = {"model": state_dict, "step": 1}
                     torch.save(payload, test_ckpt_path)
 
-                    with open(test_ckpt_path, "rb") as f:
-                        h1 = hashlib.sha256(f.read()).hexdigest()
-
                     loaded = torch.load(test_ckpt_path, map_location="cpu", weights_only=True)
                     model_new = GPT(gpt_cfg)
                     model_new.load_state_dict(loaded["model"])
 
-                    # Re-save and verify identical state dict
-                    test_ckpt_path2 = os.path.join(tmp_dir, "test_gate_ckpt2.pt")
-                    torch.save({"model": model_new.state_dict(), "step": 1}, test_ckpt_path2)
-                    with open(test_ckpt_path2, "rb") as f:
-                        h2 = hashlib.sha256(f.read()).hexdigest()
-
-                    # Compare state dict tensors
                     for k in state_dict:
                         if not torch.equal(state_dict[k], model_new.state_dict()[k]):
                             ckpt_ok = False
@@ -339,18 +350,38 @@ class ChatReadinessGate:
         if not ckpt_ok:
             results["blockers"].extend(ckpt_errs)
 
-        # DETERMINE STATUS
-        all_passed = scale_ok and prov_ok and leak_ok and tok_ok and arch_ok and dry_run_ok and ckpt_ok
+        # CHECK 8: Meaningful Pilot Scale Evaluation
+        pilot_scale_ok = (len(all_recs) >= self.pilot_min_records) and (total_tokens >= self.pilot_min_tokens)
+        results["checks"]["pilot_scale_evaluation"] = {
+            "passed": pilot_scale_ok,
+            "total_records": len(all_recs),
+            "required_records": self.pilot_min_records,
+            "total_tokens": total_tokens,
+            "required_tokens": self.pilot_min_tokens
+        }
 
-        if not scale_ok:
-            results["status"] = STATUS_DATA_INSUFFICIENT
-        elif not prov_ok:
+        # DETERMINE STATUS
+        engineering_smoke_test_passed = (smoke_scale_ok and prov_ok and leak_ok and tok_ok and arch_ok and dry_run_ok and ckpt_ok)
+        results["smoke_test_passed"] = engineering_smoke_test_passed
+
+        if not prov_ok:
             results["status"] = STATUS_PROVENANCE_PENDING
-        elif all_passed:
+        elif not smoke_scale_ok:
+            results["status"] = STATUS_DATA_INSUFFICIENT
+            results["blockers"].extend(smoke_errs)
+        elif not engineering_smoke_test_passed:
+            results["status"] = STATUS_DATA_INSUFFICIENT
+        elif not pilot_scale_ok:
+            # Code pipeline works, but data is insufficient for meaningful pilot training
+            results["status"] = STATUS_ENGINEERING_SMOKE_TEST_ONLY
+            results["blockers"].append(
+                f"Corpus scale ({len(all_recs)} records, {total_tokens:,} tokens) is sufficient only for pipeline "
+                f"engineering verification ({STATUS_ENGINEERING_SMOKE_TEST_ONLY}). Meaningful pilot training for a "
+                f"25.7M parameter model requires at least {self.pilot_min_records} verified records and {self.pilot_min_tokens:,} tokens."
+            )
+        else:
             results["status"] = STATUS_READY_FOR_PILOT
             results["passed"] = True
-        else:
-            results["status"] = STATUS_DATA_INSUFFICIENT
 
         return results
 
@@ -358,13 +389,14 @@ def evaluate_and_report() -> Dict[str, Any]:
     gate = ChatReadinessGate()
     res = gate.run_all_checks()
     print("=" * 65)
-    print("   MOON AI — CHAT READINESS GATE EVALUATION")
+    print("   MOON AI -- CHAT READINESS GATE EVALUATION")
     print("=" * 65)
-    print(f"Status:   {res['status']}")
-    print(f"Passed:   {res['passed']}")
-    print(f"Blockers: {len(res['blockers'])}")
+    print(f"Status:             {res['status']}")
+    print(f"Smoke Test Ready:   {res['smoke_test_passed']}")
+    print(f"Production Ready:   {res['passed']}")
+    print(f"Remaining Blockers: {len(res['blockers'])}")
     for b in res["blockers"]:
-        print(f"  • {b}")
+        print(f"  - {b}")
     print("=" * 65)
     return res
 

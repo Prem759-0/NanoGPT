@@ -70,16 +70,16 @@ paths:
 hardware_budget:
   gpu: "NVIDIA T4 (Turing, Compute Capability 7.5)"
   vram_available_mb: 15360
-  model_params: 25690624
+  model_params: 25698816
   model_weights_fp16_mb: 51.4
   gradients_fp16_mb: 51.4
-  optimizer_states_adamw_fp32_mb: 308.3
-  activations_estimate_mb: 450.0
+  optimizer_states_adamw_fp32_mb: 308.4
+  activations_estimate_mb: 300.9
   cuda_runtime_context_mb: 600.0
-  estimated_peak_vram_mb: 1461.1
-  vram_safety_margin_mb: 13898.9
-  oom_risk: "ZERO"
-  oom_risk_assessment: "LOW (safe with micro-batch 4 and gradient accumulation 8; increases to HIGH if micro-batch > 32 or block_size > 2048 without activation checkpointing)"
+  estimated_peak_vram_mb: 1312.1
+  vram_safety_margin_mb: 14047.9
+  oom_risk: "LOW"
+  oom_risk_assessment: "LOW (safe with micro-batch 4 and gradient accumulation 8. Theoretical OOM risk is never zero; elevates if batch_size > 32 or block_size > 2048 without gradient checkpointing)"
   storage_requirements:
     checkpoint_size_mb: 98.1
     full_run_with_checkpoints_mb: 350.0

@@ -1,10 +1,12 @@
 # Moon AI — Sovereign Chat Dataset Audit Report
 
-**Generated:** 2026-11-02T16:06:18.076090+00:00  
+**Generated:** 2026-11-02T18:21:46.517981+00:00  
 **Chief ML Systems Architect:** Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)  
 **Ownership Policy:** `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`  
 **Model Track:** `moon-chat-v0`  
-**Status:** **READY_FOR_PILOT_TRAINING**  
+**Status:** **ENGINEERING_SMOKE_TEST_ONLY**  
+**Engineering Smoke Test Capable:** **True**  
+**Production Pilot Ready:** **False**  
 
 ---
 
@@ -35,8 +37,15 @@
 
 ---
 
-## 3. License Distribution
+## 3. Provenance & Licensing Distribution
 
+### Provenance Types
+| Provenance Type | Count | Percentage |
+|---|---|---|
+| `ORIGINAL_SELF_AUTHORED_QA` | 6 | 27.3% |
+| `SOURCE_DERIVED_EDUCATIONAL_SUMMARY` | 16 | 72.7% |
+
+### Licenses
 | License | Count | Percentage |
 |---|---|---|
 | `CustomSovereign` | 6 | 27.3% |

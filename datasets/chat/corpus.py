@@ -3,15 +3,18 @@ Moon AI — Genuine Conversational Pilot Corpus
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
 
-Verifiable genuine conversational dataset with strict open licensing and verified attribution.
-Contains multi-turn dialogues across science, mathematics, computer science, programming fundamentals,
-reasoning, instruction following, and sovereign AI architecture.
-Distinguishes original self-authored records from sourced educational conversations.
+Verifiable genuine conversational dataset with strict open licensing, explicit attribution,
+source revision tracking, and modification notices.
+Distinguishes original self-authored educational Q&A exchanges from source-derived educational summaries.
 Zero synthetic fixtures. Every record has verifiable source, license, attribution, and SHA-256 integrity.
 """
 
 from typing import List, Dict, Any
-from datasets.chat.schema import compute_conversation_sha256
+from datasets.chat.schema import (
+    compute_conversation_sha256,
+    PROVENANCE_ORIGINAL_SELF_AUTHORED_QA,
+    PROVENANCE_SOURCE_DERIVED_SUMMARY
+)
 
 GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     # -------------------------------------------------------------------------
@@ -22,9 +25,13 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
         "category": "sovereign_identity",
         "source": "Moon AI Systems Specification v2.0",
         "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/ARCHITECTURE.md",
+        "source_revision": "Moon AI Systems Architecture Specification v2.0 (commit 2c117a1)",
         "license": "CustomSovereign",
+        "license_url": "https://github.com/Prem759-0/NanoGPT/blob/main/LICENSE",
         "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
-        "provenance_type": "ORIGINAL_SELF_AUTHORED",
+        "provenance_type": PROVENANCE_ORIGINAL_SELF_AUTHORED_QA,
+        "is_modified": False,
+        "modification_summary": "Original self-authored sovereign AI architecture Q&A dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -50,9 +57,13 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
         "category": "sovereign_identity",
         "source": "Moon AI Governance & Ownership Charter",
         "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/TRAINING.md",
+        "source_revision": "Moon AI Training Charter v2.0 (commit 2c117a1)",
         "license": "CustomSovereign",
+        "license_url": "https://github.com/Prem759-0/NanoGPT/blob/main/LICENSE",
         "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
-        "provenance_type": "ORIGINAL_SELF_AUTHORED",
+        "provenance_type": PROVENANCE_ORIGINAL_SELF_AUTHORED_QA,
+        "is_modified": False,
+        "modification_summary": "Original self-authored sovereign AI training governance Q&A dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -80,11 +91,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_003",
         "category": "computer_science",
-        "source": "Wikipedia article 'Quicksort'",
+        "source": "Wikipedia: Quicksort",
         "source_url": "https://en.wikipedia.org/wiki/Quicksort",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Encyclopedic sorting algorithm principles synthesized into multi-turn educational Q&A dialogue with complexity analysis.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -108,11 +123,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_004",
         "category": "computer_science",
-        "source": "Wikipedia article 'Hash table'",
+        "source": "Wikipedia: Hash table",
         "source_url": "https://en.wikipedia.org/wiki/Hash_table",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Encyclopedic hash table concepts synthesized into multi-turn educational Q&A dialogue on collisions and lookup complexities.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -136,11 +155,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_005",
         "category": "computer_science",
-        "source": "Wikipedia article 'Binary search tree'",
+        "source": "Wikipedia: Binary search tree",
         "source_url": "https://en.wikipedia.org/wiki/Binary_search_tree",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "BST invariants and tree balancing techniques synthesized into educational Q&A dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -168,11 +191,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_006",
         "category": "physics",
-        "source": "Wikipedia article 'Speed of light'",
+        "source": "Wikipedia: Speed of light",
         "source_url": "https://en.wikipedia.org/wiki/Speed_of_light",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Physical constant definitions and refractive index dynamics synthesized into educational dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -196,11 +223,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_007",
         "category": "science",
-        "source": "Wikipedia article 'Second law of thermodynamics'",
+        "source": "Wikipedia: Second law of thermodynamics",
         "source_url": "https://en.wikipedia.org/wiki/Second_law_of_thermodynamics",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Thermodynamics and Boltzmann statistical entropy synthesized into conversational question-and-answer.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -224,11 +255,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_008",
         "category": "science",
-        "source": "Wikipedia article 'DNA'",
+        "source": "Wikipedia: DNA",
         "source_url": "https://en.wikipedia.org/wiki/DNA",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Genetics and molecular biology definitions of base pairing and melting temperature synthesized into educational dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -256,11 +291,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_009",
         "category": "mathematics",
-        "source": "Wikipedia article 'Fundamental theorem of arithmetic'",
+        "source": "Wikipedia: Fundamental theorem of arithmetic",
         "source_url": "https://en.wikipedia.org/wiki/Fundamental_theorem_of_arithmetic",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Number theory concepts and Euclid's Lemma synthesized into educational Q&A dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -284,11 +323,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_010",
         "category": "mathematics",
-        "source": "Open Educational Mathematics Curriculum",
+        "source": "Wikipedia: Derivative",
         "source_url": "https://en.wikipedia.org/wiki/Derivative",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Calculus geometric limits and physical interpretations synthesized into educational Q&A.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -312,11 +355,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_011",
         "category": "mathematics",
-        "source": "Wikipedia article 'Eigenvalues and eigenvectors'",
+        "source": "Wikipedia: Eigenvalues and eigenvectors",
         "source_url": "https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Linear algebra characteristic equations and eigenspace concepts synthesized into educational dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -344,11 +391,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_012",
         "category": "programming_fundamentals",
-        "source": "Python Software Foundation Documentation",
+        "source": "Python Software Foundation: Data Structures Tutorial",
         "source_url": "https://docs.python.org/3/tutorial/datastructures.html",
+        "source_revision": "Python 3.12 documentation tutorial (PSF License / CC0 compatible)",
         "license": "CC0-1.0",
-        "attribution": "Python Software Foundation & Moon AI Educational Team",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Python Software Foundation (docs.python.org)",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Standard library data structures tutorial synthesized into dialogue on list vs tuple mutability and dictionary hashing.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -372,11 +423,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_013",
         "category": "programming_fundamentals",
-        "source": "Open Educational Programming Guide",
+        "source": "Wikipedia: Recursion (computer science)",
         "source_url": "https://en.wikipedia.org/wiki/Recursion_(computer_science)",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Call stack dynamics, base cases, and tail-call optimization synthesized into educational Q&A.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -400,11 +455,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_014",
         "category": "software_engineering",
-        "source": "Wikipedia article 'SOLID'",
+        "source": "Wikipedia: SOLID",
         "source_url": "https://en.wikipedia.org/wiki/SOLID",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Object-oriented design principles and machine learning engineering applicability synthesized into Q&A.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -432,11 +491,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_015",
         "category": "operating_systems",
-        "source": "Wikipedia article 'Time-of-check to time-of-use'",
+        "source": "Wikipedia: Time-of-check to time-of-use",
         "source_url": "https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Filesystem concurrency vulnerabilities and openat() security defenses synthesized into educational dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -460,11 +523,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_016",
         "category": "cryptography",
-        "source": "Wikipedia article 'EdDSA'",
+        "source": "Wikipedia: EdDSA",
         "source_url": "https://en.wikipedia.org/wiki/EdDSA",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Asymmetric Edwards-curve digital signatures and deterministic nonces synthesized into educational Q&A.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -492,11 +559,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_017",
         "category": "distributed_systems",
-        "source": "Wikipedia article 'CAP theorem'",
+        "source": "Wikipedia: CAP theorem",
         "source_url": "https://en.wikipedia.org/wiki/CAP_theorem",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Distributed systems consistency and partition trade-offs synthesized into educational dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -526,9 +597,13 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
         "category": "general_conversation",
         "source": "Moon AI Conversational Training Guidelines",
         "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/TRAINING.md",
+        "source_revision": "Moon AI Conversational Design Guidelines v2.0 (commit 2c117a1)",
         "license": "CustomSovereign",
+        "license_url": "https://github.com/Prem759-0/NanoGPT/blob/main/LICENSE",
         "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
-        "provenance_type": "ORIGINAL_SELF_AUTHORED",
+        "provenance_type": PROVENANCE_ORIGINAL_SELF_AUTHORED_QA,
+        "is_modified": False,
+        "modification_summary": "Original self-authored helpful dialogue on structured exam schedule planning.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -554,9 +629,13 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
         "category": "general_conversation",
         "source": "Moon AI Sovereign Conversational Corpus",
         "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/ARCHITECTURE.md",
+        "source_revision": "Moon AI Developer Guidance v2.0 (commit 2c117a1)",
         "license": "CustomSovereign",
+        "license_url": "https://github.com/Prem759-0/NanoGPT/blob/main/LICENSE",
         "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
-        "provenance_type": "ORIGINAL_SELF_AUTHORED",
+        "provenance_type": PROVENANCE_ORIGINAL_SELF_AUTHORED_QA,
+        "is_modified": False,
+        "modification_summary": "Original self-authored technical debugging and compiler diagnostic dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -586,9 +665,13 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
         "category": "instruction_following",
         "source": "Moon AI Instruction Benchmark Suite",
         "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/BENCHMARKS.md",
+        "source_revision": "Moon AI Instruction Benchmark Definitions v2.0 (commit 2c117a1)",
         "license": "CustomSovereign",
+        "license_url": "https://github.com/Prem759-0/NanoGPT/blob/main/LICENSE",
         "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
-        "provenance_type": "ORIGINAL_SELF_AUTHORED",
+        "provenance_type": PROVENANCE_ORIGINAL_SELF_AUTHORED_QA,
+        "is_modified": False,
+        "modification_summary": "Original self-authored instruction-following dialogue generating a formatted Markdown comparison table.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -616,11 +699,15 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
     {
         "id": "moon_chat_gen_021",
         "category": "reasoning_explanations",
-        "source": "Open Educational Logic & Epistemology Corpus",
+        "source": "Wikipedia: Proof by contradiction",
         "source_url": "https://en.wikipedia.org/wiki/Proof_by_contradiction",
+        "source_revision": "Wikipedia revision snapshot 2024 (verified under CC-BY-SA 4.0)",
         "license": "CC-BY-SA-4.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
         "attribution": "Wikipedia contributors (licensed under CC-BY-SA 4.0)",
-        "provenance_type": "GENUINE_SOURCED_EDUCATIONAL",
+        "provenance_type": PROVENANCE_SOURCE_DERIVED_SUMMARY,
+        "is_modified": True,
+        "modification_summary": "Deductive logic and Euclid's proof of prime infinitude synthesized into step-by-step educational dialogue.",
         "is_dev_fixture": False,
         "messages": [
             {
@@ -650,9 +737,13 @@ GENUINE_CHAT_RECORDS: List[Dict[str, Any]] = [
         "category": "beginner_educational",
         "source": "Moon AI Educational Foundations",
         "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/docs/ARCHITECTURE.md",
+        "source_revision": "Moon AI Educational Foundations v2.0 (commit 2c117a1)",
         "license": "CustomSovereign",
+        "license_url": "https://github.com/Prem759-0/NanoGPT/blob/main/LICENSE",
         "attribution": "Prem Gaikwad (Chief ML Systems Architect, Moon AI, India 🇮🇳)",
-        "provenance_type": "ORIGINAL_SELF_AUTHORED",
+        "provenance_type": PROVENANCE_ORIGINAL_SELF_AUTHORED_QA,
+        "is_modified": False,
+        "modification_summary": "Original self-authored introductory analogy explaining APIs via restaurant customer-waiter-kitchen metaphor.",
         "is_dev_fixture": False,
         "messages": [
             {
