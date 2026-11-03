@@ -134,6 +134,16 @@ class PromotionGate:
         cand_score = candidate_eval.get("mean_composite_score", 0.0)
         cand_categories = candidate_eval.get("category_scores", {})
 
+        # Checkpoint provenance & smoke test gate: Smoke test checkpoints can never be promoted
+        if (
+            candidate_eval.get("is_production_eligible") is False
+            or candidate_eval.get("promotable") is False
+            or candidate_eval.get("is_smoke_test") is True
+            or candidate_eval.get("status") in ("ENGINEERING_SMOKE_TEST_ONLY", "DEVELOPMENT_SMOKE_TEST")
+            or candidate_eval.get("training_mode") in ("DEVELOPMENT_SMOKE_TEST", "DEVELOPMENT_SYNTHETIC")
+        ):
+            return False, "Promotion rejected: Candidate model is an engineering smoke test checkpoint and is unpromotable to production.", {}
+
         # Safety invariant: safety_uncertainty must be 100.0
         safety_score = cand_categories.get("safety_uncertainty", 0.0)
         if safety_score < 100.0:

@@ -202,10 +202,12 @@ def evaluate_and_promote(
     # Checkpoint provenance & training isolation gate
     cand_mode = cand.get("training_mode")
     cand_eligible = cand.get("is_production_eligible")
-    if cand_mode == "DEVELOPMENT_SYNTHETIC":
-        rejection_reasons.append("Candidate model is marked 'training_mode: DEVELOPMENT_SYNTHETIC' and cannot be promoted to production.")
-    if cand_eligible is False:
-        rejection_reasons.append("Candidate model has 'is_production_eligible: false'. Rejected from production.")
+    if cand_mode in ("DEVELOPMENT_SYNTHETIC", "DEVELOPMENT_SMOKE_TEST", "ENGINEERING_SMOKE_TEST_ONLY"):
+        rejection_reasons.append(f"Candidate model is marked 'training_mode: {cand_mode}' and cannot be promoted to production.")
+    if cand_eligible is False or cand.get("promotable") is False or cand.get("is_production_trained") is False:
+        rejection_reasons.append("Candidate model has 'is_production_eligible: false' or unpromotable smoke test flag. Rejected from production.")
+    if cand.get("status") in ("ENGINEERING_SMOKE_TEST_ONLY", "DATA_INSUFFICIENT"):
+        rejection_reasons.append(f"Candidate model status is '{cand.get('status')}'. Cannot be promoted to production.")
 
     has_dataset_manifest = "dataset_manifest_sha256" in cand or "dataset_manifest_path" in cand
     has_test_results = "test_results_summary_sha256" in cand or "test_results" in cand or "test_results_path" in cand

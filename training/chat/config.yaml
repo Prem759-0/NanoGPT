@@ -38,9 +38,12 @@ model:
   bias: false
   exact_parameters: 25698816
 
-# Baseline 124M Model Architecture (Reference Scale)
-baseline_124m:
-  name: "moon-chat-124m"
+# Baseline Model Architecture (Reference Scale: 86.1M exact parameters with vocab_size 512)
+# Reconciled in Stage 2.1.3.1: GPT-2 Small hidden geometry (768 dim, 12 layers, 12 heads) yields
+# exactly 86,133,504 parameters when paired with Moon Chat's 512-token pure BPE vocabulary.
+# (The 124M figure only applies to standard GPT-2 with 50,257 vocab size).
+baseline_model:
+  name: "moon-chat-86m"
   n_layer: 12
   n_head: 12
   n_embd: 768
@@ -49,6 +52,21 @@ baseline_124m:
   dropout: 0.1
   bias: false
   exact_parameters: 86133504
+  reference_geometry: "GPT-2 Small Hidden Structure (768 embd, 12 layers, 12 heads)"
+  parameter_reconciliation_note: "Standard GPT-2 124M has vocab_size 50,257. Under Moon Chat's 512-token pure BPE vocabulary, the exact parameter count is 86,133,504 (86.1M)."
+
+# Backward-compatible alias for legacy Stage 2.1.1 suite
+baseline_124m:
+  name: "moon-chat-86m"
+  n_layer: 12
+  n_head: 12
+  n_embd: 768
+  block_size: 1024
+  vocab_size: 512
+  dropout: 0.1
+  bias: false
+  exact_parameters: 86133504
+  alias_of: "baseline_model"
 
 # Google Colab T4 Training Hyperparameters
 training:
