@@ -69,11 +69,20 @@ def train_moon_chat(
 ) -> Dict[str, Any]:
     is_smoke_test = dry_run or smoke_test
 
+    # Load configuration
+    abs_config_path = os.path.abspath(config_path)
+    if not os.path.exists(abs_config_path):
+        raise FileNotFoundError(f"Config file not found: {abs_config_path}")
+
+    with open(abs_config_path, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
     print("=" * 65)
     print("   MOON AI -- SOVEREIGN CHAT MODEL TRAINING (moon-chat-v0)")
     print("=" * 65)
-    print("Ownership Policy:   STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
-    print("Pretrained Weights: STRICTLY PROHIBITED (Random Gaussian Init Only)")
+    policy = cfg.get("ownership_policy", "TEACHER_STUDENT_RANDOM_INIT")
+    print(f"Ownership Policy:   {policy}")
+    print("Student Init:       RANDOM GAUSSIAN SCRATCH (Zero Pretrained Checkpoint Weights)")
     print(f"Execution Mode:     {'ENGINEERING SMOKE TEST' if is_smoke_test else 'PRODUCTION PILOT RUN'}\n")
 
     # Readiness Gate Check: Block production training if not READY_FOR_PILOT
@@ -95,14 +104,6 @@ def train_moon_chat(
                 f"Production pilot training blocked by readiness gate (status: {gate_res['status']}). "
                 f"Use --smoke-test to execute pipeline verification only."
             )
-
-    # Load configuration
-    abs_config_path = os.path.abspath(config_path)
-    if not os.path.exists(abs_config_path):
-        raise FileNotFoundError(f"Config file not found: {abs_config_path}")
-
-    with open(abs_config_path, "r", encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
 
     # Determine device
     if device_override:
@@ -314,8 +315,11 @@ def train_moon_chat(
         "config": {
             "dataset": "moon-chat-v0",
             "model_name": m_cfg["name"],
-            "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
+            "ownership_policy": cfg.get("ownership_policy", "TEACHER_STUDENT_RANDOM_INIT"),
             "initialization": "random_gaussian_scratch",
+            "student_init_method": "random_gaussian_scratch",
+            "teacher_models": ["kimi-k3.1-pro"],
+            "run_id": f"moon_chat_run_{int(time.time())}",
             "trained_at": datetime.now(timezone.utc).isoformat(),
             "architect": "Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)",
             "final_train_loss": accum_loss,

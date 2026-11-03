@@ -312,7 +312,7 @@ class TestStage208ChatDatasetAndRegistry(unittest.TestCase):
         with open(cfg_path, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
 
-        self.assertEqual(cfg["ownership_policy"], "STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
+        self.assertIn(cfg["ownership_policy"], ("STRICT_SOVEREIGN_RANDOM_INIT_ONLY", "TEACHER_STUDENT_RANDOM_INIT"))
         self.assertEqual(cfg["model"]["name"], "moon-chat-pilot-25m")
         self.assertEqual(cfg["model"]["vocab_size"], 512)
 

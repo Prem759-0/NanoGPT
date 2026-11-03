@@ -1,7 +1,7 @@
 """
 Moon AI — Strict Training Readiness Gate (moon-chat-v0)
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
-Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
+Ownership Policy: TEACHER_STUDENT_RANDOM_INIT (Legacy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY)
 
 Comprehensive gate validating:
 1. Cryptographic provenance, source tracking, attribution, and revision metadata.
