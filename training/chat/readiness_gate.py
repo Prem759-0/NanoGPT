@@ -78,10 +78,11 @@ MIN_TEST_RECORDS = SMOKE_TEST_MIN_TEST_RECORDS
 MIN_TOTAL_TOKENS = SMOKE_TEST_MIN_TOTAL_TOKENS
 
 # Scale criteria for Meaningful Pilot Training (25.7M parameter model)
+# Established in Stage 2.1.1. MUST NOT be lowered. All four sub-criteria must be satisfied.
 PILOT_MIN_TOTAL_RECORDS = 500
 PILOT_MIN_TRAIN_RECORDS = 400
-PILOT_MIN_VAL_RECORDS = 50
-PILOT_MIN_TEST_RECORDS = 50
+PILOT_MIN_VAL_RECORDS = 50   # Stage 2.1.5.1: enforced in pilot_scale_evaluation check
+PILOT_MIN_TEST_RECORDS = 50  # Stage 2.1.5.1: enforced in pilot_scale_evaluation check
 PILOT_MIN_TOTAL_TOKENS = 100000
 
 def load_jsonl(path: str) -> List[Dict[str, Any]]:
@@ -108,7 +109,10 @@ class ChatReadinessGate:
         pilot_min_tokens: int = PILOT_MIN_TOTAL_TOKENS,
         train_manifest: Optional[str] = None,
         val_manifest: Optional[str] = None,
-        test_manifest: Optional[str] = None
+        test_manifest: Optional[str] = None,
+        pilot_min_train: Optional[int] = None,
+        pilot_min_val: Optional[int] = None,
+        pilot_min_test: Optional[int] = None
     ):
         self.root_dir = root_dir
         self.pilot_min_records = pilot_min_records
@@ -119,6 +123,17 @@ class ChatReadinessGate:
         self.tokenizer_path = os.path.join(root_dir, "models", "chat", "tokenizer.json")
         self.config_path = os.path.join(root_dir, "training", "chat", "config.yaml")
         self.registry_path = os.path.join(root_dir, "models", "registry.json")
+
+        # Pilot split criteria: for standard pilot training (500 records), enforce 400 train, 50 val, 50 test.
+        # If caller overrides pilot_min_records (e.g. for custom testing suites), scale splits proportionally.
+        if pilot_min_records == PILOT_MIN_TOTAL_RECORDS:
+            self.pilot_min_train = pilot_min_train or PILOT_MIN_TRAIN_RECORDS
+            self.pilot_min_val = pilot_min_val or PILOT_MIN_VAL_RECORDS
+            self.pilot_min_test = pilot_min_test or PILOT_MIN_TEST_RECORDS
+        else:
+            self.pilot_min_train = pilot_min_train or int(pilot_min_records * 0.8)
+            self.pilot_min_val = pilot_min_val or max(1, int(pilot_min_records * 0.1))
+            self.pilot_min_test = pilot_min_test or max(1, int(pilot_min_records * 0.1))
 
     def run_all_checks(self) -> Dict[str, Any]:
         """Runs the complete battery of readiness checks."""
@@ -354,13 +369,50 @@ class ChatReadinessGate:
             results["blockers"].extend(ckpt_errs)
 
         # CHECK 8: Meaningful Pilot Scale Evaluation
-        pilot_scale_ok = (len(all_recs) >= self.pilot_min_records) and (total_tokens >= self.pilot_min_tokens)
+        # All four sub-criteria must pass for READY_FOR_PILOT.
+        # These thresholds must NEVER be lowered.
+        pilot_scale_ok = True
+        pilot_scale_errors = []
+        if len(all_recs) < self.pilot_min_records:
+            pilot_scale_ok = False
+            pilot_scale_errors.append(
+                f"Total eligible records ({len(all_recs)}) < pilot minimum ({self.pilot_min_records})."
+            )
+        if len(train_recs) < self.pilot_min_train:
+            pilot_scale_ok = False
+            pilot_scale_errors.append(
+                f"Train records ({len(train_recs)}) < pilot minimum ({self.pilot_min_train})."
+            )
+        if len(val_recs) < self.pilot_min_val:
+            pilot_scale_ok = False
+            pilot_scale_errors.append(
+                f"Validation records ({len(val_recs)}) < pilot minimum ({self.pilot_min_val}). "
+                f"Current: {len(val_recs)}. Required: {self.pilot_min_val}."
+            )
+        if len(test_recs) < self.pilot_min_test:
+            pilot_scale_ok = False
+            pilot_scale_errors.append(
+                f"Blind test records ({len(test_recs)}) < pilot minimum ({self.pilot_min_test}). "
+                f"Current: {len(test_recs)}. Required: {self.pilot_min_test}."
+            )
+        if total_tokens < self.pilot_min_tokens:
+            pilot_scale_ok = False
+            pilot_scale_errors.append(
+                f"Total supervised tokens ({total_tokens:,}) < pilot minimum ({self.pilot_min_tokens:,})."
+            )
         results["checks"]["pilot_scale_evaluation"] = {
             "passed": pilot_scale_ok,
             "total_records": len(all_recs),
             "required_records": self.pilot_min_records,
+            "train_records": len(train_recs),
+            "required_train_records": self.pilot_min_train,
+            "val_records": len(val_recs),
+            "required_val_records": self.pilot_min_val,
+            "test_records": len(test_recs),
+            "required_test_records": self.pilot_min_test,
             "total_tokens": total_tokens,
-            "required_tokens": self.pilot_min_tokens
+            "required_tokens": self.pilot_min_tokens,
+            "errors": pilot_scale_errors
         }
 
         # CHECK 9: Curriculum Domain Coverage & Balance (Stage 2.1.4)
@@ -390,12 +442,14 @@ class ChatReadinessGate:
         elif not engineering_smoke_test_passed:
             results["status"] = STATUS_DATA_INSUFFICIENT
         elif not pilot_scale_ok:
-            # Code pipeline works, but data is insufficient for meaningful pilot training
+            # Code pipeline works, but split counts or total scale are insufficient for meaningful pilot training.
             results["status"] = STATUS_ENGINEERING_SMOKE_TEST_ONLY
+            split_details = f" (train={len(train_recs)}/{self.pilot_min_train}, val={len(val_recs)}/{self.pilot_min_val}, test={len(test_recs)}/{self.pilot_min_test})"
             results["blockers"].append(
                 f"Corpus scale ({len(all_recs)} records, {total_tokens:,} tokens) is sufficient only for pipeline "
                 f"engineering verification ({STATUS_ENGINEERING_SMOKE_TEST_ONLY}). Meaningful pilot training for a "
-                f"25.7M parameter model requires at least {self.pilot_min_records} verified records and {self.pilot_min_tokens:,} tokens."
+                f"25.7M parameter model requires at least {self.pilot_min_records} verified records, {self.pilot_min_tokens:,} tokens, "
+                f"and valid splits{split_details}. Errors: {'; '.join(pilot_scale_errors)}."
             )
         else:
             results["status"] = STATUS_READY_FOR_PILOT

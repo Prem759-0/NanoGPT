@@ -29,6 +29,11 @@ PROVENANCE_SOURCE_DERIVED_SUMMARY = "SOURCE_DERIVED_EDUCATIONAL_SUMMARY"
 PROVENANCE_SOURCE_DERIVED_EDUCATIONAL_SUMMARY = "SOURCE_DERIVED_EDUCATIONAL_SUMMARY"
 PROVENANCE_GENUINE_HUMAN_CONVERSATION = "GENUINE_HUMAN_CONVERSATION"
 PROVENANCE_TEACHER_DISTILLATION_QUALIFIED = "TEACHER_DISTILLATION_OFFLINE_QUALIFIED"
+# Stage 2.1.5.1 Audit: Records produced by deterministic Python template expansion
+# (not by actual live Qwen2.5-7B-Instruct inference). Content is educationally valid
+# and eligible for training but MUST NOT be labelled as Qwen teacher outputs.
+# Distinct from SYNTHETIC_DEV_FIXTURE, which is strictly ineligible for production training.
+PROVENANCE_DETERMINISTIC_CURRICULUM_TEMPLATE = "DETERMINISTIC_CURRICULUM_TEMPLATE"
 PROVENANCE_SYNTHETIC_DEV_FIXTURE = "SYNTHETIC_DEV_FIXTURE"
 PROVENANCE_PENDING = "PROVENANCE_PENDING"
 
@@ -37,6 +42,7 @@ ALLOWED_PROVENANCE_TYPES = {
     PROVENANCE_SOURCE_DERIVED_SUMMARY,
     PROVENANCE_GENUINE_HUMAN_CONVERSATION,
     PROVENANCE_TEACHER_DISTILLATION_QUALIFIED,
+    PROVENANCE_DETERMINISTIC_CURRICULUM_TEMPLATE,
     PROVENANCE_SYNTHETIC_DEV_FIXTURE,
     PROVENANCE_PENDING,
     # Backward compatibility aliases from Stage 2.1.1:
@@ -124,8 +130,8 @@ def validate_chat_record(record: Dict[str, Any], is_production: bool = True) -> 
     source_url = record.get("source_url")
     if not source_url or not isinstance(source_url, str):
         return False, f"Record '{rec_id}' missing 'source_url'."
-    if not (source_url.startswith("http://") or source_url.startswith("https://") or source_url.startswith("file://") or source_url.startswith("internal://") or source_url.startswith("docs/")):
-        return False, f"Record '{rec_id}' has invalid 'source_url' format ('{source_url}'). Must be an HTTP(S), file, docs, or internal URL."
+    if not (source_url.startswith("http://") or source_url.startswith("https://") or source_url.startswith("file://") or source_url.startswith("internal://") or source_url.startswith("docs/") or source_url.startswith("local://")):
+        return False, f"Record '{rec_id}' has invalid 'source_url' format ('{source_url}'). Must be an HTTP(S), file, docs, local, or internal URL."
 
     # Strict Wikipedia Licensing Check
     if "wikipedia.org" in source_url.lower():

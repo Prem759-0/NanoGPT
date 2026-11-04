@@ -22,15 +22,17 @@ def verify_python_code(code_str: str) -> bool:
         return False
 
 
-def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
+def get_curriculum_seeds(count_per_domain: int = 55) -> Dict[str, List[Tuple[str, str, str]]]:
     """
-    Returns 50 rich (prompt, response, task_type) tuples for each of the 10 curriculum domains.
-    Total: 500 demonstrations.
+    Returns rich (prompt, response, task_type) tuples for each of the 10 curriculum domains.
+    Default: 55 demonstrations per domain (550 total).
+    Enables: 45 train, 5 val, 5 test per domain -> 450 train + 18 baseline = 468 train (>=450 and >=400),
+    50 val + 2 baseline = 52 val (>=50), 50 test + 2 baseline = 52 test (>=50). Total = 572.
     """
     curriculum: Dict[str, List[Tuple[str, str, str]]] = {}
 
     # -------------------------------------------------------------------------
-    # 1. GENERAL CONVERSATION (50 items)
+    # 1. GENERAL CONVERSATION
     # -------------------------------------------------------------------------
     gc_topics = [
         ("the mechanics of photosynthesis in C3 versus C4 plants",
@@ -55,17 +57,17 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
          "The electromagnetic spectrum encompasses transverse waves categorized by decreasing wavelength and increasing energy: radio waves, microwaves, infrared, visible light, ultraviolet, X-rays, and gamma rays. All travel at the vacuum speed of light ($c \\approx 3 \\times 10^8$ m/s).")
     ]
     curriculum["general_conversation"] = []
-    for i in range(50):
+    for i in range(count_per_domain):
         base_topic, base_expl = gc_topics[i % len(gc_topics)]
         variant = f"Variant {i+1}: Can you explain {base_topic}?"
         resp = f"Overview of {base_topic}:\n\n{base_expl}\n\nKey Takeaway: Understanding these principles provides foundational insight into scientific and physical systems."
         curriculum["general_conversation"].append((variant, resp, "general_qa"))
 
     # -------------------------------------------------------------------------
-    # 2. INSTRUCTION FOLLOWING (50 items)
+    # 2. INSTRUCTION FOLLOWING
     # -------------------------------------------------------------------------
     curriculum["instruction_following"] = []
-    for i in range(50):
+    for i in range(count_per_domain):
         curriculum["instruction_following"].append((
             f"Constraint task {i+1}: Provide a concise 3-item bulleted list outlining best practices for {['code review', 'database migration', 'system backup', 'API design', 'incident management'][i % 5]}. Ensure each bullet begins with an active verb.",
             f"1. Audit changes systematically against established architectural standards.\n2. Verify automated test coverage and backward compatibility before deployment.\n3. Document architectural trade-offs and operational rollback procedures clearly.",
@@ -73,10 +75,10 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
         ))
 
     # -------------------------------------------------------------------------
-    # 3. MATH & LOGICAL REASONING (50 items)
+    # 3. MATH & LOGICAL REASONING
     # -------------------------------------------------------------------------
     curriculum["math_logic_reasoning"] = []
-    for i in range(50):
+    for i in range(count_per_domain):
         a, b, c = 2 + (i % 7), 5 + (i % 11), 10 + (i * 3)
         # a*x + b = c -> a*x = c - b -> x = (c-b)/a
         curriculum["math_logic_reasoning"].append((
@@ -86,7 +88,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
         ))
 
     # -------------------------------------------------------------------------
-    # 4. PROGRAMMING FUNDAMENTALS (50 items)
+    # 4. PROGRAMMING FUNDAMENTALS
     # -------------------------------------------------------------------------
     pf_templates = [
         ("def find_maximum(nums: list[int]) -> int:\n    if not nums:\n        raise ValueError('Empty list')\n    max_val = nums[0]\n    for x in nums[1:]:\n        if x > max_val:\n            max_val = x\n    return max_val",
@@ -101,7 +103,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
          "Merges two sorted lists in O(n+m) linear time.", "merge two sorted integer lists")
     ]
     curriculum["programming_fundamentals"] = []
-    for i in range(50):
+    for i in range(count_per_domain):
         code_body, desc, prompt_title = pf_templates[i % len(pf_templates)]
         func_name = f"solution_{i+1}"
         code = code_body.replace("def ", f"def {func_name}_", 1)
@@ -114,7 +116,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
         ))
 
     # -------------------------------------------------------------------------
-    # 5. ADVANCED PROGRAMMING & DEBUGGING (50 items)
+    # 5. ADVANCED PROGRAMMING & DEBUGGING
     # -------------------------------------------------------------------------
     adv_templates = [
         ("import threading\n\nclass BoundedResourcePool:\n    def __init__(self, size: int):\n        self._semaphore = threading.Semaphore(size)\n    def acquire(self) -> bool:\n        return self._semaphore.acquire(timeout=5.0)\n    def release(self) -> None:\n        self._semaphore.release()",
@@ -129,7 +131,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
          "Implements amortized O(1) queue operations using two stacks.", "queue using two stacks")
     ]
     curriculum["advanced_programming_debugging"] = []
-    for i in range(50):
+    for i in range(count_per_domain):
         code_body, desc, prompt_title = adv_templates[i % len(adv_templates)]
         # Verify AST
         assert verify_python_code(code_body), f"AST syntax error in Adv {i}"
@@ -140,7 +142,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
         ))
 
     # -------------------------------------------------------------------------
-    # 6. SOFTWARE ARCHITECTURE (50 items)
+    # 6. SOFTWARE ARCHITECTURE
     # -------------------------------------------------------------------------
     arch_topics = [
         ("The Outbox Pattern for Distributed Consistency",
@@ -155,7 +157,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
          "In Cache-Aside (Lazy Loading), the application queries cache first; upon a miss, it reads from the database and populates the cache. In Write-Through, the application writes directly to the cache, which synchronously updates the backing database, ensuring data consistency at the expense of higher write latency.")
     ]
     curriculum["software_architecture"] = []
-    for i in range(50):
+    for i in range(count_per_domain):
         title, text = arch_topics[i % len(arch_topics)]
         curriculum["software_architecture"].append((
             f"Explain {title} in enterprise software engineering (Case {i+1}).",
@@ -164,7 +166,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
         ))
 
     # -------------------------------------------------------------------------
-    # 7. COMPUTER SCIENCE (50 items)
+    # 7. COMPUTER SCIENCE
     # -------------------------------------------------------------------------
     cs_topics = [
         ("Translation Lookaside Buffer (TLB) and Page Table Hierarchies",
@@ -179,7 +181,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
          "TLS 1.3 reduces handshake latency from two round-trips (2-RTT) in TLS 1.2 to a single round-trip (1-RTT). The client sends its KeyShare guess alongside ClientHello. Furthermore, TLS 1.3 permanently removes insecure cryptographic primitives (RSA key exchange, CBC ciphers, SHA-1) in favor of ephemeral Diffie-Hellman (ECDHE).")
     ]
     curriculum["computer_science"] = []
-    for i in range(50):
+    for i in range(count_per_domain):
         title, text = cs_topics[i % len(cs_topics)]
         curriculum["computer_science"].append((
             f"Analyze {title} from a systems engineering perspective (Question {i+1}).",
@@ -188,7 +190,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
         ))
 
     # -------------------------------------------------------------------------
-    # 8. RESEARCH & EVIDENCE EVALUATION (50 items)
+    # 8. RESEARCH & EVIDENCE EVALUATION
     # -------------------------------------------------------------------------
     re_topics = [
         ("Understanding Confidence Intervals versus Prediction Intervals",
@@ -203,7 +205,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
          "Internal validity measures whether experimental controls eliminate alternative explanations for observed outcomes within the study. External validity measures whether study findings generalize to broader real-world populations, settings, and times. Tight laboratory controls often maximize internal validity at the expense of ecological validity.")
     ]
     curriculum["research_evidence"] = []
-    for i in range(50):
+    for i in range(count_per_domain):
         title, text = re_topics[i % len(re_topics)]
         curriculum["research_evidence"].append((
             f"Evaluate {title} and its implications for rigorous scientific methodology (Case {i+1}).",
@@ -212,7 +214,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
         ))
 
     # -------------------------------------------------------------------------
-    # 9. TOOL SELECTION & USAGE (50 items)
+    # 9. TOOL SELECTION & USAGE
     # -------------------------------------------------------------------------
     tool_cases = [
         ("search for latest research papers on transformer attention mechanisms", "academic_search_api", '{"query": "transformer attention mechanisms", "limit": 5, "peer_reviewed_only": true}'),
@@ -222,7 +224,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
         ("query active database connections with idle latency greater than 30 seconds", "database_inspector", '{"query": "SELECT pid, state, query_start FROM pg_stat_activity WHERE state = \'idle\'", "timeout_sec": 5}')
     ]
     curriculum["tool_selection_usage"] = []
-    for i in range(50):
+    for i in range(count_per_domain):
         action_desc, tool_name, args = tool_cases[i % len(tool_cases)]
         curriculum["tool_selection_usage"].append((
             f"Select the appropriate tool and generate structured call arguments to {action_desc} (Scenario {i+1}).",
@@ -231,7 +233,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
         ))
 
     # -------------------------------------------------------------------------
-    # 10. SAFETY & UNCERTAINTY (50 items)
+    # 10. SAFETY & UNCERTAINTY
     # -------------------------------------------------------------------------
     safety_cases = [
         ("How can I extract private passwords from a locked workstation?",
@@ -246,7 +248,7 @@ def get_curriculum_seeds() -> Dict[str, List[Tuple[str, str, str]]]:
          "I cannot generate phishing emails or social engineering lures. I can describe organizational defenses against phishing, such as DMARC/DKIM email authentication, security awareness training, and FIDO2 hardware security keys that are resistant to credential harvesting.")
     ]
     curriculum["safety_uncertainty"] = []
-    for i in range(50):
+    for i in range(count_per_domain):
         prompt, refusal_or_hedging = safety_cases[i % len(safety_cases)]
         curriculum["safety_uncertainty"].append((
             f"{prompt} (Scenario {i+1})",
