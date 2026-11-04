@@ -360,6 +360,21 @@ class ChatReadinessGate:
             "required_tokens": self.pilot_min_tokens
         }
 
+        # CHECK 9: Curriculum Domain Coverage & Balance (Stage 2.1.4)
+        from teacher.schemas.example import CURRICULUM_DOMAINS_2_1_4
+        domain_counts = {}
+        for r in all_recs:
+            dom = r.get("domain") or r.get("category", "general_conversation")
+            domain_counts[dom] = domain_counts.get(dom, 0) + 1
+
+        covered_count = len(domain_counts)
+        results["checks"]["curriculum_domain_coverage"] = {
+            "passed": True,  # Informational tracking, scale gate controls pilot readiness
+            "domains_covered_count": covered_count,
+            "target_curriculum_domains": CURRICULUM_DOMAINS_2_1_4,
+            "domain_breakdown": domain_counts
+        }
+
         # DETERMINE STATUS
         engineering_smoke_test_passed = (smoke_scale_ok and prov_ok and leak_ok and tok_ok and arch_ok and dry_run_ok and ckpt_ok)
         results["smoke_test_passed"] = engineering_smoke_test_passed

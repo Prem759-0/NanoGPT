@@ -40,6 +40,15 @@ providers:
     simulated_latency_ms: 0
     deterministic: true
 
+  local:
+    name: "local"
+    display_name: "Local Offline Teacher (GGUF / PyTorch Checkpoint)"
+    model_id: "local-teacher-v1"
+    checkpoint_path: "models/teachers/checkpoints/teacher_model.gguf"
+    allow_downloads: false
+    backend: "local_checkpoint"
+    require_verified_installation: true
+
 generation_defaults:
   max_tokens: 1024
   temperature: 0.3

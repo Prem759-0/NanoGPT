@@ -40,6 +40,9 @@ class MockTeacherProvider(BaseTeacherProvider):
         )
         self.simulate_error = simulate_error
         self.custom_response = custom_response
+        self.is_mock = True
+        self.is_dev_fixture = True
+        self.is_synthetic = True
 
     def _maybe_trigger_error(self):
         if self.simulate_error == "rate_limit":
@@ -75,7 +78,13 @@ class MockTeacherProvider(BaseTeacherProvider):
                 "total_tokens": prompt_tokens + completion_tokens
             },
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "metadata": {"deterministic": True, "mock": True}
+            "metadata": {
+                "deterministic": True,
+                "mock": True,
+                "is_dev_fixture": True,
+                "is_synthetic": True,
+                "eligible_for_production": False
+            }
         }
 
     def generate_structured_example(

@@ -8,11 +8,13 @@ from typing import Dict, Type, Optional, Any
 from teacher.providers.base import BaseTeacherProvider
 from teacher.providers.kimi import KimiProvider
 from teacher.providers.mock import MockTeacherProvider
+from teacher.providers.local import LocalTeacherProvider
 from teacher.config import load_teacher_config
 
 _PROVIDER_REGISTRY: Dict[str, Type[BaseTeacherProvider]] = {
     "kimi": KimiProvider,
     "mock": MockTeacherProvider,
+    "local": LocalTeacherProvider,
 }
 
 def register_provider(name: str, provider_cls: Type[BaseTeacherProvider]):
@@ -54,6 +56,13 @@ def get_teacher_provider(
             model_id=kwargs.get("model_id", "mock-teacher-v1"),
             simulate_error=kwargs.get("simulate_error"),
             custom_response=kwargs.get("custom_response")
+        )
+    elif p_name == "local":
+        l_cfg = cfg.get("providers", {}).get("local", {})
+        return LocalTeacherProvider(
+            checkpoint_path=kwargs.get("checkpoint_path", l_cfg.get("checkpoint_path")),
+            model_id=kwargs.get("model_id", l_cfg.get("model_id", "local-teacher-v1")),
+            allow_downloads=False
         )
     else:
         return provider_cls(allow_external_calls=ext_allowed, **kwargs)
