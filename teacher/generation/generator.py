@@ -40,7 +40,7 @@ class DemonstrationGenerator:
         prompt: str,
         domain: str = DOMAIN_GENERAL_CONVERSATION,
         task_type: str = "general_qa",
-        license_str: str = "Permissive-Teacher-Terms",
+        license_str: str = "Apache-2.0",
         example_id: Optional[str] = None
     ) -> Tuple[bool, TeacherExample]:
         """

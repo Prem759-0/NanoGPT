@@ -79,15 +79,15 @@ DOMAIN_ALIASES: Dict[str, str] = {
 
 ALL_CURRICULUM_DOMAINS: Set[str] = VALID_DOMAINS.union(set(CURRICULUM_DOMAINS_2_1_4))
 
-# Approved Open & Permissive Licenses
+# Approved Open & Permissive Licenses (Verified SPDX Licenses)
+# Note (Stage 2.1.5 Audit): 'Permissive-Teacher-Terms' was rejected and removed as an unverified non-SPDX identifier.
 APPROVED_LICENSES: Set[str] = {
     "CC0-1.0",
     "CC-BY-4.0",
     "CC-BY-SA-4.0",
     "MIT",
     "Apache-2.0",
-    "CustomSovereign",
-    "Permissive-Teacher-Terms"
+    "CustomSovereign"
 }
 
 # Validation and Split Statuses

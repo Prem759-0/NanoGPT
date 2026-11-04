@@ -105,14 +105,17 @@ class ChatReadinessGate:
         self,
         root_dir: str = PROJECT_ROOT,
         pilot_min_records: int = PILOT_MIN_TOTAL_RECORDS,
-        pilot_min_tokens: int = PILOT_MIN_TOTAL_TOKENS
+        pilot_min_tokens: int = PILOT_MIN_TOTAL_TOKENS,
+        train_manifest: Optional[str] = None,
+        val_manifest: Optional[str] = None,
+        test_manifest: Optional[str] = None
     ):
         self.root_dir = root_dir
         self.pilot_min_records = pilot_min_records
         self.pilot_min_tokens = pilot_min_tokens
-        self.train_manifest = os.path.join(root_dir, "datasets", "manifests", "chat_train.jsonl")
-        self.val_manifest = os.path.join(root_dir, "datasets", "manifests", "chat_val.jsonl")
-        self.test_manifest = os.path.join(root_dir, "datasets", "manifests", "chat_test.jsonl")
+        self.train_manifest = train_manifest or os.path.join(root_dir, "datasets", "manifests", "chat_train.jsonl")
+        self.val_manifest = val_manifest or os.path.join(root_dir, "datasets", "manifests", "chat_val.jsonl")
+        self.test_manifest = test_manifest or os.path.join(root_dir, "datasets", "manifests", "chat_test.jsonl")
         self.tokenizer_path = os.path.join(root_dir, "models", "chat", "tokenizer.json")
         self.config_path = os.path.join(root_dir, "training", "chat", "config.yaml")
         self.registry_path = os.path.join(root_dir, "models", "registry.json")
