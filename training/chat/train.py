@@ -85,9 +85,26 @@ def train_moon_chat(
     print("Student Init:       RANDOM GAUSSIAN SCRATCH (Zero Pretrained Checkpoint Weights)")
     print(f"Execution Mode:     {'ENGINEERING SMOKE TEST' if is_smoke_test else 'PRODUCTION PILOT RUN'}\n")
 
+    # Resolve manifest paths
+    train_manifest = cfg["paths"]["train_manifest"]
+    if not os.path.isabs(train_manifest):
+        train_manifest = os.path.join(PROJECT_ROOT, train_manifest)
+
+    val_manifest = cfg["paths"]["val_manifest"]
+    if not os.path.isabs(val_manifest):
+        val_manifest = os.path.join(PROJECT_ROOT, val_manifest)
+
+    test_manifest = cfg["paths"].get("test_manifest", "datasets/manifests/chat_test.jsonl")
+    if not os.path.isabs(test_manifest):
+        test_manifest = os.path.join(PROJECT_ROOT, test_manifest)
+
     # Readiness Gate Check: Block production training if not READY_FOR_PILOT
     if not is_smoke_test:
-        gate = ChatReadinessGate()
+        gate = ChatReadinessGate(
+            train_manifest=train_manifest,
+            val_manifest=val_manifest,
+            test_manifest=test_manifest
+        )
         gate_res = gate.run_all_checks()
         if gate_res["status"] != STATUS_READY_FOR_PILOT:
             print("!" * 65)
@@ -283,7 +300,30 @@ def train_moon_chat(
     if val_steps == 0:
         raise RuntimeError("Validation evaluation produced 0 steps! Cannot compute validation metrics.")
     mean_val_loss = val_loss / val_steps
-    print(f"Final Validation Loss: {mean_val_loss:.4f}")
+    perplexity = math.exp(min(20.0, mean_val_loss))
+    print(f"Final Validation Loss: {mean_val_loss:.4f} | Perplexity: {perplexity:.2f}")
+
+    # Qualitative Inference Diagnostic
+    print("\nRunning qualitative inference generation check...")
+    model.eval()
+    sample_queries = ["Hi", "What is Python?"]
+    generated_samples = {}
+    with torch.no_grad():
+        for q in sample_queries:
+            q_turns = [{"role": "user", "content": q}]
+            q_ids = tokenizer.encode_chat(q_turns)
+            idx = torch.tensor(q_ids, dtype=torch.long, device=device).unsqueeze(0)
+            for _ in range(20):
+                idx_cond = idx if idx.size(1) <= gpt_conf.block_size else idx[:, -gpt_conf.block_size:]
+                logits, _ = model(idx_cond)
+                logits = logits[:, -1, :]
+                probs = torch.softmax(logits, dim=-1)
+                idx_next = torch.multinomial(probs, num_samples=1)
+                idx = torch.cat((idx, idx_next), dim=1)
+            gen_text = tokenizer.decode(idx[0].tolist())
+            generated_samples[q] = gen_text
+            preview = gen_text.replace("\n", " ")[:75]
+            print(f"  • Prompt '{q}': {preview}...")
 
     # Determine checkpoint destination (Smoke test checkpoints are isolated and marked unpromotable)
     if custom_ckpt_path:
@@ -318,19 +358,23 @@ def train_moon_chat(
             "ownership_policy": cfg.get("ownership_policy", "TEACHER_STUDENT_RANDOM_INIT"),
             "initialization": "random_gaussian_scratch",
             "student_init_method": "random_gaussian_scratch",
-            "teacher_models": ["kimi-k3.1-pro"],
+            "teacher_checkpoint_weights_transferred": False,
+            "teacher_models": ["Qwen2.5-7B-Instruct-GGUF"],
+            "teacher_license": "Apache-2.0",
+            "dataset_provenance": "DETERMINISTIC_CURRICULUM_TEMPLATE + ORIGINAL_SELF_AUTHORED_QA",
             "run_id": f"moon_chat_run_{int(time.time())}",
             "trained_at": datetime.now(timezone.utc).isoformat(),
             "architect": "Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)",
             "final_train_loss": accum_loss,
             "final_val_loss": mean_val_loss,
+            "perplexity": perplexity,
             "iterations": iter_num,
             "is_production_trained": not is_smoke_test,
             "status": "ENGINEERING_SMOKE_TEST_ONLY" if is_smoke_test else "PILOT_TRAINED",
             "notes": (
                 "Engineering smoke test checkpoint only. Unpromotable to production."
                 if is_smoke_test
-                else "Pilot trained checkpoint."
+                else "Pilot trained checkpoint from pure Gaussian scratch."
             )
         },
         "iter_num": iter_num,
@@ -360,14 +404,17 @@ def train_moon_chat(
         "checkpoint_path": checkpoint_path,
         "checkpoint_sha256": ckpt_sha256,
         "parameters": total_params,
+        "final_train_loss": accum_loss,
         "final_val_loss": mean_val_loss,
+        "perplexity": perplexity,
         "iterations": iter_num,
         "total_iterations": iter_num,
         "unique_records": unique_records,
         "chunks_generated": len(train_dataset),
         "supervised_tokens": train_dataset.get_total_supervised_tokens(),
         "is_smoke_test": is_smoke_test,
-        "effective_dataset_passes": dataset_passes
+        "effective_dataset_passes": dataset_passes,
+        "generated_samples": generated_samples
     }
 
 if __name__ == "__main__":
