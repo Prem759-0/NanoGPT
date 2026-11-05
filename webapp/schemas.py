@@ -148,3 +148,47 @@ class SelfTrainResponse(BaseModel):
     message: str
     training_pairs_count: int
     dataset_ready: bool = True
+
+# --- Multimodal & Document Intelligence Schemas ---
+class DocumentGenRequest(BaseModel):
+    doc_type: str = Field(..., description="Document type: 'pdf', 'docx', 'xlsx', or 'pptx'")
+    title: Optional[str] = "Moon AI Sovereign Document"
+    author: Optional[str] = "Prem Gaikwad (Moon AI Sovereign Core, India)"
+    sections: Optional[List[Dict[str, Any]]] = None
+    sheet_name: Optional[str] = "Sheet1"
+    headers: Optional[List[str]] = None
+    rows: Optional[List[List[Any]]] = None
+    subtitle: Optional[str] = None
+    slides: Optional[List[Dict[str, Any]]] = None
+
+class DocumentGenResponse(BaseModel):
+    status: str
+    doc_type: str
+    filename: str
+    file_path: str
+    file_url: str
+    size_bytes: int
+
+class DocumentParseRequest(BaseModel):
+    filepath: str
+
+class DocumentParseResponse(BaseModel):
+    status: str
+    filename: str
+    extension: str
+    size_bytes: int
+    text: str
+    tables: List[Dict[str, Any]]
+    metadata: Dict[str, Any]
+
+class MultimodalDispatchRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, description="Multimodal instruction or generation prompt")
+    user_id: Optional[str] = "guest"
+    extra_args: Optional[Dict[str, Any]] = None
+
+class MultimodalDispatchResponse(BaseModel):
+    modality: str
+    engine: str
+    reply: str
+    artifacts: List[str] = []
+    result: Optional[Dict[str, Any]] = None

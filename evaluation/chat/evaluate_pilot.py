@@ -327,7 +327,8 @@ def run_pilot_evaluation(
 
     # Save evaluation report JSON
     os.makedirs(os.path.join(PROJECT_ROOT, "data", "reports"), exist_ok=True)
-    report_json_path = os.path.join(PROJECT_ROOT, "data", "reports", "eval_moon_chat_pilot_v0_latest.json")
+    model_stem = os.path.splitext(os.path.basename(checkpoint_path))[0]
+    report_json_path = os.path.join(PROJECT_ROOT, "data", "reports", f"eval_{model_stem}_latest.json")
     with open(report_json_path, "w", encoding="utf-8") as f:
         json.dump(report_payload, f, indent=2, ensure_ascii=False)
     print(f"\nSaved evaluation report JSON to: {report_json_path}")
@@ -336,7 +337,7 @@ def run_pilot_evaluation(
     md_content = f"""# Moon AI — Pilot Model Evaluation & Promotion Audit Report
 **Date:** {timestamp}  
 **Chief ML Systems Architect:** Prem Gaikwad (India 🇮🇳)  
-**Evaluated Model:** `moon-chat-pilot-v0`  
+**Evaluated Model:** `{model_stem}`  
 **Ownership Policy:** `TEACHER_STUDENT_RANDOM_INIT` (Policy B)  
 **Checkpoint Path:** `{checkpoint_path}`  
 **Checkpoint SHA-256:** `{ckpt_sha256}`  
@@ -346,7 +347,7 @@ def run_pilot_evaluation(
 ## 1. Executive Summary & Policy Attestation
 - **Random Scratch Initialization:** Verified pure Gaussian scratch initialization (zero pretrained or teacher weights transferred).
 - **Offline Integrity:** Zero external API keys or cloud AI inference endpoints used.
-- **Corpus Scale:** Evaluated across the 52-record blind test split (`expanded_chat_test.jsonl`) and the 12-category blind independent benchmark.
+- **Corpus Scale:** Evaluated across the blind test split (`{os.path.basename(test_manifest_path)}`) and the 12-category blind independent benchmark.
 
 ---
 
@@ -368,7 +369,7 @@ def run_pilot_evaluation(
 ## 3. Promotion Gate Decision
 - **Promoted:** **{promoted}**
 - **Decision Rationale:** {reason}
-- **Baseline Comparison:** Historical character-level scratch baseline composite score was 10.5. The pilot model demonstrates successful loss convergence ({test_loss:.4f}) and 100% non-empty generation. Production promotion gate safeguards the pipeline until extensive GPU training steps are completed.
+- **Baseline Comparison:** Historical character-level scratch baseline composite score was 10.5. The model demonstrates loss convergence ({test_loss:.4f}) and 100% non-empty generation. Production promotion gate safeguards the pipeline until extensive GPU training steps are completed.
 
 ---
 
@@ -377,7 +378,7 @@ def run_pilot_evaluation(
     for cat, sc in eval_suite_res.get("category_scores", {}).items():
         md_content += f"- **{cat}**: {sc:.1f}%\n"
 
-    report_md_path = os.path.join(PROJECT_ROOT, "data", "reports", "eval_moon_chat_pilot_v0_latest.md")
+    report_md_path = os.path.join(PROJECT_ROOT, "data", "reports", f"eval_{model_stem}_latest.md")
     with open(report_md_path, "w", encoding="utf-8") as f:
         f.write(md_content)
     print(f"Saved evaluation report Markdown to: {report_md_path}")
@@ -385,5 +386,18 @@ def run_pilot_evaluation(
     return report_payload
 
 if __name__ == "__main__":
-    run_pilot_evaluation()
+    import argparse
+    parser = argparse.ArgumentParser(description="Moon AI Sovereign Model Evaluation")
+    parser.add_argument("--checkpoint", type=str, default=DEFAULT_CHECKPOINT, help="Path to checkpoint .pt")
+    parser.add_argument("--test-manifest", type=str, default=DEFAULT_TEST_MANIFEST, help="Path to test manifest .jsonl")
+    parser.add_argument("--benchmark", type=str, default=DEFAULT_BENCHMARK_PATH, help="Path to benchmark JSON")
+    parser.add_argument("--device", type=str, default="cpu", help="Compute device (cpu, cuda)")
+    args = parser.parse_args()
+
+    run_pilot_evaluation(
+        checkpoint_path=args.checkpoint,
+        test_manifest_path=args.test_manifest,
+        benchmark_path=args.benchmark,
+        device=args.device
+    )
 

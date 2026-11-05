@@ -1,0 +1,67 @@
+# Moon AI — Scaled 1,100-Record Curriculum Training Configuration
+# Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
+# Ownership Policy: TEACHER_STUDENT_RANDOM_INIT (Policy B)
+# Target: Moon Chat Scaled Pilot (25.7M Parameters, Pure Gaussian Scratch Initialization)
+
+model_track: "moon-chat-v1-scaled"
+ownership_policy: "TEACHER_STUDENT_RANDOM_INIT"
+legacy_ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
+
+# Teacher Distillation Architecture (Student starts strictly from random Gaussian scratch)
+teacher_distillation:
+  enabled: true
+  strategy: "POLICY_B_TEACHER_STUDENT_RANDOM_INIT"
+  target_teacher: "Qwen2.5-7B-Instruct-GGUF"
+  teacher_provider: "local"
+  teacher_license: "Apache-2.0"
+  student_init_method: "random_gaussian_scratch"
+  allow_teacher_demonstrations: true
+  prohibit_teacher_checkpoint_weights: true
+
+# Architecture
+architecture_type: "Causal_Decoder_Only_Transformer_PreLayerNorm_GELU"
+architecture_details:
+  normalization: "Pre-LayerNorm"
+  activation: "GELU"
+  position_encoding: "Learned Absolute Embeddings (wpe)"
+  initialization: "Random Gaussian N(0, 0.02^2)"
+  weight_tying: true
+
+model:
+  name: "moon-chat-scaled-25m"
+  n_layer: 8
+  n_head: 8
+  n_embd: 512
+  block_size: 512
+  vocab_size: 512
+  dropout: 0.1
+  bias: false
+  exact_parameters: 25698816
+
+# Training Hyperparameters
+training:
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 0.0003
+  min_lr: 0.00003
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  warmup_iters: 2
+  max_iters: 5
+  eval_interval: 5
+  eval_iters: 5
+  mixed_precision: "fp16"
+  seed: 42
+  loss_masking: "assistant_only"
+
+# Paths: Point to verified high-volume scaled corpus (1,100 records, 445k tokens)
+paths:
+  train_manifest: "datasets/manifests/scaled_chat_train.jsonl"
+  val_manifest: "datasets/manifests/scaled_chat_val.jsonl"
+  test_manifest: "datasets/manifests/scaled_chat_test.jsonl"
+  tokenizer_path: "models/chat/tokenizer.json"
+  checkpoint_dir: "models/checkpoints/chat"
+  checkpoint_name: "moon_chat_scaled_v1.pt"
+

@@ -27,3 +27,5 @@ node_modules/
 .env
 models/teachers/checkpoints/*
 !models/teachers/checkpoints/.gitkeep
+data/documents/*
+!data/documents/.gitkeep
