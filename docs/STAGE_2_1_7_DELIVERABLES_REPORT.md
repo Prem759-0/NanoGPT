@@ -72,3 +72,4 @@ The Model Promotion Gate operates under strict zero-trust standards: candidate m
 - **Stage 2.1.5.1 Regression Suite:** `tests/test_stage_2_1_5_1_corpus_and_readiness_audit.py` (15 tests) -> **15/15 PASSED**.
 - **Combined Regression Runtime:** 22 tests in 321.43s (OK).
 - **Frontend Production Build:** `npm run build --prefix frontend` -> **Clean build (code 0)**.
+
