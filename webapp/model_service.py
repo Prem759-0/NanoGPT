@@ -143,6 +143,16 @@ class ModelService:
         """Finds best available GGUF model (prioritizing 7B Qwen Coder, then LLaMA 1B)."""
         return self.find_qwen_gguf() or self.find_llama_gguf()
 
+    def find_pilot_checkpoint(self) -> Optional[str]:
+        """Locates the Stage 2.1.6 sovereign pilot checkpoint."""
+        candidate = os.path.join(self.base_dir, "models", "checkpoints", "chat", "moon_chat_pilot_v0.pt")
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+        alt_matches = glob.glob(os.path.join(self.base_dir, "models", "checkpoints", "chat", "*.pt"))
+        if alt_matches:
+            return os.path.abspath(alt_matches[0])
+        return None
+
     def find_checkpoint(self, preferred_path: Optional[str] = None) -> Optional[str]:
         """
         Safely locates an explicit or default scratch assistant checkpoint.
@@ -197,6 +207,7 @@ class ModelService:
         has_qwen = self.find_qwen_gguf() is not None
         has_llama = self.find_llama_gguf() is not None
         has_scratch = self.find_checkpoint() is not None
+        has_pilot = self.find_pilot_checkpoint() is not None
 
         title = "🌙 Moon AI Sovereign (7.6B v1 — Fine-Tuned by Prem Gaikwad)" if moon_path else "👑 Qwen-2.5-Coder-7B (Frontier Super-AI — By Prem Gaikwad)"
         desc = (
@@ -238,6 +249,17 @@ class ModelService:
                 "block_size": 1024,
                 "vocab_size": 50257,
                 "available": True
+            },
+            {
+                "id": "moon-chat-pilot-v0",
+                "name": "🌙 Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
+                "type": "sovereign_scratch",
+                "description": "Stage 2.1.6 sovereign 25.7M parameter transformer initialized from Gaussian random scratch. Evaluated on 572-record verified curriculum. 0 teacher weights transferred (Policy B).",
+                "active": self.active_model_name == "moon-chat-pilot-v0",
+                "parameters": "25.70M",
+                "block_size": 512,
+                "vocab_size": 512,
+                "available": has_pilot
             },
             {
                 "id": "scratch",
@@ -431,6 +453,57 @@ class ModelService:
                     self.model = None
                     self.error_message = f"Failed to load scratch checkpoint: {str(e)}"
                     return False
+
+            # Option 4: Sovereign Moon Chat Pilot (25.7M scratch-initialized transformer)
+            elif target in ["moon-chat-pilot-v0", "moon-pilot", "pilot"]:
+                ckpt_path = self.find_pilot_checkpoint()
+                if not ckpt_path:
+                    self.error_message = "Moon Chat Pilot checkpoint not found on disk at models/checkpoints/chat/moon_chat_pilot_v0.pt"
+                    return False
+                try:
+                    import torch
+                    from model import GPT, GPTConfig
+                    from datasets.chat.tokenizer import SovereignTokenizer
+
+                    print(f"Loading Moon Chat Pilot checkpoint: {ckpt_path} on {self.device}...")
+                    checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=False)
+
+                    model_args = checkpoint.get("model_args", {})
+                    self.model_args = model_args
+                    gptconf = GPTConfig(**model_args)
+                    self.model_config = gptconf
+
+                    model = GPT(gptconf)
+                    state_dict = checkpoint["model"]
+                    unwanted_prefix = "_orig_mod."
+                    for k in list(state_dict.keys()):
+                        if k.startswith(unwanted_prefix):
+                            state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    model.to(self.device)
+
+                    self.model = model
+                    self.llama_model = None
+                    self.active_model_name = "moon-chat-pilot-v0"
+                    self.current_checkpoint_path = os.path.relpath(ckpt_path, self.base_dir)
+                    self.checkpoint_meta = checkpoint.get("config", {}) or checkpoint.get("metadata", {})
+                    self.dataset_name = self.checkpoint_meta.get("dataset", "expanded_chat_corpus")
+                    self.vocab_size = model_args.get("vocab_size", 512)
+
+                    # Initialize sovereign BPE tokenizer
+                    sovereign_tok = SovereignTokenizer()
+                    self.sovereign_tokenizer = sovereign_tok
+                    self.encode_fn = lambda s: sovereign_tok.encode_chat([{"role": "user", "content": s}])
+                    self.decode_fn = sovereign_tok.decode
+
+                    self.error_message = None
+                    return True
+                except Exception as e:
+                    self.model = None
+                    self.error_message = f"Failed to load Moon Chat Pilot checkpoint: {str(e)}"
+                    return False
             else:
                 self.error_message = f"Unknown model name: {target}"
                 return False
@@ -484,10 +557,10 @@ class ModelService:
         self.decode_fn = char_decode
 
     def switch_model(self, model_name: str) -> bool:
-        """Switches active model between 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', and 'scratch'."""
-        allowed = ["qwen-2.5-coder-7b", "qwen", "qwen-7b", "llama-3.2", "gpt2", "scratch"]
+        """Switches active model between available engines."""
+        allowed = ["qwen-2.5-coder-7b", "qwen", "qwen-7b", "llama-3.2", "gpt2", "scratch", "moon-chat-pilot-v0", "moon-pilot", "pilot"]
         if model_name not in allowed:
-            raise ValueError(f"Invalid model: {model_name}. Allowed: 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', 'scratch'")
+            raise ValueError(f"Invalid model: {model_name}. Allowed: 'moon-chat-pilot-v0', 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', 'scratch'")
         return self.load_model(model_name)
 
     def generate(self, prompt: str, max_new_tokens: int = 150, temperature: float = 0.7, history: Optional[List[Dict[str, str]]] = None, mode: str = "chat") -> Dict[str, Any]:
@@ -733,6 +806,69 @@ class ModelService:
                 "device": dev_label
             }
 
+        # --- 1.5 Moon Chat Pilot Generation (25.7M Sovereign Scratch Transformer) ---
+        if self.active_model_name == "moon-chat-pilot-v0" and self.model is not None:
+            import torch
+            from datasets.chat.tokenizer import SovereignTokenizer
+
+            tok = getattr(self, "sovereign_tokenizer", None) or SovereignTokenizer()
+            im_end_id = tok.special_to_id.get("<|im_end|>", 3)
+            eos_id = tok.special_to_id.get("<|endoftext|>", 0)
+
+            turns = []
+            if history:
+                for h in history[-4:]:
+                    r = h.get("role", "user")
+                    c = h.get("content", "").strip()
+                    if c:
+                        turns.append({"role": r, "content": c})
+            turns.append({"role": "user", "content": clean_prompt})
+
+            token_ids = tok.encode_chat(turns)
+            block_size = getattr(self.model_config, "block_size", 512)
+            if len(token_ids) >= block_size:
+                token_ids = token_ids[-(block_size - 1):]
+
+            prompt_len = len(token_ids)
+            idx = torch.tensor(token_ids, dtype=torch.long, device=self.device).unsqueeze(0)
+            capped_tokens = min(max_new_tokens, 60)
+
+            new_tokens = []
+            stop_reason = "max_tokens_reached"
+            with torch.no_grad():
+                for _ in range(capped_tokens):
+                    idx_cond = idx if idx.size(1) <= block_size else idx[:, -block_size:]
+                    logits, _ = self.model(idx_cond)
+                    logits = logits[:, -1, :]
+                    if temperature > 0:
+                        probs = torch.softmax(logits / max(temperature, 0.1), dim=-1)
+                        idx_next = torch.multinomial(probs, num_samples=1)
+                    else:
+                        idx_next = torch.argmax(logits, dim=-1, keepdim=True)
+
+                    next_id = idx_next.item()
+                    if next_id in (im_end_id, eos_id):
+                        stop_reason = "stop_token (<|im_end|>)"
+                        break
+                    new_tokens.append(next_id)
+                    idx = torch.cat((idx, idx_next), dim=1)
+
+            raw_reply = tok.decode(new_tokens).strip() if new_tokens else ""
+            clean_reply = raw_reply.replace("<|im_end|>", "").strip()
+            if not clean_reply:
+                clean_reply = "[Moon AI Pilot: Initialized from Gaussian scratch. Emitted 0 readable tokens.]"
+
+            return {
+                "reply": clean_reply,
+                "raw_reply": raw_reply,
+                "stop_reason": stop_reason,
+                "full_text": clean_reply,
+                "model_name": "Moon AI Pilot (25.7M Sovereign Chat — Policy B)",
+                "prompt_length": prompt_len,
+                "tokens_generated": len(new_tokens),
+                "device": f"{self.device.upper()} Local Sovereign Engine"
+            }
+
         # --- 2. NanoGPT Light / Core Generation ---
         import torch
 
@@ -855,6 +991,26 @@ class ModelService:
                 "n_embd": 2048,
                 "hardware": "CPU (4-Bit AVX2 C++ Quantized)",
                 "description": "Frontier 1.23B parameter NanoGPT architecture created by Prem Gaikwad from India. Runs locally and offline on your laptop."
+            }
+
+        if self.active_model_name == "moon-chat-pilot-v0":
+            param_count = sum(p.numel() for p in self.model.parameters()) if self.model is not None else 25698816
+            return {
+                "model_name": "Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
+                "model_type": "Moon AI 25.7M Sovereign Pilot (Policy B Scratch Init)",
+                "checkpoint_path": self.current_checkpoint_path or "models/checkpoints/chat/moon_chat_pilot_v0.pt",
+                "model_status": status,
+                "dataset": "Moon AI Sovereign Expanded Corpus (572 records, 120k+ tokens)",
+                "vocab_size": 512,
+                "parameters": param_count,
+                "block_size": getattr(self.model_config, "block_size", 512),
+                "n_layer": getattr(self.model_config, "n_layer", 8),
+                "n_head": getattr(self.model_config, "n_head", 8),
+                "n_embd": getattr(self.model_config, "n_embd", 512),
+                "hardware": f"{self.device.upper()} (PyTorch {self.torch_version or 'not installed'})",
+                "ownership_policy": "TEACHER_STUDENT_RANDOM_INIT",
+                "teacher_checkpoint_weights_transferred": False,
+                "description": "25.7M parameter sovereign transformer trained purely from Gaussian random scratch under Policy B. Zero teacher weights transferred."
             }
 
         is_gpt2 = self.active_model_name == "gpt2"

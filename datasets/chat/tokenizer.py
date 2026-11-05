@@ -195,6 +195,10 @@ class SovereignTokenizer:
         """Alias for decode_tokens for standard tokenizer API compatibility."""
         return self.decode_tokens(tokens)
 
+    def encode(self, text: str) -> List[int]:
+        """Alias for encode_text for standard tokenizer API compatibility."""
+        return self.encode_text(text)
+
     def _unpack_token_to_bytes(self, token_id: int) -> List[int]:
         """Recursively unpacks a merged token ID into its constituent raw bytes."""
         if self.byte_offset <= token_id < self.byte_offset + 256:

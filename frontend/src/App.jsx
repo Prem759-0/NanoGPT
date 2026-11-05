@@ -90,6 +90,15 @@ const apiFetch = (path, options = {}) => {
 // Default high-performance sovereign models (100% zero-key out of the box)
 const DEFAULT_MODELS = [
   {
+    id: 'moon-chat-pilot-v0',
+    name: '🌙 Moon AI Pilot (25.7M Sovereign Scratch — Policy B)',
+    type: 'sovereign_scratch',
+    description: 'Stage 2.1.6 sovereign 25.7M parameter transformer initialized from Gaussian random scratch. 0 teacher weights transferred.',
+    active: false,
+    parameters: '25.70M',
+    available: true
+  },
+  {
     id: 'moon-sovereign-v2',
     name: '🌙 Moon AI Sovereign (All-in-One Engine — By Prem Gaikwad)',
     type: 'cloud_frontier',
@@ -1405,7 +1414,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
           <div className="topbar-left">
             <div className="grok-model-pill">
               <Sparkles size={14} color="#38bdf8" />
-              <span>{activeModel.includes('qwen') ? '🌙 Moon AI Sovereign (7B)' : '⚡ Moon AI Fast (1.2B)'}</span>
+              <span>{activeModel.includes('pilot') ? '🌙 Moon Pilot (25.7M Scratch)' : activeModel.includes('qwen') ? '🌙 Moon AI Sovereign (7B)' : '⚡ Moon AI Fast (1.2B)'}</span>
             </div>
 
             {/* Grok Fun Mode & Think Mode Toggles */}
