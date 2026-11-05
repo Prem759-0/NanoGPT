@@ -44,7 +44,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Moon AI Sovereign Chat Training Engine")
     parser.add_argument("--config", type=str, default="training/chat/config.yaml", help="Path to training config YAML")
     parser.add_argument("--max-iters", type=int, default=None, help="Override maximum training iterations")
+    parser.add_argument("--eval-interval", type=int, default=None, help="Override validation evaluation interval")
     parser.add_argument("--device", type=str, default=None, help="Device to use (cuda, cpu, mps)")
+    parser.add_argument("--resume-from", type=str, default=None, help="Resume training from an existing random-init checkpoint")
     parser.add_argument("--dry-run", action="store_true", help="Run 1 iteration to verify pipeline integrity")
     parser.add_argument("--smoke-test", action="store_true", help="Run 1 iteration engineering smoke test without production checkpointing")
     return parser.parse_args()
@@ -63,6 +65,8 @@ def train_moon_chat(
     config_path: str,
     max_iters_override: Optional[int] = None,
     device_override: Optional[str] = None,
+    eval_interval_override: Optional[int] = None,
+    resume_from_ckpt: Optional[str] = None,
     dry_run: bool = False,
     smoke_test: bool = False,
     custom_ckpt_path: Optional[str] = None
@@ -212,6 +216,19 @@ def train_moon_chat(
     model = GPT(gpt_conf)
     model.to(device)
 
+    if resume_from_ckpt:
+        if not os.path.exists(resume_from_ckpt):
+            raise FileNotFoundError(f"Resume checkpoint not found: {resume_from_ckpt}")
+        ckpt_data = torch.load(resume_from_ckpt, map_location=device, weights_only=False)
+        cfg_meta = ckpt_data.get("config", {}) or ckpt_data.get("metadata", {})
+        # Policy B Verification
+        if cfg_meta.get("teacher_checkpoint_weights_transferred") is not False:
+            raise ValueError("Policy B violation: teacher_checkpoint_weights_transferred must be False.")
+        if cfg_meta.get("initialization") != "random_gaussian_scratch":
+            raise ValueError("Policy B violation: checkpoint must originate from random_gaussian_scratch.")
+        model.load_state_dict(ckpt_data["model"])
+        print(f"✅ Policy B Verified: Resumed weights from student checkpoint: {resume_from_ckpt}")
+
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Model architecture initialized: {total_params:,} parameters ({total_params / 1e6:.2f}M)")
 
@@ -228,7 +245,17 @@ def train_moon_chat(
     use_amp = device == "cuda" and t_cfg.get("mixed_precision") == "fp16"
     scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
 
-    print(f"\nBeginning training run: {max_iters} iterations (grad accum: {grad_accum_steps}, AMP: {use_amp})...\n")
+    checkpoint_dir = cfg["paths"]["checkpoint_dir"]
+    if not os.path.isabs(checkpoint_dir):
+        checkpoint_dir = os.path.join(PROJECT_ROOT, checkpoint_dir)
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
+    eval_interval = eval_interval_override or t_cfg.get("eval_interval", 100)
+    eval_iters = t_cfg.get("eval_iters", 5)
+    best_val_loss = float("inf")
+    metrics_history = []
+
+    print(f"\nBeginning training run: {max_iters} iterations (grad accum: {grad_accum_steps}, AMP: {use_amp}, eval_interval: {eval_interval})...\n")
 
     model.train()
     iter_num = 0
@@ -277,7 +304,64 @@ def train_moon_chat(
 
         iter_num += 1
 
-        if iter_num % 10 == 0 or iter_num == max_iters or is_smoke_test:
+        if not is_smoke_test and (iter_num % eval_interval == 0 or iter_num == max_iters):
+            model.eval()
+            val_loss = 0.0
+            val_steps = 0
+            with torch.no_grad():
+                for v_x, v_y in val_loader:
+                    v_x, v_y = v_x.to(device), v_y.to(device)
+                    if use_amp:
+                        with torch.amp.autocast('cuda'):
+                            _, l = model(v_x, v_y)
+                    else:
+                        _, l = model(v_x, v_y)
+                    val_loss += l.item()
+                    val_steps += 1
+                    if val_steps >= eval_iters:
+                        break
+            mean_v_loss = val_loss / max(1, val_steps)
+            step_ppl = math.exp(min(20.0, mean_v_loss))
+            dt = time.time() - t0
+            t0 = time.time()
+            print(f"Iter {iter_num:4d}/{max_iters} | Train Loss: {accum_loss:.4f} | Val Loss: {mean_v_loss:.4f} (PPL: {step_ppl:.2f}) | LR: {lr:.6f} | Time: {dt*1000:.1f}ms")
+
+            metrics_history.append({
+                "iter": iter_num,
+                "train_loss": round(accum_loss, 4),
+                "val_loss": round(mean_v_loss, 4),
+                "perplexity": round(step_ppl, 2),
+                "lr": round(lr, 8)
+            })
+
+            if mean_v_loss < best_val_loss:
+                best_val_loss = mean_v_loss
+                best_ckpt_path = os.path.join(checkpoint_dir, "moon_chat_scaled_best.pt")
+                best_payload = {
+                    "status": "PILOT_TRAINED_BEST",
+                    "model": model.state_dict(),
+                    "model_args": {
+                        "block_size": gpt_conf.block_size,
+                        "vocab_size": gpt_conf.vocab_size,
+                        "n_layer": gpt_conf.n_layer,
+                        "n_head": gpt_conf.n_head,
+                        "n_embd": gpt_conf.n_embd,
+                        "dropout": gpt_conf.dropout,
+                        "bias": gpt_conf.bias
+                    },
+                    "config": {
+                        "model_name": m_cfg["name"],
+                        "initialization": "random_gaussian_scratch",
+                        "teacher_checkpoint_weights_transferred": False,
+                        "best_val_loss": best_val_loss,
+                        "iter_num": iter_num,
+                        "policy": "POLICY_B_TEACHER_STUDENT_RANDOM_INIT"
+                    }
+                }
+                torch.save(best_payload, best_ckpt_path)
+                print(f"  ⭐ Saved new best validation checkpoint: {best_ckpt_path} (Loss: {best_val_loss:.4f})")
+            model.train()
+        elif iter_num % 10 == 0 or iter_num == max_iters or is_smoke_test:
             dt = time.time() - t0
             t0 = time.time()
             print(f"Iter {iter_num:4d}/{max_iters} | Loss: {accum_loss:.4f} | LR: {lr:.6f} | Time: {dt*1000:.1f}ms")
@@ -399,6 +483,24 @@ def train_moon_chat(
     print(f"SHA-256: {ckpt_sha256}")
     print("=" * 65)
 
+    # Save training metrics history
+    reports_dir = os.path.join(PROJECT_ROOT, "data", "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    metrics_path = os.path.join(reports_dir, "training_metrics_latest.json")
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        json.dump({
+            "run_id": f"moon_run_{int(time.time())}",
+            "model_name": m_cfg["name"],
+            "parameters": total_params,
+            "max_iters": max_iters,
+            "final_train_loss": round(accum_loss, 4),
+            "final_val_loss": round(mean_val_loss, 4),
+            "final_perplexity": round(perplexity, 2),
+            "best_val_loss": round(best_val_loss if best_val_loss != float("inf") else mean_val_loss, 4),
+            "metrics_history": metrics_history,
+            "checkpoint_sha256": ckpt_sha256
+        }, f, indent=2)
+
     return {
         "status": "COMPLETED_SMOKE_TEST" if is_smoke_test else "COMPLETED_PRODUCTION_PILOT",
         "checkpoint_path": checkpoint_path,
@@ -406,6 +508,7 @@ def train_moon_chat(
         "parameters": total_params,
         "final_train_loss": accum_loss,
         "final_val_loss": mean_val_loss,
+        "best_val_loss": best_val_loss if best_val_loss != float("inf") else mean_val_loss,
         "perplexity": perplexity,
         "iterations": iter_num,
         "total_iterations": iter_num,
@@ -414,7 +517,8 @@ def train_moon_chat(
         "supervised_tokens": train_dataset.get_total_supervised_tokens(),
         "is_smoke_test": is_smoke_test,
         "effective_dataset_passes": dataset_passes,
-        "generated_samples": generated_samples
+        "generated_samples": generated_samples,
+        "metrics_history": metrics_history
     }
 
 if __name__ == "__main__":
@@ -423,6 +527,8 @@ if __name__ == "__main__":
         config_path=args.config,
         max_iters_override=args.max_iters,
         device_override=args.device,
+        eval_interval_override=args.eval_interval,
+        resume_from_ckpt=args.resume_from,
         dry_run=args.dry_run,
         smoke_test=args.smoke_test
     )

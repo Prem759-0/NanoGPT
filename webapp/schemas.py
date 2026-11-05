@@ -192,3 +192,16 @@ class MultimodalDispatchResponse(BaseModel):
     reply: str
     artifacts: List[str] = []
     result: Optional[Dict[str, Any]] = None
+
+class SandboxExecuteRequest(BaseModel):
+    code: str = Field(..., min_length=1, description="Python code string to execute safely")
+    timeout_seconds: Optional[float] = Field(default=7.0, ge=0.5, le=30.0)
+
+class SandboxExecuteResponse(BaseModel):
+    success: bool
+    output: str
+    error: Optional[str] = None
+    exit_code: int
+    duration_ms: float
+    ast_security: str
+    artifacts: List[Dict[str, Any]] = []

@@ -65,14 +65,16 @@ class MoonMultimodalCoordinator:
             return "image_generation"
 
         # 3. Document generation
-        if any(k in p for k in ["generate pdf", "create pdf", "export pdf", "make pdf"]):
+        if p.startswith("/pdf") or any(k in p for k in ["generate pdf", "create pdf", "export pdf", "make pdf", "pdf report"]):
             return "document_pdf"
-        if any(k in p for k in ["generate docx", "create docx", "export docx", "word document"]):
+        if p.startswith("/docx") or p.startswith("/word") or any(k in p for k in ["generate docx", "create docx", "export docx", "word document", "word doc"]):
             return "document_docx"
-        if any(k in p for k in ["generate xlsx", "create xlsx", "export xlsx", "excel sheet", "spreadsheet"]):
+        if p.startswith("/xlsx") or p.startswith("/excel") or any(k in p for k in ["generate xlsx", "create xlsx", "export xlsx", "excel sheet", "spreadsheet"]):
             return "document_xlsx"
-        if any(k in p for k in ["generate pptx", "create pptx", "export pptx", "presentation slides", "slide deck"]):
+        if p.startswith("/pptx") or p.startswith("/slide") or any(k in p for k in ["generate pptx", "create pptx", "export pptx", "presentation slides", "slide deck", "powerpoint"]):
             return "document_pptx"
+        if p.startswith("/doc") or any(k in p for k in ["generate document", "create document", "export document"]):
+            return "document_pdf"
 
         # 4. Code execution
         if p.startswith("/run") or p.startswith("/exec") or "execute python" in p or "run this code" in p:
@@ -128,7 +130,8 @@ class MoonMultimodalCoordinator:
 
         # 3. Document PDF Dispatch
         if intent == "document_pdf":
-            title = extra.get("title", "Moon AI Sovereign Report")
+            clean_title = re.sub(r"^/(?:doc|pdf)\s*", "", prompt, flags=re.I).strip()
+            title = extra.get("title", clean_title if clean_title else "Moon AI Sovereign Report")
             sections = extra.get("sections", [
                 {"heading": "Executive Summary", "body": prompt},
                 {"heading": "Technical Architecture", "body": "Sovereign multimodal intelligence powered by Moon Core."}
@@ -145,7 +148,8 @@ class MoonMultimodalCoordinator:
 
         # 4. Document DOCX Dispatch
         if intent == "document_docx":
-            title = extra.get("title", "Moon AI Sovereign Document")
+            clean_title = re.sub(r"^/(?:docx|word)\s*", "", prompt, flags=re.I).strip()
+            title = extra.get("title", clean_title if clean_title else "Moon AI Sovereign Document")
             sections = extra.get("sections", [
                 {"heading": "Overview", "body": prompt}
             ])
@@ -200,12 +204,16 @@ class MoonMultimodalCoordinator:
         if intent == "code_execution":
             code_body = re.sub(r"^/(?:run|exec)\s*", "", prompt).strip()
             exec_res = self.code_service.execute_code(code_body)
+            reply = exec_res.get("output", "")
+            if not reply and exec_res.get("error"):
+                reply = exec_res.get("error")
+            artifacts = [a["path"] for a in exec_res.get("artifacts", []) if isinstance(a, dict) and "path" in a]
             return {
                 "modality": "code",
                 "engine": "Secure Code Interpreter Sandbox",
                 "result": exec_res,
-                "reply": exec_res.get("output", ""),
-                "artifacts": []
+                "reply": reply,
+                "artifacts": artifacts
             }
 
         # 8. Default: Text Chat via Moon Core LLM

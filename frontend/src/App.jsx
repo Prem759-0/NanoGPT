@@ -33,7 +33,10 @@ import {
   Sparkles,
   Terminal,
   ExternalLink,
-  Key
+  Key,
+  FileText,
+  FileSpreadsheet,
+  Presentation
 } from 'lucide-react';
 import './App.css';
 
@@ -67,6 +70,15 @@ const isVideoGenerationIntent = (prompt) => {
   if (p.startsWith('/video')) return true;
   if (/^(?:please\s+)?(?:can\s+you\s+)?(?:generate|genrate|gentrate|generte|create|make|render|animate)\s+(?:an?\s+)?(?:video|clip|animation|movie|motion)\b/i.test(ql)) return true;
   if (/^(?:video|clip|animation|motion)\s+of\b/i.test(ql)) return true;
+  return false;
+};
+
+const isDocumentIntent = (prompt) => {
+  const p = (prompt || '').trim();
+  const ql = p.toLowerCase();
+  if (p.startsWith('/doc') || p.startsWith('/pdf') || p.startsWith('/docx') || p.startsWith('/xlsx') || p.startsWith('/pptx') || p.startsWith('/slide')) return true;
+  if (/\b(?:generate|create|make|export|build)\s+(?:a\s+|an\s+)?(?:pdf|word|docx|excel|spreadsheet|xlsx|powerpoint|presentation|pptx|document|slides)\b/i.test(ql)) return true;
+  if (/\b(?:pdf|word\s+doc|excel\s+sheet|powerpoint\s+presentation|slideshow)\s+for\b/i.test(ql)) return true;
   return false;
 };
 
@@ -227,6 +239,12 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   });
   const [showGpuModal, setShowGpuModal] = useState(false);
   const [showAdvancedDev, setShowAdvancedDev] = useState(false);
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [docType, setDocType] = useState('pdf');
+  const [docTitle, setDocTitle] = useState('Moon AI Sovereign Intelligence Report');
+  const [docContent, setDocContent] = useState('Sovereign offline AI foundation developed by Prem Gaikwad. Full document generation and parsing capabilities in pure Python.');
+  const [docLoading, setDocLoading] = useState(false);
+  const [docResult, setDocResult] = useState(null);
 
   // Auto-check 24/7 Cloud Engine status on load & periodic ping
   const checkGpuHealth = async (targetUrl = null) => {
@@ -804,8 +822,8 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
     const isCodeQuery = prompt.toLowerCase().includes('game') || prompt.toLowerCase().includes('code') || prompt.toLowerCase().includes('write') || prompt.startsWith('/code');
     const tokenBudget = isCodeQuery ? 400 : 160;
 
-    // Multimodal commands (images & videos) are synthesized directly by Moon AI Studios on Vercel
-    const isMultimodal = isImageGenerationIntent(prompt) || isVideoGenerationIntent(prompt);
+    // Multimodal commands (images, videos, and documents) are synthesized directly by Moon AI Sovereign Core
+    const isMultimodal = isImageGenerationIntent(prompt) || isVideoGenerationIntent(prompt) || isDocumentIntent(prompt);
 
     // Grok Mode Persona Injection (only for pure text/reasoning queries, never multimodal)
     let outgoingMessage = prompt;
@@ -826,6 +844,31 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
       };
 
       let success = false;
+
+      // 0a. Direct Sovereign Multimodal & Document Dispatch
+      if (isDocumentIntent(prompt)) {
+        try {
+          const docRes = await apiFetch('/api/multimodal/dispatch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: outgoingMessage, user_id: activeUserId })
+          });
+          if (docRes.ok) {
+            const docData = await docRes.json();
+            if (docData.reply) {
+              replyText = docData.reply;
+              meta.model_name = docData.engine || 'Sovereign Document Engine';
+              meta.device = 'Moon Core Offline';
+              if (docData.artifacts && docData.artifacts.length > 0) {
+                meta.artifacts = docData.artifacts;
+              }
+              success = true;
+            }
+          }
+        } catch (docErr) {
+          console.warn('Multimodal document dispatch failed, falling back to sovereign chat:', docErr);
+        }
+      }
 
 
 
@@ -1231,6 +1274,50 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
             </div>
           );
         })}
+
+        {/* Embedded Generated Documents */}
+        {(() => {
+          const docRegex = /(?:Generated sovereign (?:PDF|Word DOCX|Excel XLSX|PowerPoint PPTX) document: |artifact: |download:\s*)([^\s\n]+\.(?:pdf|docx|xlsx|pptx))/gi;
+          const docMatches = [];
+          let dMatch;
+          while ((dMatch = docRegex.exec(rawText)) !== null) {
+            docMatches.push(dMatch[1]);
+          }
+          if (docMatches.length === 0) return null;
+
+          return docMatches.map((docPath, dIdx) => {
+            const filename = docPath.split(/[/\\]/).pop();
+            const ext = filename.split('.').pop().toLowerCase();
+            const downloadUrl = `/api/documents/download/${filename}`;
+            const resolvedDocUrl = resolveMediaUrl(downloadUrl);
+
+            return (
+              <div key={`doc-${dIdx}`} className="moon-doc-card">
+                <div className="moon-doc-info">
+                  <span className={`moon-doc-badge ${ext}`}>
+                    {ext.toUpperCase()}
+                  </span>
+                  <div>
+                    <div className="moon-doc-title">{filename}</div>
+                    <div className="moon-doc-meta">Sovereign Document • Generated Offline</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <a
+                    href={resolvedDocUrl}
+                    download={filename}
+                    className="grok-action-chip"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Download size={13} />
+                    <span>Download</span>
+                  </a>
+                </div>
+              </div>
+            );
+          });
+        })()}
       </div>
     );
   };
@@ -1714,6 +1801,15 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
 
                   <button
                     className="toolbar-pill"
+                    onClick={() => setShowDocModal(true)}
+                    title="Document Studio: Generate or Parse PDF, Word, Excel, PowerPoint"
+                  >
+                    <FileText size={13} />
+                    <span>Document</span>
+                  </button>
+
+                  <button
+                    className="toolbar-pill"
                     onClick={toggleRecording}
                     style={isRecording ? { borderColor: '#ef4444', color: '#ef4444', background: 'rgba(239, 68, 68, 0.15)' } : {}}
                     title={isRecording ? "Click to stop recording" : "Voice Typing: Click and speak into microphone"}
@@ -1907,6 +2003,140 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sovereign Document Studio Modal */}
+      {showDocModal && (
+        <div className="gpu-modal-overlay" onClick={() => setShowDocModal(false)}>
+          <div className="gpu-modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <div className="gpu-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={18} color="#3b82f6" />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Moon AI Sovereign Document Studio</h3>
+              </div>
+              <button className="grok-btn-ghost" onClick={() => setShowDocModal(false)} style={{ padding: '4px' }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="gpu-modal-body">
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: '0.74rem', color: '#a1a1aa', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase' }}>
+                  Format
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                  {['pdf', 'docx', 'xlsx', 'pptx'].map(fmt => (
+                    <button
+                      key={fmt}
+                      type="button"
+                      className="grok-btn-ghost"
+                      onClick={() => setDocType(fmt)}
+                      style={{
+                        padding: '8px 4px',
+                        justifyContent: 'center',
+                        borderColor: docType === fmt ? '#3b82f6' : '#27272a',
+                        background: docType === fmt ? 'rgba(59, 130, 246, 0.15)' : '#09090b',
+                        color: docType === fmt ? '#60a5fa' : '#a1a1aa',
+                        fontWeight: 700
+                      }}
+                    >
+                      {fmt.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: '0.74rem', color: '#a1a1aa', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase' }}>
+                  Document Title
+                </label>
+                <input
+                  type="text"
+                  value={docTitle}
+                  onChange={e => setDocTitle(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', background: '#09090b', color: '#fff', border: '1px solid #27272a', borderRadius: '6px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: '0.74rem', color: '#a1a1aa', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase' }}>
+                  Content Brief
+                </label>
+                <textarea
+                  value={docContent}
+                  onChange={e => setDocContent(e.target.value)}
+                  rows={4}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', background: '#09090b', color: '#fff', border: '1px solid #27272a', borderRadius: '6px', resize: 'vertical' }}
+                />
+              </div>
+
+              {docResult && (
+                <div className="moon-doc-card" style={{ marginBottom: 16 }}>
+                  <div className="moon-doc-info">
+                    <span className={`moon-doc-badge ${docResult.doc_type}`}>
+                      {docResult.doc_type.toUpperCase()}
+                    </span>
+                    <div>
+                      <div className="moon-doc-title">{docResult.filename}</div>
+                      <div className="moon-doc-meta">Size: {(docResult.size_bytes / 1024).toFixed(1)} KB • Offline Validated</div>
+                    </div>
+                  </div>
+                  <a
+                    href={resolveMediaUrl(docResult.file_url)}
+                    download={docResult.filename}
+                    className="grok-action-chip"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Download size={13} />
+                    <span>Download</span>
+                  </a>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button className="grok-btn-ghost" onClick={() => setShowDocModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  className="grok-btn-primary"
+                  disabled={docLoading || !docTitle.trim()}
+                  onClick={async () => {
+                    setDocLoading(true);
+                    setDocResult(null);
+                    try {
+                      const res = await apiFetch('/api/document/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          doc_type: docType,
+                          title: docTitle,
+                          sections: [{ heading: 'Executive Summary', body: docContent }],
+                          subtitle: docContent.slice(0, 80),
+                          sheet_name: 'Analysis',
+                          headers: ['Metric', 'Description', 'Attestation'],
+                          rows: [['Summary', docContent.slice(0, 50), 'SOVEREIGN_PASSED']]
+                        })
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setDocResult(data);
+                      } else {
+                        alert('Generation failed: ' + res.statusText);
+                      }
+                    } catch (err) {
+                      alert('Error: ' + err.message);
+                    } finally {
+                      setDocLoading(false);
+                    }
+                  }}
+                >
+                  {docLoading ? 'Generating...' : `Generate ${docType.toUpperCase()}`}
+                </button>
+              </div>
             </div>
           </div>
         </div>

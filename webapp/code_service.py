@@ -1,9 +1,15 @@
+"""
+webapp/code_service.py
+Subprocess-based sandbox for running Python code safely with timeout and AST security inspection.
+Delegates to the sovereign sandbox engine in sandbox/code_sandbox.py.
+"""
+
 import os
 import sys
 import time
-import subprocess
-import ast
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+
+from sandbox.code_sandbox import SovereignCodeSandbox, SandboxSecurityError
 
 class SecurityException(Exception):
     """Raised when code violates sandbox security policies."""
@@ -14,109 +20,45 @@ class CodeService:
     Subprocess-based sandbox for running Python code safely with timeout and AST security inspection.
     """
 
-    BLOCKED_MODULES = {
-        "os", "sys", "subprocess", "shutil", "socket", "ctypes", "winreg",
-        "urllib", "requests", "http", "pathlib", "pty", "multiprocessing",
-        "threading", "signal", "posix", "nt"
-    }
-    BLOCKED_CALLS = {
-        "system", "rmtree", "kill", "remove", "unlink", "popen", "spawn",
-        "exec", "eval", "compile", "__import__", "open", "input"
-    }
-
     def __init__(self, python_executable: str = sys.executable, timeout_seconds: float = 15.0):
         self.python_executable = python_executable
         self.timeout_seconds = timeout_seconds
+        self.sandbox = SovereignCodeSandbox(
+            python_executable=python_executable,
+            timeout_seconds=timeout_seconds
+        )
 
     def check_security(self, code: str) -> None:
         """Inspects code AST to detect dangerous host operating system calls."""
-        # Check enabled flag
         if os.environ.get("MOON_ENABLE_SANDBOX", "1").lower() in ("0", "false", "no"):
             raise SecurityException("Code execution is disabled on this server instance (MOON_ENABLE_SANDBOX=0).")
 
         try:
-            tree = ast.parse(code)
-        except SyntaxError:
-            return  # Allow syntax error to be caught naturally by Python execution
-
-        for node in ast.walk(tree):
-            # Check imports
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    root_mod = alias.name.split(".")[0]
-                    if root_mod in self.BLOCKED_MODULES:
-                        raise SecurityException(f"Importing '{alias.name}' is prohibited in the sandbox.")
-            elif isinstance(node, ast.ImportFrom):
-                if node.module:
-                    root_mod = node.module.split(".")[0]
-                    if root_mod in self.BLOCKED_MODULES:
-                        raise SecurityException(f"Importing from '{node.module}' is prohibited in the sandbox.")
-
-            # Check function calls
-            elif isinstance(node, ast.Call):
-                func_name = None
-                if isinstance(node.func, ast.Name):
-                    func_name = node.func.id
-                elif isinstance(node.func, ast.Attribute):
-                    func_name = node.func.attr
-
-                if func_name in self.BLOCKED_CALLS:
-                    raise SecurityException(f"Executing call '{func_name}()' is prohibited in the sandbox.")
+            self.sandbox.analyze_ast(code)
+        except SandboxSecurityError as se:
+            raise SecurityException(str(se))
 
     def execute_code(self, code: str) -> Dict[str, Any]:
-        t0 = time.time()
-        # 1. Static AST Security Audit
-        try:
-            self.check_security(code)
-        except SecurityException as se:
+        """Executes Python code safely in the sandbox."""
+        if os.environ.get("MOON_ENABLE_SANDBOX", "1").lower() in ("0", "false", "no"):
             return {
                 "success": False,
                 "output": "",
-                "error": f"🔒 Sandbox Security Rejection: {str(se)}",
+                "error": "🔒 Sandbox Security Rejection: Code execution is disabled on this server instance (MOON_ENABLE_SANDBOX=0).",
                 "exit_code": -2,
-                "execution_time_ms": 0.0
+                "execution_time_ms": 0.0,
+                "artifacts": []
             }
 
-        # 2. Subprocess Execution with Timeout and Sanitized Environment
-        try:
-            # Strip sensitive environment variables (API keys, DB URLs, tokens)
-            sanitized_env = {
-                "SYSTEMROOT": os.environ.get("SYSTEMROOT", "C:\\Windows"),
-                "PATH": os.environ.get("PATH", ""),
-                "PYTHONIOENCODING": "utf-8"
-            }
-            process = subprocess.run(
-                [self.python_executable, "-c", code],
-                capture_output=True,
-                text=True,
-                timeout=self.timeout_seconds,
-                env=sanitized_env
-            )
-            elapsed_ms = (time.time() - t0) * 1000
-            
-            output = process.stdout
-            error = process.stderr if process.returncode != 0 else None
-            
-            return {
-                "success": process.returncode == 0,
-                "output": output if output else ("(No output returned)" if not error else ""),
-                "error": error,
-                "exit_code": process.returncode,
-                "execution_time_ms": round(elapsed_ms, 2)
-            }
-        except subprocess.TimeoutExpired:
-            return {
-                "success": False,
-                "output": "",
-                "error": f"Execution timed out after {self.timeout_seconds} seconds.",
-                "exit_code": -1,
-                "execution_time_ms": self.timeout_seconds * 1000
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "output": "",
-                "error": str(e),
-                "exit_code": -1,
-                "execution_time_ms": 0.0
-            }
+        res = self.sandbox.execute(code, timeout_override=self.timeout_seconds)
+        output = res.get("output", "")
+        error = res.get("error")
+
+        return {
+            "success": res.get("success", False),
+            "output": output if output else ("(No output returned)" if not error else ""),
+            "error": error,
+            "exit_code": res.get("exit_code", 0),
+            "execution_time_ms": res.get("duration_ms", 0.0),
+            "artifacts": res.get("artifacts", [])
+        }

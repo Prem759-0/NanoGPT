@@ -14,7 +14,8 @@ from webapp.schemas import (
     CodeRunRequest, CodeRunResponse, SessionItem, CreateSessionRequest, SwitchModelRequest,
     AddMemoryRequest, SelfTrainRequest,
     DocumentGenRequest, DocumentGenResponse, DocumentParseRequest, DocumentParseResponse,
-    MultimodalDispatchRequest, MultimodalDispatchResponse
+    MultimodalDispatchRequest, MultimodalDispatchResponse,
+    SandboxExecuteRequest, SandboxExecuteResponse
 )
 from webapp.model_service import ModelService, ModelNotTrainedException
 from webapp.image_service import ImageService
@@ -752,6 +753,15 @@ async def run_code_endpoint(request: CodeRunRequest):
     """
     res = code_service.execute_code(request.code)
     return CodeRunResponse(**res)
+
+@app.post("/api/sandbox/execute", response_model=SandboxExecuteResponse)
+async def sandbox_execute_endpoint(request: SandboxExecuteRequest):
+    """
+    Sovereign isolated Python code execution sandbox.
+    Audits code AST, blocks dangerous syscalls/network calls, executes with timeout, and captures artifacts.
+    """
+    res = code_service.sandbox.execute(request.code, timeout_override=request.timeout_seconds)
+    return SandboxExecuteResponse(**res)
 
 # =========================================================================
 # Self-Learning & Long-Term Memory API Endpoints

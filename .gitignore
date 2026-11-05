@@ -29,3 +29,5 @@ models/teachers/checkpoints/*
 !models/teachers/checkpoints/.gitkeep
 data/documents/*
 !data/documents/.gitkeep
+data/sandbox/*
+!data/sandbox/.gitkeep
