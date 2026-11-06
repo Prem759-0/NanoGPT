@@ -26,10 +26,28 @@ class CheckpointValidationResult(tuple):
         return self[2]
 
 
-def validate_checkpoint_structure(ckpt_path: str) -> CheckpointValidationResult:
+class SafeUnpickler(pickle.Unpickler):
     """
-    Validates the PyTorch structure and schema of a checkpoint file.
-    Fails closed on missing file, unreadable file, empty file, non-dict, or missing model tensors.
+    Restricted unpickler that permits only primitive dictionary structures,
+    completely preventing arbitrary object instantiation or code execution during unpickling.
+    """
+    SAFE_BUILTINS = {
+        "dict", "list", "set", "frozenset", "tuple",
+        "str", "int", "float", "bool", "bytes", "bytearray", "NoneType"
+    }
+
+    def find_class(self, module: str, name: str) -> Any:
+        import builtins
+        if module in ("builtins", "__builtin__") and name in self.SAFE_BUILTINS:
+            return getattr(builtins, name)
+        raise pickle.UnpicklingError(f"Untrusted object '{module}.{name}' is prohibited during safe deserialization.")
+
+
+def validate_checkpoint_structure(ckpt_path: str, weights_only: bool = True) -> CheckpointValidationResult:
+    """
+    Validates the PyTorch structure and schema of a checkpoint file with secure deserialization.
+    Fails closed on missing file, unreadable file, empty file, non-dict, missing model tensors,
+    malicious pickle payloads, unsupported types, or invalid architectures.
     Returns: CheckpointValidationResult(is_valid, reason, loaded_dict)
     """
     if not ckpt_path or not os.path.isfile(ckpt_path):
@@ -39,13 +57,22 @@ def validate_checkpoint_structure(ckpt_path: str) -> CheckpointValidationResult:
 
     try:
         import torch
-        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        # Enforce secure deserialization: weights_only=True restricts unpickling to tensors and safe primitives
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=weights_only)
         if not isinstance(ckpt, dict):
             return CheckpointValidationResult(False, f"Checkpoint root is not a dictionary (type={type(ckpt).__name__})", {})
         if "model" not in ckpt or not isinstance(ckpt["model"], dict):
             return CheckpointValidationResult(False, "Checkpoint missing 'model' state dictionary", {})
         if len(ckpt["model"]) == 0:
             return CheckpointValidationResult(False, "Checkpoint 'model' state dictionary is empty", {})
+
+        # Tensor type and payload security verification
+        for param_name, param_val in ckpt["model"].items():
+            if not isinstance(param_name, str):
+                return CheckpointValidationResult(False, f"Invalid non-string parameter name in state dictionary: {type(param_name).__name__}", {})
+            if not isinstance(param_val, torch.Tensor):
+                return CheckpointValidationResult(False, f"Invalid non-tensor parameter value for '{param_name}': {type(param_val).__name__}", {})
+
         if "model_args" not in ckpt or not isinstance(ckpt["model_args"], dict):
             return CheckpointValidationResult(False, "Checkpoint missing 'model_args' dictionary", {})
 
@@ -53,6 +80,30 @@ def validate_checkpoint_structure(ckpt_path: str) -> CheckpointValidationResult:
         for arg in required_args:
             if arg not in ckpt["model_args"]:
                 return CheckpointValidationResult(False, f"Checkpoint 'model_args' missing required architectural parameter '{arg}'", {})
+            val = ckpt["model_args"][arg]
+            if not isinstance(val, int) or val <= 0:
+                return CheckpointValidationResult(False, f"Architectural parameter '{arg}' must be a positive integer, got {val}", {})
+
+        # Architectural invariants & bounds validation (blocks invalid geometries or allocation exhaustion attacks)
+        n_embd = ckpt["model_args"]["n_embd"]
+        n_head = ckpt["model_args"]["n_head"]
+        n_layer = ckpt["model_args"]["n_layer"]
+        vocab_size = ckpt["model_args"]["vocab_size"]
+        block_size = ckpt["model_args"]["block_size"]
+
+        if n_embd % n_head != 0:
+            return CheckpointValidationResult(False, f"Invalid architecture: n_embd ({n_embd}) must be divisible by n_head ({n_head})", {})
+
+        if n_layer > 128 or n_head > 128 or n_embd > 8192 or vocab_size > 262144 or block_size > 65536:
+            return CheckpointValidationResult(False, "Architectural parameter exceeds safe supported bounds", {})
+
+        # Reviewed schema version compatibility verification
+        cfg = ckpt.get("config", {})
+        schema_version = ckpt.get("schema_version") or (cfg.get("schema_version") if isinstance(cfg, dict) else None)
+        if schema_version is not None:
+            supported_schemas = ("1.0", "1.1", "2.0", "2.1", "2.2", "2.3", "2.4", "moon_chat_v1", "sovereign_v1")
+            if str(schema_version) not in supported_schemas:
+                return CheckpointValidationResult(False, f"Unsupported checkpoint schema version: {schema_version}", {})
 
         return CheckpointValidationResult(True, "VALID_STRUCTURE", ckpt)
     except Exception as e:
@@ -548,7 +599,7 @@ class ModelService:
                     import torch
                     from model import GPTConfig, GPT
 
-                    checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=False)
+                    checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=True)
                     if not isinstance(checkpoint, dict) or "model" not in checkpoint or "model_args" not in checkpoint:
                         self.error_message = f"Invalid checkpoint format in {ckpt_path}: missing required 'model' or 'model_args' keys."
                         return False
@@ -603,7 +654,7 @@ class ModelService:
                     from datasets.chat.tokenizer import SovereignTokenizer
 
                     print(f"Loading Moon Chat Pilot checkpoint: {ckpt_path} on {self.device}...")
-                    checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=False)
+                    checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=True)
                     self.is_test_fixture = self.is_checkpoint_fixture(ckpt_path)
 
                     model_args = checkpoint.get("model_args", {})
@@ -667,7 +718,7 @@ class ModelService:
             )
 
         with open(meta_path, "rb") as f:
-            meta = pickle.load(f)
+            meta = SafeUnpickler(f).load()
 
         if "stoi" not in meta or "itos" not in meta:
             raise ValueError(f"Malformed meta.pkl at {meta_path}: missing required 'stoi' or 'itos' dictionaries.")

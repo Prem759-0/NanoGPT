@@ -25,13 +25,14 @@ Outputs:
 
 import os
 import sys
+import re
 import time
 import json
 import math
 import uuid
 import tempfile
 import hashlib
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 
 # Ensure project root in sys.path
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -41,6 +42,119 @@ if PROJECT_ROOT not in sys.path:
 import torch
 import torch.nn as nn
 from model import GPTConfig, GPT
+
+
+def check_t4_hardware_identity(
+    device_name: str,
+    compute_capability: str,
+    total_vram_mb: float,
+    min_vram_mb: float = 14000.0
+) -> Tuple[bool, str, Dict[str, Any]]:
+    """
+    Strictly verifies that the target device is an authentic physical NVIDIA Tesla T4 GPU.
+    Enforces:
+    1. Device name contains 'T4' or 'Tesla T4' and does NOT match other GPU architectures (A100, L4, V100, H100, etc.).
+    2. Compute capability is exactly '7.5' (Turing architecture).
+    3. Total physical VRAM meets minimum requirement (>= 14,000 MB, standard T4 has ~15.1-15.3 GB).
+    """
+    name_clean = device_name.strip()
+    name_lower = name_clean.lower()
+
+    details = {
+        "device_name": device_name,
+        "compute_capability": compute_capability,
+        "total_vram_mb": total_vram_mb,
+        "min_vram_mb": min_vram_mb
+    }
+
+    # Prohibited non-T4 architectures
+    prohibited_models = [
+        r"\ba100\b",
+        r"\bl4\b",
+        r"\bv100\b",
+        r"\bh100\b",
+        r"\ba10g?\b",
+        r"\brtx\s*\d+\b",
+        r"\bgtx\s*\d+\b",
+        r"\bk80\b",
+        r"\bp100\b",
+        r"\bt600\b",
+        r"\bt1000\b",
+        r"\bcpu\b"
+    ]
+    for pat in prohibited_models:
+        if re.search(pat, name_lower):
+            return False, f"Hardware mismatch: detected non-T4 device '{device_name}'", details
+
+    # Positive T4 matching (e.g. 'Tesla T4', 'NVIDIA T4', 'T4')
+    if not (re.search(r"\b(tesla\s+)?t4\b", name_lower) or "t4" in name_lower):
+        return False, f"Hardware mismatch: device name '{device_name}' does not identify an NVIDIA Tesla T4", details
+
+    # Compute capability check: Turing T4 is exactly 7.5
+    comp_cap_str = str(compute_capability).strip()
+    if comp_cap_str != "7.5":
+        return False, f"Hardware mismatch: compute capability is '{compute_capability}', expected exactly '7.5' for NVIDIA T4", details
+
+    # Physical VRAM check: standard T4 has 16 GB (~15,100 to 15,360 MB)
+    if total_vram_mb < min_vram_mb:
+        return False, f"Hardware mismatch: insufficient physical VRAM ({total_vram_mb:.1f} MB < required {min_vram_mb:.1f} MB)", details
+
+    return True, "NVIDIA_T4_AUTHENTICATED", details
+
+
+def save_benchmark_report(
+    summary: Dict[str, Any],
+    report_dir: Optional[str] = None,
+    allow_overwrite_verified: bool = False
+) -> str:
+    """
+    Safely exports the benchmark report.
+    Guarantees:
+    1. Generates a unique run_id and exports to t4_empirical_benchmark_{run_id}.json.
+    2. Only updates canonical data/reports/t4_empirical_benchmark.json if:
+       - The run is verified (status == 'T4_EMPIRICAL_BENCHMARK_VERIFIED'), AND
+       - Either no verified report exists yet, or allow_overwrite_verified is explicitly True.
+    3. An existing verified benchmark report is never overwritten by an unverified or mismatched run.
+    """
+    if report_dir is None:
+        report_dir = os.path.join(PROJECT_ROOT, "data", "reports")
+    os.makedirs(report_dir, exist_ok=True)
+
+    run_id = summary.get("run_id") or f"t4_bench_{int(time.time())}_{uuid.uuid4().hex[:8]}"
+    summary["run_id"] = run_id
+
+    # 1. Always save the isolated, unique run report
+    unique_report_path = os.path.join(report_dir, f"t4_empirical_benchmark_{run_id}.json")
+    with open(unique_report_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    # 2. Canonical report protection
+    canonical_path = os.path.join(report_dir, "t4_empirical_benchmark.json")
+    is_verified_run = summary.get("status") == "T4_EMPIRICAL_BENCHMARK_VERIFIED"
+
+    if os.path.isfile(canonical_path):
+        try:
+            with open(canonical_path, "r", encoding="utf-8") as f:
+                existing_data = json.load(f)
+            existing_is_verified = existing_data.get("status") == "T4_EMPIRICAL_BENCHMARK_VERIFIED"
+        except Exception:
+            existing_is_verified = False
+
+        if existing_is_verified and not allow_overwrite_verified:
+            # Preserve existing verified report
+            print(f"      ℹ️ Existing verified benchmark report preserved at {canonical_path}")
+            print(f"      ℹ️ This run exported to isolated report: {unique_report_path}")
+            return unique_report_path
+
+    # If this run is not verified, never overwrite canonical report with an error report
+    if not is_verified_run:
+        print(f"      ℹ️ Unverified run ({summary.get('status')}) exported to isolated report: {unique_report_path}")
+        return unique_report_path
+
+    # Update canonical report
+    with open(canonical_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+    return canonical_path
 
 
 def verify_checkpoint_roundtrip_isolated(
@@ -97,7 +211,7 @@ def verify_checkpoint_roundtrip_isolated(
 
         # Load back into fresh model
         fresh_model = GPT(gpt_conf).to(device)
-        loaded_ckpt = torch.load(temp_ckpt_path, map_location=device, weights_only=False)
+        loaded_ckpt = torch.load(temp_ckpt_path, map_location=device, weights_only=True)
         fresh_model.load_state_dict(loaded_ckpt["model"])
 
         # Bitwise comparison
@@ -125,7 +239,12 @@ def verify_checkpoint_roundtrip_isolated(
                 pass
 
 
-def run_empirical_t4_validation(custom_temp_dir: Optional[str] = None) -> Dict[str, Any]:
+def run_empirical_t4_validation(
+    custom_temp_dir: Optional[str] = None,
+    min_vram_mb: float = 14000.0,
+    allow_overwrite_verified: bool = False,
+    report_dir: Optional[str] = None
+) -> Dict[str, Any]:
     print("=" * 70)
     print("   MOON AI — EMPIRICAL T4 GPU HARDWARE BENCHMARK & VALIDATION")
     print("   Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)")
@@ -142,12 +261,14 @@ def run_empirical_t4_validation(custom_temp_dir: Optional[str] = None) -> Dict[s
         print("(e.g., Google Colab with T4 GPU runtime enabled).")
         print("Simulated or analytical GPU benchmarks are strictly prohibited by Moon AI policy.\n")
         print("=" * 70)
-        return {
+        summary = {
             "status": "CUDA_UNAVAILABLE",
             "error": "CUDA is not available on this host.",
             "device": "cpu",
             "empirical_benchmark_verified": False
         }
+        save_benchmark_report(summary, report_dir=report_dir, allow_overwrite_verified=False)
+        return summary
 
     device = torch.device("cuda:0")
     device_name = torch.cuda.get_device_name(0)
@@ -160,6 +281,33 @@ def run_empirical_t4_validation(custom_temp_dir: Optional[str] = None) -> Dict[s
     print(f"      • Compute Capability:     {compute_cap}")
     print(f"      • Total Physical VRAM:    {total_vram_mb:,.1f} MB ({total_vram_mb/1024:.2f} GB)")
     print(f"      • Multi-Processor Count:   {device_props.multi_processor_count}")
+
+    # Enforce physical NVIDIA T4 identity
+    is_t4, mismatch_reason, hw_details = check_t4_hardware_identity(
+        device_name=device_name,
+        compute_capability=compute_cap,
+        total_vram_mb=total_vram_mb,
+        min_vram_mb=min_vram_mb
+    )
+    if not is_t4:
+        print(f"\n❌ CRITICAL HARDWARE MISMATCH: {mismatch_reason}")
+        print("Hardware Status: Detected device is NOT an authentic NVIDIA Tesla T4.")
+        print("Execution Result: HARDWARE_MISMATCH")
+        print("\nExplanation:")
+        print("Live T4 GPU validation strictly requires an authentic NVIDIA Tesla T4 GPU (Compute Capability 7.5).")
+        print("Running on alternate GPUs (e.g. A100, L4, V100) or CPU cannot certify T4 empirical performance.\n")
+        print("=" * 70)
+        summary = {
+            "status": "HARDWARE_MISMATCH",
+            "error": mismatch_reason,
+            "device_name": device_name,
+            "compute_capability": compute_cap,
+            "total_vram_mb": total_vram_mb,
+            "empirical_benchmark_verified": False,
+            "hardware_details": hw_details
+        }
+        save_benchmark_report(summary, report_dir=report_dir, allow_overwrite_verified=False)
+        return summary
 
     # 2. Reset peak memory tracking
     torch.cuda.empty_cache()
@@ -297,11 +445,11 @@ def run_empirical_t4_validation(custom_temp_dir: Optional[str] = None) -> Dict[s
         "teacher_checkpoint_weights_transferred": False
     }
 
-    report_dir = os.path.join(PROJECT_ROOT, "data", "reports")
-    os.makedirs(report_dir, exist_ok=True)
-    report_path = os.path.join(report_dir, "t4_empirical_benchmark.json")
-    with open(report_path, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=2)
+    report_path = save_benchmark_report(
+        summary,
+        report_dir=report_dir,
+        allow_overwrite_verified=allow_overwrite_verified
+    )
 
     print("\n[8/8] Benchmark Results Exported:")
     print(f"      • JSON Report:             {report_path}")

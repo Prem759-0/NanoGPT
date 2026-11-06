@@ -30,7 +30,7 @@ def is_fixture_checkpoint(ckpt_path: str) -> bool:
     if not os.path.isfile(ckpt_path):
         return False
     try:
-        data = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        data = torch.load(ckpt_path, map_location="cpu", weights_only=True)
         if not isinstance(data, dict):
             return False
         if data.get("is_test_fixture") is True:
