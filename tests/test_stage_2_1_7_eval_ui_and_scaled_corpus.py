@@ -125,7 +125,9 @@ class TestStage217EvalUiAndScaledCorpus(unittest.TestCase):
             self.assertFalse(info.get("is_production_trained", True))
             self.assertEqual(info.get("status"), "CI_TEST_FIXTURE")
         else:
-            self.assertTrue(info.get("is_production_trained", False))
+            self.assertFalse(info.get("is_test_fixture", True))
+            self.assertFalse(info.get("is_production_trained", True))
+            self.assertIn(info.get("status"), ("PILOT_TRAINED", "EVALUATION_PASSED"))
 
     def test_05_model_service_pilot_generation(self):
         """Certifies interactive generation using moon-chat-pilot-v0 via ModelService."""

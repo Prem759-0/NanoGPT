@@ -2,7 +2,121 @@ import os
 import sys
 import glob
 import pickle
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
+
+
+class CheckpointValidationResult(tuple):
+    """Encapsulates checkpoint validation tuple (is_valid, reason, checkpoint_data) with boolean coercion."""
+    def __new__(cls, is_valid: bool, reason: str, data: Dict[str, Any]):
+        return super().__new__(cls, (is_valid, reason, data))
+
+    def __bool__(self) -> bool:
+        return bool(self[0])
+
+    @property
+    def is_valid(self) -> bool:
+        return self[0]
+
+    @property
+    def reason(self) -> str:
+        return self[1]
+
+    @property
+    def data(self) -> Dict[str, Any]:
+        return self[2]
+
+
+def validate_checkpoint_structure(ckpt_path: str) -> CheckpointValidationResult:
+    """
+    Validates the PyTorch structure and schema of a checkpoint file.
+    Fails closed on missing file, unreadable file, empty file, non-dict, or missing model tensors.
+    Returns: CheckpointValidationResult(is_valid, reason, loaded_dict)
+    """
+    if not ckpt_path or not os.path.isfile(ckpt_path):
+        return CheckpointValidationResult(False, f"Checkpoint path does not exist or is not a file: {ckpt_path}", {})
+    if os.path.getsize(ckpt_path) == 0:
+        return CheckpointValidationResult(False, f"Checkpoint file is empty (0 bytes): {ckpt_path}", {})
+
+    try:
+        import torch
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        if not isinstance(ckpt, dict):
+            return CheckpointValidationResult(False, f"Checkpoint root is not a dictionary (type={type(ckpt).__name__})", {})
+        if "model" not in ckpt or not isinstance(ckpt["model"], dict):
+            return CheckpointValidationResult(False, "Checkpoint missing 'model' state dictionary", {})
+        if len(ckpt["model"]) == 0:
+            return CheckpointValidationResult(False, "Checkpoint 'model' state dictionary is empty", {})
+        if "model_args" not in ckpt or not isinstance(ckpt["model_args"], dict):
+            return CheckpointValidationResult(False, "Checkpoint missing 'model_args' dictionary", {})
+
+        required_args = ["n_layer", "n_head", "n_embd", "vocab_size", "block_size"]
+        for arg in required_args:
+            if arg not in ckpt["model_args"]:
+                return CheckpointValidationResult(False, f"Checkpoint 'model_args' missing required architectural parameter '{arg}'", {})
+
+        return CheckpointValidationResult(True, "VALID_STRUCTURE", ckpt)
+    except Exception as e:
+        return CheckpointValidationResult(False, f"Failed to load checkpoint file ({type(e).__name__}): {str(e)}", {})
+
+
+def is_checkpoint_fixture(ckpt_path: str) -> bool:
+    """Determines if a checkpoint file is an unpromotable CI test fixture."""
+    ok, reason, ckpt = validate_checkpoint_structure(ckpt_path)
+    if not ok:
+        return False
+    if ckpt.get("is_test_fixture") is True:
+        return True
+    if ckpt.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY"):
+        return True
+    cfg = ckpt.get("config", {}) or ckpt.get("metadata", {})
+    if cfg.get("is_test_fixture") is True or cfg.get("run_id") == "ci_test_fixture":
+        return True
+    return False
+
+
+def is_verified_genuine_checkpoint(ckpt_path: str) -> bool:
+    """
+    Positively validates that a checkpoint is a genuine, trained student checkpoint.
+    Fails closed on:
+    - Corrupted, malformed, or unreadable files
+    - Missing or incomplete metadata
+    - CI test fixtures or engineering smoke test checkpoints
+    - Policy B violations (e.g. teacher checkpoint weights transferred)
+    """
+    ok, reason, ckpt = validate_checkpoint_structure(ckpt_path)
+    if not ok:
+        return False
+
+    # Must not be marked as a test fixture or smoke test
+    if ckpt.get("is_test_fixture") is True:
+        return False
+    if ckpt.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY", "DATA_INSUFFICIENT"):
+        return False
+
+    cfg = ckpt.get("config", {}) or ckpt.get("metadata", {})
+    if not isinstance(cfg, dict):
+        return False
+    if cfg.get("is_test_fixture") is True or cfg.get("run_id") == "ci_test_fixture":
+        return False
+
+    # Policy B provenance verification
+    if cfg.get("teacher_checkpoint_weights_transferred") is True:
+        return False
+    init_method = cfg.get("initialization") or cfg.get("student_init_method")
+    if init_method != "random_gaussian_scratch":
+        return False
+    policy = cfg.get("ownership_policy") or cfg.get("policy")
+    if policy not in ("TEACHER_STUDENT_RANDOM_INIT", "STRICT_SOVEREIGN_RANDOM_INIT_ONLY", "POLICY_B_TEACHER_STUDENT_RANDOM_INIT"):
+        return False
+
+    # Status must be positively genuine
+    valid_statuses = ("PILOT_TRAINED", "PILOT_TRAINED_BEST", "EVALUATION_PASSED", "PRODUCTION_TRAINED", "PROMOTED_PRODUCTION")
+    status = ckpt.get("status")
+    if status not in valid_statuses:
+        return False
+
+    return True
+
 
 class ModelNotTrainedException(Exception):
     """Raised when an inference request is made but no valid checkpoint or model exists."""
@@ -143,40 +257,34 @@ class ModelService:
         """Finds best available GGUF model (prioritizing 7B Qwen Coder, then LLaMA 1B)."""
         return self.find_qwen_gguf() or self.find_llama_gguf()
 
-    def is_checkpoint_fixture(self, ckpt_path: str) -> bool:
-        """Determines if a checkpoint file is an unpromotable CI test fixture."""
-        if not ckpt_path or not os.path.isfile(ckpt_path):
-            return False
-        try:
-            import torch
-            ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-            if not isinstance(ckpt, dict):
-                return False
-            if ckpt.get("is_test_fixture") is True:
-                return True
-            if ckpt.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY"):
-                return True
-            if ckpt.get("is_production_trained") is False:
-                return True
-            cfg = ckpt.get("config", {}) or ckpt.get("metadata", {})
-            if cfg.get("is_test_fixture") is True or cfg.get("run_id") == "ci_test_fixture":
-                return True
-            return False
-        except Exception:
-            return False
+    validate_checkpoint_structure = staticmethod(validate_checkpoint_structure)
+    is_checkpoint_fixture = staticmethod(is_checkpoint_fixture)
+    is_verified_genuine_checkpoint = staticmethod(is_verified_genuine_checkpoint)
 
     def find_pilot_checkpoint(self, allow_fixture: bool = False) -> Optional[str]:
-        """Locates the Stage 2.1.6 sovereign pilot checkpoint."""
-        candidate = os.path.join(self.base_dir, "models", "checkpoints", "chat", "moon_chat_pilot_v0.pt")
-        if os.path.isfile(candidate):
-            if not allow_fixture and self.is_checkpoint_fixture(candidate):
-                return None
-            return os.path.abspath(candidate)
-        alt_matches = glob.glob(os.path.join(self.base_dir, "models", "checkpoints", "chat", "*.pt"))
-        for alt in alt_matches:
-            if not allow_fixture and self.is_checkpoint_fixture(alt):
+        """
+        Locates the sovereign pilot checkpoint with fail-closed positive verification.
+        - If allow_fixture is False: ONLY returns a positively verified genuine checkpoint.
+        - If allow_fixture is True: returns a verified genuine checkpoint OR a valid CI fixture.
+        Never returns an unreadable, malformed, or unverified checkpoint file.
+        Never silently falls back to an unrelated checkpoint.
+        """
+        candidate_paths = [
+            os.path.join(self.base_dir, "models", "checkpoints", "chat", "moon_chat_pilot_v0.pt"),
+            os.path.join(self.base_dir, "models", "checkpoints", "chat", "moon_chat_phase_2_4_t4_pilot_v0.pt"),
+            os.path.join(self.base_dir, "models", "checkpoints", "chat", "moon_chat_phase_2_4_t4_pilot_best.pt")
+        ]
+
+        for cand in candidate_paths:
+            if not os.path.isfile(cand):
                 continue
-            return os.path.abspath(alt)
+            if self.is_verified_genuine_checkpoint(cand):
+                return os.path.abspath(cand)
+            if allow_fixture:
+                ok, _, _ = self.validate_checkpoint_structure(cand)
+                if ok and self.is_checkpoint_fixture(cand):
+                    return os.path.abspath(cand)
+
         return None
 
     def find_checkpoint(self, preferred_path: Optional[str] = None) -> Optional[str]:
@@ -1042,7 +1150,8 @@ class ModelService:
                 "ownership_policy": "TEACHER_STUDENT_RANDOM_INIT",
                 "teacher_checkpoint_weights_transferred": False,
                 "is_test_fixture": is_fixture,
-                "is_production_trained": not is_fixture,
+                "is_production_trained": False,
+                "promotable": False,
                 "status": "CI_TEST_FIXTURE" if is_fixture else "PILOT_TRAINED",
                 "description": "25.7M parameter sovereign transformer trained purely from Gaussian random scratch under Policy B. Zero teacher weights transferred."
             }

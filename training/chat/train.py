@@ -367,8 +367,10 @@ def train_moon_chat(
                 best_val_loss = mean_v_loss
                 best_payload = {
                     "status": "PILOT_TRAINED_BEST",
-                    "is_production_trained": True,
-                    "promotable": True,
+                    "is_production_trained": False,
+                    "promotable": False,
+                    "is_production_eligible": False,
+                    "is_test_fixture": False,
                     "model": model.state_dict(),
                     "model_args": {
                         "block_size": gpt_conf.block_size,
@@ -382,13 +384,21 @@ def train_moon_chat(
                     "config": {
                         "model_name": m_cfg["name"],
                         "initialization": "random_gaussian_scratch",
+                        "student_init_method": "random_gaussian_scratch",
                         "teacher_checkpoint_weights_transferred": False,
                         "best_val_loss": best_val_loss,
                         "iter_num": iter_num,
                         "policy": "POLICY_B_TEACHER_STUDENT_RANDOM_INIT",
+                        "ownership_policy": cfg.get("ownership_policy", "TEACHER_STUDENT_RANDOM_INIT"),
                         "best_checkpoint_path": best_ckpt_path,
                         "effective_config": cfg,
-                        "manifest_hashes": manifest_provenance_hashes
+                        "manifest_hashes": manifest_provenance_hashes,
+                        "status": "PILOT_TRAINED_BEST",
+                        "is_production_trained": False,
+                        "promotable": False,
+                        "is_production_eligible": False,
+                        "is_test_fixture": False,
+                        "notes": "Best validation checkpoint from pilot training run. Unpromoted pilot requiring independent evaluation before production consideration."
                     }
                 }
                 torch.save(best_payload, best_ckpt_path)
@@ -460,8 +470,10 @@ def train_moon_chat(
 
     checkpoint_payload = {
         "status": "ENGINEERING_SMOKE_TEST_ONLY" if is_smoke_test else "PILOT_TRAINED",
-        "is_production_trained": not is_smoke_test,
-        "promotable": not is_smoke_test,
+        "is_production_trained": False,
+        "promotable": False,
+        "is_production_eligible": False,
+        "is_test_fixture": False,
         "model": model.state_dict(),
         "model_args": {
             "block_size": gpt_conf.block_size,
@@ -489,7 +501,10 @@ def train_moon_chat(
             "final_val_loss": mean_val_loss,
             "perplexity": perplexity,
             "iterations": iter_num,
-            "is_production_trained": not is_smoke_test,
+            "is_production_trained": False,
+            "promotable": False,
+            "is_production_eligible": False,
+            "is_test_fixture": False,
             "status": "ENGINEERING_SMOKE_TEST_ONLY" if is_smoke_test else "PILOT_TRAINED",
             "checkpoint_filename": ckpt_filename,
             "best_checkpoint_filename": best_ckpt_filename,
@@ -498,7 +513,7 @@ def train_moon_chat(
             "notes": (
                 "Engineering smoke test checkpoint only. Unpromotable to production."
                 if is_smoke_test
-                else "Pilot trained checkpoint from pure Gaussian scratch."
+                else "Pilot trained checkpoint from pure Gaussian scratch. Unpromoted pilot requiring independent evaluation before production consideration."
             )
         },
         "iter_num": iter_num,

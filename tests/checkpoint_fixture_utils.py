@@ -37,8 +37,6 @@ def is_fixture_checkpoint(ckpt_path: str) -> bool:
             return True
         if data.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY"):
             return True
-        if data.get("is_production_trained") is False:
-            return True
         cfg = data.get("config", {}) or data.get("metadata", {})
         if cfg.get("is_test_fixture") is True or cfg.get("run_id") == "ci_test_fixture":
             return True
