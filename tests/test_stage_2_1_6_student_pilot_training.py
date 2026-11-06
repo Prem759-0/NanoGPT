@@ -49,6 +49,16 @@ PILOT_CKPT = os.path.join(PROJECT_ROOT, "models", "checkpoints", "chat", "moon_c
 class TestStage216StudentPilotTraining(unittest.TestCase):
     """Stage 2.1.6 Student Pilot Training and Policy B Attestation Tests."""
 
+    @classmethod
+    def setUpClass(cls):
+        from tests.checkpoint_fixture_utils import ensure_pilot_checkpoint_fixture
+        cls.ckpt_path, cls.created_fixture = ensure_pilot_checkpoint_fixture()
+
+    @classmethod
+    def tearDownClass(cls):
+        from tests.checkpoint_fixture_utils import cleanup_checkpoint_fixture
+        cleanup_checkpoint_fixture(cls.ckpt_path, cls.created_fixture)
+
     def setUp(self):
         self.tokenizer = SovereignTokenizer.load(TOKENIZER_PATH)
 

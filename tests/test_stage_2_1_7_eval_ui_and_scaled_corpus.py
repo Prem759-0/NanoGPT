@@ -38,6 +38,16 @@ SCALED_TEST = os.path.join(PROJECT_ROOT, "datasets", "manifests", "scaled_chat_t
 class TestStage217EvalUiAndScaledCorpus(unittest.TestCase):
     """Test suite certifying Stage 2.1.7 deliverables."""
 
+    @classmethod
+    def setUpClass(cls):
+        from tests.checkpoint_fixture_utils import ensure_pilot_checkpoint_fixture
+        cls.ckpt_path, cls.created_fixture = ensure_pilot_checkpoint_fixture()
+
+    @classmethod
+    def tearDownClass(cls):
+        from tests.checkpoint_fixture_utils import cleanup_checkpoint_fixture
+        cleanup_checkpoint_fixture(cls.ckpt_path, cls.created_fixture)
+
     def test_01_pilot_checkpoint_policy_b_attestation(self):
         """Certifies that moon_chat_pilot_v0.pt exists and maintains strict Policy B attestation."""
         self.assertTrue(os.path.isfile(CHECKPOINT_PATH), f"Checkpoint not found at: {CHECKPOINT_PATH}")

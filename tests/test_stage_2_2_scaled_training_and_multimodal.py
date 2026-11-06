@@ -35,9 +35,16 @@ class TestStage22ScaledTrainingAndMultimodal(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        from tests.checkpoint_fixture_utils import ensure_scaled_checkpoint_fixture
+        cls.ckpt_path, cls.created_fixture = ensure_scaled_checkpoint_fixture()
         cls.client = TestClient(app)
         cls.doc_engine = SovereignDocumentEngine()
         cls.coordinator = MoonMultimodalCoordinator(document_engine=cls.doc_engine)
+
+    @classmethod
+    def tearDownClass(cls):
+        from tests.checkpoint_fixture_utils import cleanup_checkpoint_fixture
+        cleanup_checkpoint_fixture(cls.ckpt_path, cls.created_fixture)
 
     def test_01_scaled_training_checkpoint_policy_b_attestation(self):
         """Certifies that moon_chat_scaled_v1.pt exists with strict Policy B attestation."""
