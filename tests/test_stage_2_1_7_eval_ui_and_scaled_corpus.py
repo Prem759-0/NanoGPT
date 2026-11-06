@@ -45,8 +45,11 @@ class TestStage217EvalUiAndScaledCorpus(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        from tests.checkpoint_fixture_utils import cleanup_checkpoint_fixture
-        cleanup_checkpoint_fixture(cls.ckpt_path, cls.created_fixture)
+        try:
+            from tests.checkpoint_fixture_utils import cleanup_checkpoint_fixture
+            cleanup_checkpoint_fixture(cls.ckpt_path, getattr(cls, "created_fixture", False))
+        except Exception:
+            pass
 
     def test_01_pilot_checkpoint_policy_b_attestation(self):
         """Certifies that moon_chat_pilot_v0.pt exists and maintains strict Policy B attestation."""
@@ -80,21 +83,28 @@ class TestStage217EvalUiAndScaledCorpus(unittest.TestCase):
         self.assertIn("reason", data["promotion_gate"])
 
     def test_03_model_service_available_models_includes_pilot(self):
-        """Certifies that ModelService.get_available_models lists moon-chat-pilot-v0 with Policy B specs."""
+        """Certifies that ModelService.get_available_models lists moon-chat-pilot-v0 and distinguishes fixtures from trained models."""
         ms = ModelService(base_dir=PROJECT_ROOT)
         models = ms.get_available_models()
         pilot_entries = [m for m in models if m["id"] == "moon-chat-pilot-v0"]
 
         self.assertEqual(len(pilot_entries), 1, "moon-chat-pilot-v0 must be listed in available models.")
         pilot = pilot_entries[0]
-        self.assertTrue(pilot["available"], "moon-chat-pilot-v0 must be marked available when checkpoint exists.")
         self.assertEqual(pilot["parameters"], "25.70M")
         self.assertEqual(pilot["block_size"], 512)
         self.assertEqual(pilot["vocab_size"], 512)
         self.assertEqual(pilot["type"], "sovereign_scratch")
 
+        is_fixture = getattr(self, "created_fixture", False) or pilot.get("is_test_fixture", False)
+        if is_fixture:
+            # Production model discovery must NOT treat a temporary CI fixture as an available trained model
+            self.assertFalse(pilot["available"], "CI test fixture must not be marked available as a trained production model.")
+            self.assertTrue(pilot.get("is_test_fixture", False), "CI fixture entry must be flagged with is_test_fixture: true.")
+        else:
+            self.assertTrue(pilot["available"], "Genuine production checkpoint must be marked available.")
+
     def test_04_model_service_pilot_loading_and_get_info(self):
-        """Certifies switching to moon-chat-pilot-v0 loads the model and reports Policy B metadata."""
+        """Certifies switching to moon-chat-pilot-v0 loads the model and reports Policy B metadata without false training claims."""
         ms = ModelService(base_dir=PROJECT_ROOT)
         success = ms.switch_model("moon-chat-pilot-v0")
         self.assertTrue(success, f"Failed to switch to moon-chat-pilot-v0: {ms.error_message}")
@@ -108,6 +118,14 @@ class TestStage217EvalUiAndScaledCorpus(unittest.TestCase):
         self.assertEqual(info["n_embd"], 512)
         self.assertEqual(info["ownership_policy"], "TEACHER_STUDENT_RANDOM_INIT")
         self.assertFalse(info["teacher_checkpoint_weights_transferred"])
+
+        is_fixture = getattr(self, "created_fixture", False) or info.get("is_test_fixture", False)
+        if is_fixture:
+            self.assertTrue(info.get("is_test_fixture", False))
+            self.assertFalse(info.get("is_production_trained", True))
+            self.assertEqual(info.get("status"), "CI_TEST_FIXTURE")
+        else:
+            self.assertTrue(info.get("is_production_trained", False))
 
     def test_05_model_service_pilot_generation(self):
         """Certifies interactive generation using moon-chat-pilot-v0 via ModelService."""

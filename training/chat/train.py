@@ -250,6 +250,35 @@ def train_moon_chat(
         checkpoint_dir = os.path.join(PROJECT_ROOT, checkpoint_dir)
     os.makedirs(checkpoint_dir, exist_ok=True)
 
+    # Configurable best-checkpoint name (stage-isolated)
+    best_ckpt_filename = cfg["paths"].get("best_checkpoint_name")
+    if not best_ckpt_filename:
+        base_name = cfg["paths"].get("checkpoint_name", "moon_chat_model.pt")
+        stem, ext = os.path.splitext(base_name)
+        best_ckpt_filename = f"{stem}_best{ext}"
+    best_ckpt_path = os.path.join(checkpoint_dir, best_ckpt_filename)
+
+    def get_manifest_sha256(fpath: str) -> Optional[str]:
+        if os.path.isfile(fpath):
+            with open(fpath, "rb") as mf:
+                return hashlib.sha256(mf.read()).hexdigest()
+        return None
+
+    manifest_provenance_hashes = {
+        "train_manifest": {
+            "path": os.path.relpath(train_manifest, PROJECT_ROOT),
+            "sha256": get_manifest_sha256(train_manifest)
+        },
+        "val_manifest": {
+            "path": os.path.relpath(val_manifest, PROJECT_ROOT),
+            "sha256": get_manifest_sha256(val_manifest)
+        },
+        "test_manifest": {
+            "path": os.path.relpath(test_manifest, PROJECT_ROOT),
+            "sha256": get_manifest_sha256(test_manifest)
+        }
+    }
+
     eval_interval = eval_interval_override or t_cfg.get("eval_interval", 100)
     eval_iters = t_cfg.get("eval_iters", 5)
     best_val_loss = float("inf")
@@ -336,9 +365,10 @@ def train_moon_chat(
 
             if mean_v_loss < best_val_loss:
                 best_val_loss = mean_v_loss
-                best_ckpt_path = os.path.join(checkpoint_dir, "moon_chat_scaled_best.pt")
                 best_payload = {
                     "status": "PILOT_TRAINED_BEST",
+                    "is_production_trained": True,
+                    "promotable": True,
                     "model": model.state_dict(),
                     "model_args": {
                         "block_size": gpt_conf.block_size,
@@ -355,7 +385,10 @@ def train_moon_chat(
                         "teacher_checkpoint_weights_transferred": False,
                         "best_val_loss": best_val_loss,
                         "iter_num": iter_num,
-                        "policy": "POLICY_B_TEACHER_STUDENT_RANDOM_INIT"
+                        "policy": "POLICY_B_TEACHER_STUDENT_RANDOM_INIT",
+                        "best_checkpoint_path": best_ckpt_path,
+                        "effective_config": cfg,
+                        "manifest_hashes": manifest_provenance_hashes
                     }
                 }
                 torch.save(best_payload, best_ckpt_path)
@@ -381,6 +414,8 @@ def train_moon_chat(
                 _, loss = model(x, y)
             val_loss += loss.item()
             val_steps += 1
+            if is_smoke_test and val_steps >= 2:
+                break
     if val_steps == 0:
         raise RuntimeError("Validation evaluation produced 0 steps! Cannot compute validation metrics.")
     mean_val_loss = val_loss / val_steps
@@ -413,6 +448,7 @@ def train_moon_chat(
     if custom_ckpt_path:
         checkpoint_path = custom_ckpt_path
         os.makedirs(os.path.dirname(os.path.abspath(checkpoint_path)), exist_ok=True)
+        ckpt_filename = os.path.basename(checkpoint_path)
     else:
         checkpoint_dir = cfg["paths"]["checkpoint_dir"]
         if not os.path.isabs(checkpoint_dir):
@@ -437,7 +473,7 @@ def train_moon_chat(
             "bias": gpt_conf.bias
         },
         "config": {
-            "dataset": "moon-chat-v0",
+            "dataset": cfg.get("model_track", "moon-chat-v0"),
             "model_name": m_cfg["name"],
             "ownership_policy": cfg.get("ownership_policy", "TEACHER_STUDENT_RANDOM_INIT"),
             "initialization": "random_gaussian_scratch",
@@ -455,6 +491,10 @@ def train_moon_chat(
             "iterations": iter_num,
             "is_production_trained": not is_smoke_test,
             "status": "ENGINEERING_SMOKE_TEST_ONLY" if is_smoke_test else "PILOT_TRAINED",
+            "checkpoint_filename": ckpt_filename,
+            "best_checkpoint_filename": best_ckpt_filename,
+            "effective_config": cfg,
+            "manifest_hashes": manifest_provenance_hashes,
             "notes": (
                 "Engineering smoke test checkpoint only. Unpromotable to production."
                 if is_smoke_test

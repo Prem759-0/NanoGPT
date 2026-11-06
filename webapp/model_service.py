@@ -143,14 +143,40 @@ class ModelService:
         """Finds best available GGUF model (prioritizing 7B Qwen Coder, then LLaMA 1B)."""
         return self.find_qwen_gguf() or self.find_llama_gguf()
 
-    def find_pilot_checkpoint(self) -> Optional[str]:
+    def is_checkpoint_fixture(self, ckpt_path: str) -> bool:
+        """Determines if a checkpoint file is an unpromotable CI test fixture."""
+        if not ckpt_path or not os.path.isfile(ckpt_path):
+            return False
+        try:
+            import torch
+            ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+            if not isinstance(ckpt, dict):
+                return False
+            if ckpt.get("is_test_fixture") is True:
+                return True
+            if ckpt.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY"):
+                return True
+            if ckpt.get("is_production_trained") is False:
+                return True
+            cfg = ckpt.get("config", {}) or ckpt.get("metadata", {})
+            if cfg.get("is_test_fixture") is True or cfg.get("run_id") == "ci_test_fixture":
+                return True
+            return False
+        except Exception:
+            return False
+
+    def find_pilot_checkpoint(self, allow_fixture: bool = False) -> Optional[str]:
         """Locates the Stage 2.1.6 sovereign pilot checkpoint."""
         candidate = os.path.join(self.base_dir, "models", "checkpoints", "chat", "moon_chat_pilot_v0.pt")
         if os.path.isfile(candidate):
+            if not allow_fixture and self.is_checkpoint_fixture(candidate):
+                return None
             return os.path.abspath(candidate)
         alt_matches = glob.glob(os.path.join(self.base_dir, "models", "checkpoints", "chat", "*.pt"))
-        if alt_matches:
-            return os.path.abspath(alt_matches[0])
+        for alt in alt_matches:
+            if not allow_fixture and self.is_checkpoint_fixture(alt):
+                continue
+            return os.path.abspath(alt)
         return None
 
     def find_checkpoint(self, preferred_path: Optional[str] = None) -> Optional[str]:
@@ -207,7 +233,9 @@ class ModelService:
         has_qwen = self.find_qwen_gguf() is not None
         has_llama = self.find_llama_gguf() is not None
         has_scratch = self.find_checkpoint() is not None
-        has_pilot = self.find_pilot_checkpoint() is not None
+        has_trained_pilot = self.find_pilot_checkpoint(allow_fixture=False) is not None
+        has_any_pilot = self.find_pilot_checkpoint(allow_fixture=True) is not None
+        is_pilot_fixture = has_any_pilot and not has_trained_pilot
 
         title = "🌙 Moon AI Sovereign (7.6B v1 — Fine-Tuned by Prem Gaikwad)" if moon_path else "👑 Qwen-2.5-Coder-7B (Frontier Super-AI — By Prem Gaikwad)"
         desc = (
@@ -259,7 +287,8 @@ class ModelService:
                 "parameters": "25.70M",
                 "block_size": 512,
                 "vocab_size": 512,
-                "available": has_pilot
+                "available": has_trained_pilot,
+                "is_test_fixture": is_pilot_fixture
             },
             {
                 "id": "scratch",
@@ -456,7 +485,7 @@ class ModelService:
 
             # Option 4: Sovereign Moon Chat Pilot (25.7M scratch-initialized transformer)
             elif target in ["moon-chat-pilot-v0", "moon-pilot", "pilot"]:
-                ckpt_path = self.find_pilot_checkpoint()
+                ckpt_path = self.find_pilot_checkpoint(allow_fixture=True)
                 if not ckpt_path:
                     self.error_message = "Moon Chat Pilot checkpoint not found on disk at models/checkpoints/chat/moon_chat_pilot_v0.pt"
                     return False
@@ -467,6 +496,7 @@ class ModelService:
 
                     print(f"Loading Moon Chat Pilot checkpoint: {ckpt_path} on {self.device}...")
                     checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=False)
+                    self.is_test_fixture = self.is_checkpoint_fixture(ckpt_path)
 
                     model_args = checkpoint.get("model_args", {})
                     self.model_args = model_args
@@ -995,11 +1025,12 @@ class ModelService:
 
         if self.active_model_name == "moon-chat-pilot-v0":
             param_count = sum(p.numel() for p in self.model.parameters()) if self.model is not None else 25698816
+            is_fixture = getattr(self, "is_test_fixture", False)
             return {
                 "model_name": "Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
                 "model_type": "Moon AI 25.7M Sovereign Pilot (Policy B Scratch Init)",
                 "checkpoint_path": self.current_checkpoint_path or "models/checkpoints/chat/moon_chat_pilot_v0.pt",
-                "model_status": status,
+                "model_status": "CI TEST FIXTURE (UNPROMOTABLE)" if is_fixture else status,
                 "dataset": "Moon AI Sovereign Expanded Corpus (572 records, 120k+ tokens)",
                 "vocab_size": 512,
                 "parameters": param_count,
@@ -1010,6 +1041,9 @@ class ModelService:
                 "hardware": f"{self.device.upper()} (PyTorch {self.torch_version or 'not installed'})",
                 "ownership_policy": "TEACHER_STUDENT_RANDOM_INIT",
                 "teacher_checkpoint_weights_transferred": False,
+                "is_test_fixture": is_fixture,
+                "is_production_trained": not is_fixture,
+                "status": "CI_TEST_FIXTURE" if is_fixture else "PILOT_TRAINED",
                 "description": "25.7M parameter sovereign transformer trained purely from Gaussian random scratch under Policy B. Zero teacher weights transferred."
             }
 

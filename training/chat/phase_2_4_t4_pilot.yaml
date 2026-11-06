@@ -66,6 +66,7 @@ paths:
   tokenizer_path: "models/chat/tokenizer.json"
   checkpoint_dir: "models/checkpoints/chat"
   checkpoint_name: "moon_chat_phase_2_4_t4_pilot_v0.pt"
+  best_checkpoint_name: "moon_chat_phase_2_4_t4_pilot_best.pt"
 
 # Hardware Budget on NVIDIA T4 (15.3 GB VRAM)
 hardware_budget:
@@ -81,3 +82,4 @@ hardware_budget:
   vram_safety_margin_mb: 14047.9
   oom_risk: "LOW"
   expected_training_time_100_iters_t4: "12-18 seconds"
+

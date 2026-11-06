@@ -469,6 +469,9 @@ def verify_checkpoint_provenance(
     prod_sample_count = ckpt.get("production_eligible_sample_count", 0)
 
     # Check for metadata tampering
+    if ckpt.get("status") == "CI_TEST_FIXTURE" or ckpt.get("is_test_fixture") is True:
+        errors.append("CHECKPOINT SECURITY ERROR: Checkpoint is marked as a CI test fixture ('status: CI_TEST_FIXTURE' or 'is_test_fixture: true'). Rejected from production.")
+
     if is_prod_eligible is True and (ckpt_training_mode == TRAINING_MODE_DEVELOPMENT or synth_count > 0):
         errors.append(
             f"CHECKPOINT SECURITY ERROR: Metadata tampering detected! Claimed is_production_eligible=True "

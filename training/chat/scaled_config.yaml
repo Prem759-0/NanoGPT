@@ -64,4 +64,5 @@ paths:
   tokenizer_path: "models/chat/tokenizer.json"
   checkpoint_dir: "models/checkpoints/chat"
   checkpoint_name: "moon_chat_scaled_v1.pt"
+  best_checkpoint_name: "moon_chat_scaled_best.pt"
 
