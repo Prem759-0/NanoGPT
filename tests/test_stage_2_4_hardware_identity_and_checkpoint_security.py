@@ -339,7 +339,7 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
             self.assertEqual(reason, "NVIDIA_T4_AUTHENTICATED")
 
     def test_12_compatibility_estimate_metadata_integrity(self):
-        """Analytical compatibility estimates contain explicit metadata and no fabricated VRAM on CPU."""
+        """Analytical compatibility estimates contain explicit metadata, simulation labels, and no fabricated VRAM on CPU."""
         report_path = os.path.join(PROJECT_ROOT, "data", "reports", "t4_compatibility_benchmark.json")
         self.assertTrue(os.path.isfile(report_path), f"Expected report at {report_path}")
 
@@ -347,7 +347,11 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
             original_content = f.read()
             data = json.loads(original_content)
 
-        self.assertEqual(data.get("benchmark_type"), "COMPATIBILITY_ESTIMATE")
+        self.assertEqual(data.get("benchmark_type"), "ANALYTICAL_SIMULATION_ONLY")
+        self.assertTrue(data.get("is_simulated"))
+        self.assertFalse(data.get("is_empirical_inference"))
+        self.assertFalse(data.get("live_weights_loaded"))
+        self.assertFalse(data.get("live_inference_performed"))
         self.assertFalse(data.get("is_empirical"))
         self.assertFalse(data.get("is_cuda"))
         self.assertEqual(data.get("device_name"), "CPU")
@@ -360,7 +364,11 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
         try:
             # Verify executing run_teacher_t4_benchmark produces the same non-empirical schema
             fresh_report = run_teacher_t4_benchmark(context_length=1024, repetitions=1)
-            self.assertEqual(fresh_report.get("benchmark_type"), "COMPATIBILITY_ESTIMATE")
+            self.assertEqual(fresh_report.get("benchmark_type"), "ANALYTICAL_SIMULATION_ONLY")
+            self.assertTrue(fresh_report.get("is_simulated"))
+            self.assertFalse(fresh_report.get("is_empirical_inference"))
+            self.assertFalse(fresh_report.get("live_weights_loaded"))
+            self.assertFalse(fresh_report.get("live_inference_performed"))
             self.assertFalse(fresh_report.get("is_empirical"))
             if not fresh_report.get("is_cuda"):
                 self.assertIsNone(fresh_report.get("total_vram_mb"))
@@ -475,6 +483,50 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
         self.assertEqual(td.get("strategy"), "POLICY_B_ZERO_TEACHER_INFLUENCE")
         self.assertIsNone(td.get("target_teacher"))
         self.assertIsNone(td.get("teacher_provider"))
+
+    def test_20_train_moon_chat_fails_closed_on_existing_checkpoint(self):
+        """train_moon_chat raises FileExistsError if checkpoint_path already exists on disk."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg["paths"]["checkpoint_dir"] = tmp_dir
+            ckpt_name = cfg["paths"]["checkpoint_name"]
+            existing_ckpt = os.path.join(tmp_dir, ckpt_name)
+            with open(existing_ckpt, "wb") as f:
+                f.write(b"pre-existing checkpoint data")
+
+            bad_cfg_path = os.path.join(tmp_dir, "collision_cfg.yaml")
+            with open(bad_cfg_path, "w", encoding="utf-8") as f:
+                yaml.dump(cfg, f)
+
+            with self.assertRaises(FileExistsError) as ctx:
+                train_moon_chat(config_path=bad_cfg_path, smoke_test=False)
+            self.assertIn("Production checkpoint collision", str(ctx.exception))
+            self.assertIn(ckpt_name, str(ctx.exception))
+
+    def test_21_train_moon_chat_fails_closed_on_existing_best_checkpoint(self):
+        """train_moon_chat raises FileExistsError if best_ckpt_path already exists on disk."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg["paths"]["checkpoint_dir"] = tmp_dir
+            best_ckpt_name = cfg["paths"]["best_checkpoint_name"]
+            existing_best = os.path.join(tmp_dir, best_ckpt_name)
+            with open(existing_best, "wb") as f:
+                f.write(b"pre-existing best checkpoint data")
+
+            bad_cfg_path = os.path.join(tmp_dir, "best_collision_cfg.yaml")
+            with open(bad_cfg_path, "w", encoding="utf-8") as f:
+                yaml.dump(cfg, f)
+
+            with self.assertRaises(FileExistsError) as ctx:
+                train_moon_chat(config_path=bad_cfg_path, smoke_test=False)
+            self.assertIn("Production checkpoint collision: best checkpoint destination", str(ctx.exception))
+            self.assertIn(best_ckpt_name, str(ctx.exception))
 
 
 if __name__ == "__main__":

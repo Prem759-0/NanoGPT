@@ -258,6 +258,21 @@ def train_moon_chat(
                 f"Phase 2.4 checkpoint naming violation: '{ckpt_filename}' must contain 'phase_2_4' or 't4_pilot'."
             )
 
+    # Real Filesystem Pre-Flight Collision Gate (Production Pilot Run)
+    if not is_smoke_test:
+        if os.path.isfile(checkpoint_path):
+            raise FileExistsError(
+                f"Production checkpoint collision: destination '{checkpoint_path}' already exists! "
+                f"Silent overwriting of production checkpoints is strictly prohibited under Moon AI integrity policy. "
+                f"Archive or rename existing checkpoints before launching a new production training run."
+            )
+        if os.path.isfile(best_ckpt_path):
+            raise FileExistsError(
+                f"Production checkpoint collision: best checkpoint destination '{best_ckpt_path}' already exists! "
+                f"Silent overwriting of production checkpoints is strictly prohibited under Moon AI integrity policy. "
+                f"Archive or rename existing checkpoints before launching a new production training run."
+            )
+
     # -------------------------------------------------------------------------
     # READINESS GATE: Preflight Verification
     # -------------------------------------------------------------------------
@@ -508,7 +523,8 @@ def train_moon_chat(
     print(f"  • Output Directory:     {os.path.relpath(checkpoint_dir, PROJECT_ROOT)}")
     print(f"  • Final Checkpoint:     {ckpt_filename}")
     print(f"  • Best Checkpoint:      {best_ckpt_filename}")
-    print("  • Overwrite Collision:  CLEARED (Stage 2.2 / earlier checkpoints protected)")
+    print("  • Stage Isolation:      CLEARED (Stage 2.2 / earlier checkpoints protected)")
+    print("  • Filesystem Collision: CLEARED (Neither destination exists on disk; overwrite blocked)")
     print("=" * 70 + "\n")
 
     print(f"Beginning training run: {max_iters} iterations (grad accum: {grad_accum_steps}, AMP: {use_amp}, eval_interval: {eval_interval})...\n")

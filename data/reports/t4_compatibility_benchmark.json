@@ -1,5 +1,9 @@
 {
-  "benchmark_type": "COMPATIBILITY_ESTIMATE",
+  "benchmark_type": "ANALYTICAL_SIMULATION_ONLY",
+  "is_simulated": true,
+  "is_empirical_inference": false,
+  "live_weights_loaded": false,
+  "live_inference_performed": false,
   "is_empirical": false,
   "is_cuda": false,
   "device_name": "CPU",
@@ -20,5 +24,5 @@
   "analytical_t4_compatible": true,
   "empirical_t4_verified": false,
   "t4_compatible": true,
-  "note": "Analytical compatibility estimate calculated on CPU; not empirical GPU validation"
+  "note": "Analytical compatibility and simulation estimate; zero weights loaded and zero live neural inference performed"
 }
