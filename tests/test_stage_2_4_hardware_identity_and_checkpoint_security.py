@@ -22,10 +22,13 @@ import pickle
 import tempfile
 import unittest
 import torch
+import yaml
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+
+from training.chat.train import train_moon_chat
 
 from scripts.validate_t4_empirical import (
     check_t4_hardware_identity,
@@ -365,6 +368,113 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
             # Restore original canonical report so tests leave working tree clean
             with open(report_path, "w", encoding="utf-8") as f:
                 f.write(original_content)
+
+    def test_13_train_moon_chat_fails_closed_on_teacher_distillation_enabled(self):
+        """train_moon_chat fails closed if teacher_distillation.enabled is True."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+        cfg["teacher_distillation"]["enabled"] = True
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            bad_cfg_path = os.path.join(tmp_dir, "bad_enabled_cfg.yaml")
+            with open(bad_cfg_path, "w", encoding="utf-8") as f:
+                yaml.dump(cfg, f)
+
+            with self.assertRaises(ValueError) as ctx:
+                train_moon_chat(config_path=bad_cfg_path, smoke_test=True)
+            self.assertIn("Policy B Option 1 Sovereign violation", str(ctx.exception))
+            self.assertIn("teacher_distillation.enabled must be False", str(ctx.exception))
+
+    def test_14_train_moon_chat_fails_closed_on_teacher_demonstrations_allowed(self):
+        """train_moon_chat fails closed if allow_teacher_demonstrations is True."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+        cfg["teacher_distillation"]["allow_teacher_demonstrations"] = True
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            bad_cfg_path = os.path.join(tmp_dir, "bad_demo_cfg.yaml")
+            with open(bad_cfg_path, "w", encoding="utf-8") as f:
+                yaml.dump(cfg, f)
+
+            with self.assertRaises(ValueError) as ctx:
+                train_moon_chat(config_path=bad_cfg_path, smoke_test=True)
+            self.assertIn("Policy B Option 1 Sovereign violation", str(ctx.exception))
+            self.assertIn("allow_teacher_demonstrations must be False", str(ctx.exception))
+
+    def test_15_train_moon_chat_fails_closed_on_prohibit_teacher_checkpoint_weights_false(self):
+        """train_moon_chat fails closed if prohibit_teacher_checkpoint_weights is False."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+        cfg["teacher_distillation"]["prohibit_teacher_checkpoint_weights"] = False
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            bad_cfg_path = os.path.join(tmp_dir, "bad_prohibit_cfg.yaml")
+            with open(bad_cfg_path, "w", encoding="utf-8") as f:
+                yaml.dump(cfg, f)
+
+            with self.assertRaises(ValueError) as ctx:
+                train_moon_chat(config_path=bad_cfg_path, smoke_test=True)
+            self.assertIn("Policy B Option 1 Sovereign violation", str(ctx.exception))
+            self.assertIn("prohibit_teacher_checkpoint_weights must be True", str(ctx.exception))
+
+    def test_16_train_moon_chat_fails_closed_on_student_init_method_violation(self):
+        """train_moon_chat fails closed if student_init_method is not random_gaussian_scratch."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+        cfg["teacher_distillation"]["student_init_method"] = "pretrained_checkpoint"
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            bad_cfg_path = os.path.join(tmp_dir, "bad_init_cfg.yaml")
+            with open(bad_cfg_path, "w", encoding="utf-8") as f:
+                yaml.dump(cfg, f)
+
+            with self.assertRaises(ValueError) as ctx:
+                train_moon_chat(config_path=bad_cfg_path, smoke_test=True)
+            self.assertIn("Policy B Option 1 Sovereign violation", str(ctx.exception))
+            self.assertIn("student_init_method must be 'random_gaussian_scratch'", str(ctx.exception))
+
+    def test_17_train_moon_chat_fails_closed_on_cuda_requested_when_unavailable(self):
+        """train_moon_chat fails closed if device cuda requested when CUDA unavailable."""
+        if not torch.cuda.is_available():
+            pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+            with self.assertRaises(RuntimeError) as ctx:
+                train_moon_chat(config_path=pilot_yaml_path, device_override="cuda", smoke_test=True)
+            self.assertIn("CUDA device was explicitly requested", str(ctx.exception))
+
+    def test_18_train_moon_chat_fails_closed_on_blind_test_split_collision(self):
+        """train_moon_chat fails closed if test_manifest collides with train_manifest."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+        cfg["paths"]["test_manifest"] = cfg["paths"]["train_manifest"]
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            bad_cfg_path = os.path.join(tmp_dir, "bad_split_cfg.yaml")
+            with open(bad_cfg_path, "w", encoding="utf-8") as f:
+                yaml.dump(cfg, f)
+
+            with self.assertRaises(ValueError) as ctx:
+                train_moon_chat(config_path=bad_cfg_path, smoke_test=True)
+            self.assertIn("Blind-test split collision", str(ctx.exception))
+
+    def test_19_scaled_config_sovereign_option_1_reconciled(self):
+        """scaled_config.yaml is fully reconciled to Option 1 Sovereign zero-teacher policy."""
+        scaled_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "scaled_config.yaml")
+        with open(scaled_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+
+        td = cfg.get("teacher_distillation", {})
+        self.assertFalse(td.get("enabled"))
+        self.assertFalse(td.get("allow_teacher_demonstrations"))
+        self.assertTrue(td.get("prohibit_teacher_checkpoint_weights"))
+        self.assertEqual(td.get("student_init_method"), "random_gaussian_scratch")
+        self.assertEqual(td.get("strategy"), "POLICY_B_ZERO_TEACHER_INFLUENCE")
+        self.assertIsNone(td.get("target_teacher"))
+        self.assertIsNone(td.get("teacher_provider"))
 
 
 if __name__ == "__main__":

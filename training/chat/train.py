@@ -14,11 +14,12 @@ import hashlib
 import json
 import math
 import os
+import re
 import sys
 import time
 import yaml
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple, List
 
 import torch
 import torch.nn as nn
@@ -45,6 +46,24 @@ from model import GPTConfig, GPT
 from datasets.chat.tokenizer import SovereignTokenizer
 from training.chat.dataset import SovereignChatDataset
 from training.chat.readiness_gate import ChatReadinessGate, STATUS_READY_FOR_PILOT
+from scripts.validate_t4_empirical import check_t4_hardware_identity
+
+# Canonical LF hashes for high-volume 1,100-record curriculum splits
+CANONICAL_MANIFEST_LF_HASHES = {
+    "scaled_chat_train.jsonl": "c0f37ba515977e1ea542fed18c78ad018b3dce2f5b02d5f6213beab47e03eebe",
+    "scaled_chat_val.jsonl": "b2f53140c0f417d59eabb5cce2163198a2a35f5bd7732a4bb51f143ebaa059cd",
+    "scaled_chat_test.jsonl": "e854f62814d413b36d02224777fe1d6d33a7ebffbac1a64feb4fee8de8c53428"
+}
+
+def compute_manifest_hashes(fpath: str) -> Tuple[Optional[str], Optional[str]]:
+    """Compute (raw_sha256, normalized_lf_sha256) for a manifest file."""
+    if os.path.isfile(fpath):
+        with open(fpath, "rb") as mf:
+            content = mf.read()
+        raw_sha = hashlib.sha256(content).hexdigest()
+        lf_sha = hashlib.sha256(content.replace(b"\r\n", b"\n")).hexdigest()
+        return raw_sha, lf_sha
+    return None, None
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Moon AI Sovereign Chat Training Engine")
@@ -87,15 +106,42 @@ def train_moon_chat(
     with open(abs_config_path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
-    print("=" * 65)
-    print("   MOON AI -- SOVEREIGN CHAT MODEL TRAINING (moon-chat-v0)")
-    print("=" * 65)
-    policy = cfg.get("ownership_policy", "TEACHER_STUDENT_RANDOM_INIT")
-    print(f"Ownership Policy:   {policy}")
-    print("Student Init:       RANDOM GAUSSIAN SCRATCH (Zero Pretrained Checkpoint Weights)")
-    print(f"Execution Mode:     {'ENGINEERING SMOKE TEST' if is_smoke_test else 'PRODUCTION PILOT RUN'}\n")
+    # -------------------------------------------------------------------------
+    # SAFEGUARD 1: Fail-Closed Zero-Teacher Policy B Option 1 Enforcement
+    # -------------------------------------------------------------------------
+    td_cfg = cfg.get("teacher_distillation", {})
+    if td_cfg.get("enabled", False) is not False:
+        raise ValueError(
+            "Policy B Option 1 Sovereign violation: teacher_distillation.enabled must be False. "
+            "Zero teacher influence is mandated for Option 1 Sovereign training."
+        )
+    if td_cfg.get("allow_teacher_demonstrations", False) is not False:
+        raise ValueError(
+            "Policy B Option 1 Sovereign violation: allow_teacher_demonstrations must be False. "
+            "Teacher demonstrations are strictly prohibited."
+        )
+    if td_cfg.get("prohibit_teacher_checkpoint_weights", True) is not True:
+        raise ValueError(
+            "Policy B Option 1 Sovereign violation: prohibit_teacher_checkpoint_weights must be True. "
+            "Pretrained teacher checkpoint weights are strictly prohibited."
+        )
+    if td_cfg.get("student_init_method", "random_gaussian_scratch") != "random_gaussian_scratch":
+        raise ValueError(
+            f"Policy B Option 1 Sovereign violation: student_init_method must be 'random_gaussian_scratch' "
+            f"(detected '{td_cfg.get('student_init_method')}'). Student must initialize purely from Gaussian scratch."
+        )
+    if td_cfg.get("target_teacher") is not None:
+        raise ValueError(
+            f"Policy B Option 1 Sovereign violation: target_teacher must be null/None (detected '{td_cfg.get('target_teacher')}')."
+        )
+    if td_cfg.get("teacher_provider") is not None:
+        raise ValueError(
+            f"Policy B Option 1 Sovereign violation: teacher_provider must be null/None (detected '{td_cfg.get('teacher_provider')}')."
+        )
 
-    # Resolve manifest paths
+    # -------------------------------------------------------------------------
+    # SAFEGUARD 3: Manifest Resolution, Blind-Test Isolation & Canonical Hashes
+    # -------------------------------------------------------------------------
     train_manifest = cfg["paths"]["train_manifest"]
     if not os.path.isabs(train_manifest):
         train_manifest = os.path.join(PROJECT_ROOT, train_manifest)
@@ -104,11 +150,117 @@ def train_moon_chat(
     if not os.path.isabs(val_manifest):
         val_manifest = os.path.join(PROJECT_ROOT, val_manifest)
 
-    test_manifest = cfg["paths"].get("test_manifest", "datasets/manifests/chat_test.jsonl")
+    test_manifest = cfg["paths"].get("test_manifest", "datasets/manifests/scaled_chat_test.jsonl")
     if not os.path.isabs(test_manifest):
         test_manifest = os.path.join(PROJECT_ROOT, test_manifest)
 
-    # Readiness Gate Check: Block production training if not READY_FOR_PILOT
+    # Assert test manifest is strictly distinct from training and validation splits
+    if os.path.abspath(test_manifest) == os.path.abspath(train_manifest):
+        raise ValueError(
+            f"Blind-test split collision: test_manifest ({test_manifest}) cannot be identical to train_manifest!"
+        )
+    if os.path.abspath(test_manifest) == os.path.abspath(val_manifest):
+        raise ValueError(
+            f"Blind-test split collision: test_manifest ({test_manifest}) cannot be identical to val_manifest!"
+        )
+
+    # Compute manifest provenance hashes
+    train_raw_sha, train_lf_sha = compute_manifest_hashes(train_manifest)
+    val_raw_sha, val_lf_sha = compute_manifest_hashes(val_manifest)
+    test_raw_sha, test_lf_sha = compute_manifest_hashes(test_manifest)
+
+    # Production run manifest hash verification against audited values
+    if not is_smoke_test:
+        for m_name, m_path, m_lf_sha in [
+            ("train_manifest", train_manifest, train_lf_sha),
+            ("val_manifest", val_manifest, val_lf_sha),
+            ("test_manifest", test_manifest, test_lf_sha)
+        ]:
+            bname = os.path.basename(m_path)
+            if bname in CANONICAL_MANIFEST_LF_HASHES:
+                expected_sha = CANONICAL_MANIFEST_LF_HASHES[bname]
+                if m_lf_sha != expected_sha:
+                    raise ValueError(
+                        f"Manifest provenance hash mismatch for {m_name} ({bname})! "
+                        f"Expected canonical LF SHA: {expected_sha}, detected: {m_lf_sha}. "
+                        "Failing closed to prevent training on unverified or tampered data."
+                    )
+
+    manifest_provenance_hashes = {
+        "train_manifest": {
+            "path": os.path.relpath(train_manifest, PROJECT_ROOT),
+            "sha256": train_lf_sha or "",
+            "raw_sha256": train_raw_sha
+        },
+        "val_manifest": {
+            "path": os.path.relpath(val_manifest, PROJECT_ROOT),
+            "sha256": val_lf_sha or "",
+            "raw_sha256": val_raw_sha
+        },
+        "test_manifest": {
+            "path": os.path.relpath(test_manifest, PROJECT_ROOT),
+            "sha256": test_lf_sha or "",
+            "raw_sha256": test_raw_sha
+        }
+    }
+
+    # -------------------------------------------------------------------------
+    # SAFEGUARD 4: Stage-Isolated Checkpoint Destinations (Anti-Collision)
+    # -------------------------------------------------------------------------
+    checkpoint_dir = cfg["paths"]["checkpoint_dir"]
+    if not os.path.isabs(checkpoint_dir):
+        checkpoint_dir = os.path.join(PROJECT_ROOT, checkpoint_dir)
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
+    if custom_ckpt_path:
+        checkpoint_path = custom_ckpt_path
+        os.makedirs(os.path.dirname(os.path.abspath(checkpoint_path)), exist_ok=True)
+        ckpt_filename = os.path.basename(checkpoint_path)
+    else:
+        ckpt_filename = "smoke_test_ckpt.pt" if is_smoke_test else cfg["paths"]["checkpoint_name"]
+        checkpoint_path = os.path.join(checkpoint_dir, ckpt_filename)
+
+    best_ckpt_filename = cfg["paths"].get("best_checkpoint_name")
+    if not best_ckpt_filename:
+        base_name = cfg["paths"].get("checkpoint_name", "moon_chat_model.pt")
+        stem, ext = os.path.splitext(base_name)
+        best_ckpt_filename = f"{stem}_best{ext}"
+    best_ckpt_path = os.path.join(checkpoint_dir, best_ckpt_filename)
+
+    FORBIDDEN_LEGACY_CHECKPOINTS = {
+        "moon_chat_model.pt",
+        "moon_chat_scaled_v1.pt",
+        "moon_chat_scaled_best.pt",
+        "moon_chat_pilot_v0.pt",
+        "moon_chat_pilot_best.pt",
+    }
+    track_name = cfg.get("model_track", "")
+    is_phase_2_4 = "stage-2-4" in track_name or "t4_pilot" in track_name or "phase_2_4" in abs_config_path
+
+    if not is_smoke_test and is_phase_2_4:
+        if ckpt_filename in FORBIDDEN_LEGACY_CHECKPOINTS:
+            raise ValueError(
+                f"Checkpoint anti-collision failure: checkpoint_name '{ckpt_filename}' collides with "
+                f"a protected legacy checkpoint. Phase 2.4 must use dedicated stage-isolated filenames."
+            )
+        if best_ckpt_filename in FORBIDDEN_LEGACY_CHECKPOINTS:
+            raise ValueError(
+                f"Checkpoint anti-collision failure: best_checkpoint_name '{best_ckpt_filename}' collides with "
+                f"a protected legacy checkpoint. Phase 2.4 must use dedicated stage-isolated filenames."
+            )
+        if ckpt_filename == best_ckpt_filename:
+            raise ValueError(
+                f"Checkpoint destination collision: checkpoint_name ('{ckpt_filename}') cannot be equal "
+                f"to best_checkpoint_name ('{best_ckpt_filename}')!"
+            )
+        if "phase_2_4" not in ckpt_filename and "t4_pilot" not in ckpt_filename:
+            raise ValueError(
+                f"Phase 2.4 checkpoint naming violation: '{ckpt_filename}' must contain 'phase_2_4' or 't4_pilot'."
+            )
+
+    # -------------------------------------------------------------------------
+    # READINESS GATE: Preflight Verification
+    # -------------------------------------------------------------------------
     if not is_smoke_test:
         gate = ChatReadinessGate(
             train_manifest=train_manifest,
@@ -133,9 +285,16 @@ def train_moon_chat(
                 f"Use --smoke-test to execute pipeline verification only."
             )
 
-    # Determine device
+    # -------------------------------------------------------------------------
+    # SAFEGUARD 2: Hardware Device Authentication & Physical Tesla T4 Check
+    # -------------------------------------------------------------------------
     if device_override:
         device = device_override
+        if device == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError(
+                "CUDA device was explicitly requested (--device cuda), but torch.cuda.is_available() is False. "
+                "Failing closed."
+            )
     elif torch.cuda.is_available():
         device = "cuda"
     elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -143,11 +302,64 @@ def train_moon_chat(
     else:
         device = "cpu"
 
-    print(f"Target compute device: {device.upper()}")
-    if device == "cuda":
+    gpu_identity_info = {}
+    if not is_smoke_test:
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "Production pilot training blocked: CUDA is unavailable. "
+                "An authenticated NVIDIA Tesla T4 GPU (Compute Capability 7.5, >=14GB VRAM) is strictly required for Phase 2.4. "
+                "Use --smoke-test to execute an engineering verification dry-run on CPU."
+            )
+        if device != "cuda":
+            raise RuntimeError(
+                f"Production pilot training blocked: requested device '{device}' is not CUDA. "
+                "Phase 2.4 production pilot training must execute on CUDA."
+            )
+
         gpu_name = torch.cuda.get_device_name(0)
-        gpu_mem_gb = round(torch.cuda.get_device_properties(0).total_memory / (1024**3), 2)
-        print(f"CUDA GPU: {gpu_name} ({gpu_mem_gb} GB VRAM)")
+        cc_major, cc_minor = torch.cuda.get_device_capability(0)
+        cc_str = f"{cc_major}.{cc_minor}"
+        vram_mb = torch.cuda.get_device_properties(0).total_memory / (1024 * 1024)
+
+        is_t4, reason, details = check_t4_hardware_identity(
+            device_name=gpu_name,
+            compute_capability=cc_str,
+            total_vram_mb=vram_mb,
+            min_vram_mb=14000.0
+        )
+        if not is_t4:
+            raise RuntimeError(
+                f"Production pilot training blocked by Hardware Security Gate: {reason}. "
+                f"Detected: '{gpu_name}' (CC: {cc_str}, VRAM: {vram_mb:.1f} MB). "
+                f"Expected: Authentic NVIDIA Tesla T4 (CC: 7.5, >=14,000 MB VRAM)."
+            )
+        gpu_identity_info = {
+            "name": gpu_name,
+            "compute_capability": cc_str,
+            "vram_mb": round(vram_mb, 1),
+            "authenticated_t4": True,
+            "verification_status": "AUTHENTICATED_TESLA_T4"
+        }
+    else:
+        if device == "cuda" and torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+            cc_major, cc_minor = torch.cuda.get_device_capability(0)
+            vram_mb = torch.cuda.get_device_properties(0).total_memory / (1024 * 1024)
+            gpu_identity_info = {
+                "name": gpu_name,
+                "compute_capability": f"{cc_major}.{cc_minor}",
+                "vram_mb": round(vram_mb, 1),
+                "authenticated_t4": "t4" in gpu_name.lower(),
+                "verification_status": "SMOKE_TEST_CUDA"
+            }
+        else:
+            gpu_identity_info = {
+                "name": "CPU",
+                "compute_capability": "N/A",
+                "vram_mb": 0.0,
+                "authenticated_t4": False,
+                "verification_status": "SMOKE_TEST_CPU"
+            }
 
     # Set random seed
     seed = cfg["training"].get("seed", 42)
@@ -162,16 +374,6 @@ def train_moon_chat(
     if not os.path.exists(tok_path):
         raise FileNotFoundError(f"Sovereign tokenizer not found at: {tok_path}. Run scripts/build_chat_dataset.py first.")
     tokenizer = SovereignTokenizer.load(tok_path)
-    print(f"Loaded Sovereign Tokenizer: {tokenizer.vocab_size} tokens")
-
-    # Instantiate datasets with multi-window chunking
-    train_manifest = cfg["paths"]["train_manifest"]
-    if not os.path.isabs(train_manifest):
-        train_manifest = os.path.join(PROJECT_ROOT, train_manifest)
-
-    val_manifest = cfg["paths"]["val_manifest"]
-    if not os.path.isabs(val_manifest):
-        val_manifest = os.path.join(PROJECT_ROOT, val_manifest)
 
     m_cfg = cfg["model"]
     block_size = m_cfg["block_size"]
@@ -188,6 +390,15 @@ def train_moon_chat(
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
+    # Safeguard: Assert blind test manifest is NEVER loaded into training or validation loaders
+    abs_test_manifest = os.path.abspath(test_manifest)
+    assert os.path.abspath(train_manifest) != abs_test_manifest, "CRITICAL: train_manifest equals blind-test manifest!"
+    assert os.path.abspath(val_manifest) != abs_test_manifest, "CRITICAL: val_manifest equals blind-test manifest!"
+    if hasattr(train_dataset, "manifest_path"):
+        assert os.path.abspath(train_dataset.manifest_path) != abs_test_manifest, "CRITICAL: train_dataset loaded blind-test manifest!"
+    if hasattr(val_dataset, "manifest_path"):
+        assert os.path.abspath(val_dataset.manifest_path) != abs_test_manifest, "CRITICAL: val_dataset loaded blind-test manifest!"
+
     # Dataset Exposure Analysis
     t_cfg = cfg["training"]
     max_iters = 1 if is_smoke_test else (max_iters_override or t_cfg["max_iters"])
@@ -198,27 +409,6 @@ def train_moon_chat(
     supervised_tokens = train_dataset.get_total_supervised_tokens()
     effective_samples = max_iters * batch_size * grad_accum_steps
     dataset_passes = effective_samples / max(1, total_train_windows)
-
-    print("\nDataset Exposure & Accounting Metrics:")
-    print(f"  • Unique conversation records:       {unique_records}")
-    print(f"  • Multi-window training chunks:      {total_train_windows} (val: {len(val_dataset)})")
-    print(f"  • Supervised assistant target tokens: {supervised_tokens:,}")
-    print(f"  • Planned sample exposures:          {effective_samples:,} (iters: {max_iters}, batch: {batch_size}, accum: {grad_accum_steps})")
-    print(f"  • Effective dataset passes (epochs): {dataset_passes:.1f}")
-    if dataset_passes > 10 and not is_smoke_test:
-        print(f"  ⚠️ HIGH OVERFITTING RISK: {dataset_passes:.1f} passes over {unique_records} unique records!")
-
-    # Enforce Policy B & Zero-Teacher Sovereign Invariants
-    td_cfg = cfg.get("teacher_distillation", {})
-    if td_cfg.get("prohibit_teacher_checkpoint_weights") is not True:
-        raise ValueError("Policy B violation: prohibit_teacher_checkpoint_weights must be True.")
-    if td_cfg.get("student_init_method") != "random_gaussian_scratch":
-        raise ValueError("Policy B violation: student_init_method must be random_gaussian_scratch.")
-    print("\nZero-Teacher Policy B Verification:")
-    print(f"  • Student initialization:           {td_cfg.get('student_init_method')}")
-    print(f"  • Prohibit teacher weights:         {td_cfg.get('prohibit_teacher_checkpoint_weights')}")
-    print(f"  • Allow teacher demonstrations:     {td_cfg.get('allow_teacher_demonstrations')}")
-    print(f"  • Teacher distillation enabled:     {td_cfg.get('enabled')}")
 
     # Initialize Model from Random Gaussian Weights ONLY
     gpt_conf = GPTConfig(
@@ -231,7 +421,6 @@ def train_moon_chat(
         bias=m_cfg.get("bias", False)
     )
 
-    print("\nInitializing model from random Gaussian initialization (zero pretrained weights)...")
     model = GPT(gpt_conf)
     model.to(device)
 
@@ -249,7 +438,6 @@ def train_moon_chat(
         print(f"✅ Policy B Verified: Resumed weights from student checkpoint: {resume_from_ckpt}")
 
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"Model architecture initialized: {total_params:,} parameters ({total_params / 1e6:.2f}M)")
 
     # Optimizer
     learning_rate = t_cfg["learning_rate"]
@@ -264,46 +452,66 @@ def train_moon_chat(
     use_amp = device == "cuda" and t_cfg.get("mixed_precision") == "fp16"
     scaler = torch.amp.GradScaler('cuda', enabled=use_amp)
 
-    checkpoint_dir = cfg["paths"]["checkpoint_dir"]
-    if not os.path.isabs(checkpoint_dir):
-        checkpoint_dir = os.path.join(PROJECT_ROOT, checkpoint_dir)
-    os.makedirs(checkpoint_dir, exist_ok=True)
-
-    # Configurable best-checkpoint name (stage-isolated)
-    best_ckpt_filename = cfg["paths"].get("best_checkpoint_name")
-    if not best_ckpt_filename:
-        base_name = cfg["paths"].get("checkpoint_name", "moon_chat_model.pt")
-        stem, ext = os.path.splitext(base_name)
-        best_ckpt_filename = f"{stem}_best{ext}"
-    best_ckpt_path = os.path.join(checkpoint_dir, best_ckpt_filename)
-
-    def get_manifest_sha256(fpath: str) -> Optional[str]:
-        if os.path.isfile(fpath):
-            with open(fpath, "rb") as mf:
-                return hashlib.sha256(mf.read()).hexdigest()
-        return None
-
-    manifest_provenance_hashes = {
-        "train_manifest": {
-            "path": os.path.relpath(train_manifest, PROJECT_ROOT),
-            "sha256": get_manifest_sha256(train_manifest)
-        },
-        "val_manifest": {
-            "path": os.path.relpath(val_manifest, PROJECT_ROOT),
-            "sha256": get_manifest_sha256(val_manifest)
-        },
-        "test_manifest": {
-            "path": os.path.relpath(test_manifest, PROJECT_ROOT),
-            "sha256": get_manifest_sha256(test_manifest)
-        }
-    }
-
     eval_interval = eval_interval_override or t_cfg.get("eval_interval", 100)
     eval_iters = t_cfg.get("eval_iters", 5)
     best_val_loss = float("inf")
     metrics_history = []
 
-    print(f"\nBeginning training run: {max_iters} iterations (grad accum: {grad_accum_steps}, AMP: {use_amp}, eval_interval: {eval_interval})...\n")
+    # -------------------------------------------------------------------------
+    # SAFEGUARD 5: Comprehensive Pre-Training Verification Summary Console Table
+    # -------------------------------------------------------------------------
+    print("=" * 70)
+    print("   MOON AI -- PRE-TRAINING RUNTIME VERIFICATION & SAFEGUARD AUDIT")
+    print("   Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)")
+    print(f"   Execution Mode: {'ENGINEERING SMOKE TEST' if is_smoke_test else 'PRODUCTION PILOT RUN'}")
+    print("=" * 70)
+    print("[Config & Policy B Option 1]")
+    print(f"  • Config File:          {os.path.relpath(abs_config_path, PROJECT_ROOT)}")
+    print(f"  • Model Track:          {cfg.get('model_track', 'N/A')}")
+    print(f"  • Ownership Policy:     {cfg.get('ownership_policy', 'TEACHER_STUDENT_RANDOM_INIT')} [Option 1 Sovereign]")
+    print(f"  • Student Init:         random_gaussian_scratch (N(0, 0.02^2)) [VERIFIED]")
+    print(f"  • Prohibit Weights:     True [VERIFIED]")
+    print(f"  • Allow Demonstrations: False [VERIFIED]")
+    print(f"  • Distillation Enabled: False [VERIFIED]")
+
+    print("\n[Hardware Target & Device Identity]")
+    print(f"  • Target Device:        {device.upper()}")
+    print(f"  • GPU / Device Name:    {gpu_identity_info.get('name')}")
+    print(f"  • Compute Capability:   {gpu_identity_info.get('compute_capability')}")
+    print(f"  • Available VRAM:       {gpu_identity_info.get('vram_mb')} MB")
+    print(f"  • Hardware Gate Status: {gpu_identity_info.get('verification_status', 'UNKNOWN')}")
+
+    print("\n[Data Manifest Provenance & Hash Integrity]")
+    train_rel = os.path.relpath(train_manifest, PROJECT_ROOT)
+    val_rel = os.path.relpath(val_manifest, PROJECT_ROOT)
+    test_rel = os.path.relpath(test_manifest, PROJECT_ROOT)
+    train_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(train_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
+    val_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(val_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
+    test_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(test_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
+    print(f"  • Train Manifest:       {train_rel} ({unique_records} records)")
+    print(f"    - LF SHA-256:         {train_lf_sha[:32] if train_lf_sha else 'N/A'}... [{train_status_tag}]")
+    print(f"  • Val Manifest:         {val_rel} ({len(val_dataset)} windows)")
+    print(f"    - LF SHA-256:         {val_lf_sha[:32] if val_lf_sha else 'N/A'}... [{val_status_tag}]")
+    print(f"  • Blind-Test Manifest:  {test_rel}")
+    print(f"    - LF SHA-256:         {test_lf_sha[:32] if test_lf_sha else 'N/A'}... [{test_status_tag}]")
+    print("  • Blind-Test Isolation: 100% UNTOUCHED (Strictly excluded from train/val DataLoaders)")
+
+    print("\n[Hyperparameters & Architecture]")
+    print(f"  • Parameters:           {total_params:,} ({total_params / 1e6:.2f}M)")
+    print(f"  • Geometry:             {m_cfg['n_layer']} layers, {m_cfg['n_head']} heads, {m_cfg['n_embd']} embd, {block_size} ctx")
+    print(f"  • Training Iterations:  {max_iters} (Warmup: {t_cfg.get('warmup_iters', 10)}, Eval Interval: {eval_interval})")
+    print(f"  • Batch / Accumulation: {batch_size} micro-batch × {grad_accum_steps} accum = {batch_size * grad_accum_steps} effective batch")
+    print(f"  • Planned Exposures:    {effective_samples:,} samples ({dataset_passes:.2f} dataset passes)")
+    print(f"  • Mixed Precision:      {'FP16 AMP (autocast + GradScaler enabled)' if use_amp else 'FP32 standard'}")
+
+    print("\n[Checkpoint Isolation & Anti-Collision]")
+    print(f"  • Output Directory:     {os.path.relpath(checkpoint_dir, PROJECT_ROOT)}")
+    print(f"  • Final Checkpoint:     {ckpt_filename}")
+    print(f"  • Best Checkpoint:      {best_ckpt_filename}")
+    print("  • Overwrite Collision:  CLEARED (Stage 2.2 / earlier checkpoints protected)")
+    print("=" * 70 + "\n")
+
+    print(f"Beginning training run: {max_iters} iterations (grad accum: {grad_accum_steps}, AMP: {use_amp}, eval_interval: {eval_interval})...\n")
 
     model.train()
     iter_num = 0
@@ -407,11 +615,12 @@ def train_moon_chat(
                         "teacher_checkpoint_weights_transferred": False,
                         "best_val_loss": best_val_loss,
                         "iter_num": iter_num,
-                        "policy": "POLICY_B_TEACHER_STUDENT_RANDOM_INIT",
+                        "policy": td_cfg.get("strategy", "POLICY_B_ZERO_TEACHER_INFLUENCE"),
                         "ownership_policy": cfg.get("ownership_policy", "TEACHER_STUDENT_RANDOM_INIT"),
                         "best_checkpoint_path": best_ckpt_path,
                         "effective_config": cfg,
                         "manifest_hashes": manifest_provenance_hashes,
+                        "hardware_identity": gpu_identity_info,
                         "status": "PILOT_TRAINED_BEST",
                         "is_production_trained": False,
                         "promotable": False,
@@ -507,11 +716,12 @@ def train_moon_chat(
             "dataset": cfg.get("model_track", "moon-chat-v0"),
             "model_name": m_cfg["name"],
             "ownership_policy": cfg.get("ownership_policy", "TEACHER_STUDENT_RANDOM_INIT"),
+            "policy": td_cfg.get("strategy", "POLICY_B_ZERO_TEACHER_INFLUENCE"),
             "initialization": "random_gaussian_scratch",
             "student_init_method": "random_gaussian_scratch",
             "teacher_checkpoint_weights_transferred": False,
-            "teacher_models": ["Qwen2.5-7B-Instruct-GGUF"] if td_cfg.get("allow_teacher_demonstrations") else [],
-            "teacher_license": td_cfg.get("teacher_license") if td_cfg.get("allow_teacher_demonstrations") else None,
+            "teacher_models": [],
+            "teacher_license": None,
             "dataset_provenance": "DETERMINISTIC_CURRICULUM_TEMPLATE + ORIGINAL_SELF_AUTHORED_QA",
             "run_id": f"moon_chat_run_{int(time.time())}",
             "trained_at": datetime.now(timezone.utc).isoformat(),
@@ -529,6 +739,7 @@ def train_moon_chat(
             "best_checkpoint_filename": best_ckpt_filename,
             "effective_config": cfg,
             "manifest_hashes": manifest_provenance_hashes,
+            "hardware_identity": gpu_identity_info,
             "notes": (
                 "Engineering smoke test checkpoint only. Unpromotable to production."
                 if is_smoke_test

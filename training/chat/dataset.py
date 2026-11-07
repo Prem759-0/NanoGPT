@@ -45,6 +45,7 @@ class SovereignChatDataset(Dataset):
         pad_token_id: int = 1,
         stride: Optional[int] = None
     ):
+        self.manifest_path = os.path.abspath(manifest_path)
         self.tokenizer = tokenizer
         self.block_size = block_size
         self.pad_token_id = pad_token_id
