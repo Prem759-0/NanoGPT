@@ -58,7 +58,10 @@ training:
   seed: 42
   loss_masking: "assistant_only"
 
-# Paths: Point to verified high-volume scaled curriculum (1,100 records, 445k tokens)
+# Paths: Point to verified high-volume scaled curriculum (1,100 records total, 253,293 supervised assistant tokens):
+# - Train: 990 records (227,751 supervised assistant tokens)
+# - Validation: 50 records (11,581 supervised assistant tokens)
+# - Blind test: 60 records (13,961 supervised assistant tokens)
 paths:
   train_manifest: "datasets/manifests/scaled_chat_train.jsonl"
   val_manifest: "datasets/manifests/scaled_chat_val.jsonl"

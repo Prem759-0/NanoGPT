@@ -51,9 +51,16 @@ def check_t4_hardware_identity(
     min_vram_mb: float = 14000.0
 ) -> Tuple[bool, str, Dict[str, Any]]:
     """
-    Strictly verifies that the target device is an authentic physical NVIDIA Tesla T4 GPU.
+    Performs runtime hardware identity validation to verify the target device reports
+    as an authentic NVIDIA Tesla T4 GPU.
+
+    NOTE: This constitutes runtime driver/hardware identity validation as reported by
+    the CUDA environment, not cryptographic proof that a cloud provider has not virtualized
+    or misrepresented the underlying silicon.
+
     Enforces:
-    1. Device name contains 'T4' or 'Tesla T4' and does NOT match other GPU architectures (A100, L4, V100, H100, etc.).
+    1. Device name strictly matches authentic NVIDIA/Tesla T4 naming formats without
+       emulation, virtualization, proxy, or compatibility spoofing terms.
     2. Compute capability is exactly '7.5' (Turing architecture).
     3. Total physical VRAM meets minimum requirement (>= 14,000 MB, standard T4 has ~15.1-15.3 GB).
     """
@@ -67,28 +74,32 @@ def check_t4_hardware_identity(
         "min_vram_mb": min_vram_mb
     }
 
-    # Prohibited non-T4 architectures
-    prohibited_models = [
+    # Prohibited non-T4 architectures, virtualization, emulation, and compatibility spoofing
+    prohibited_patterns = [
+        r"\b(virtual|emulator|emulated|compatible|compatibility|fake|mock|shim|proxy)\b",
         r"\ba100\b",
         r"\bl4\b",
         r"\bv100\b",
         r"\bh100\b",
+        r"\bh200\b",
         r"\ba10g?\b",
-        r"\brtx\s*\d+\b",
-        r"\bgtx\s*\d+\b",
+        r"\brtx\b",
+        r"\bgtx\b",
         r"\bk80\b",
         r"\bp100\b",
         r"\bt600\b",
         r"\bt1000\b",
         r"\bcpu\b"
     ]
-    for pat in prohibited_models:
+    for pat in prohibited_patterns:
         if re.search(pat, name_lower):
-            return False, f"Hardware mismatch: detected non-T4 device '{device_name}'", details
+            return False, f"Hardware mismatch: prohibited device pattern detected in '{device_name}'", details
 
-    # Positive T4 matching (e.g. 'Tesla T4', 'NVIDIA T4', 'T4')
-    if not (re.search(r"\b(tesla\s+)?t4\b", name_lower) or "t4" in name_lower):
-        return False, f"Hardware mismatch: device name '{device_name}' does not identify an NVIDIA Tesla T4", details
+    # Strict positive T4 matching (e.g. 'Tesla T4', 'NVIDIA Tesla T4', 'NVIDIA T4', 'Tesla T4 16GB', 'NVIDIA T4 16GB', 'T4')
+    # Authentic strings may optionally include PCIe slot information (e.g. 'Tesla T4 PCIe')
+    t4_regex = r"^(nvidia\s+)?(tesla\s+)?t4(\s+16gb)?(\s+(pcie|pci))?$"
+    if not re.match(t4_regex, name_clean, re.IGNORECASE):
+        return False, f"Hardware mismatch: device name '{device_name}' does not identify an authentic NVIDIA Tesla T4", details
 
     # Compute capability check: Turing T4 is exactly 7.5
     comp_cap_str = str(compute_capability).strip()

@@ -160,9 +160,13 @@ def run_benchmark(context_length: int = 4096, repetitions: int = 5) -> Dict[str,
     print(f"  * T4 Compatibility Status:     {'VERIFIED' if (headroom_mb > 2048) else 'FAILED'}")
 
     report = {
-        "device_name": device_name,
+        "benchmark_type": "COMPATIBILITY_ESTIMATE",
+        "is_empirical": False,
         "is_cuda": is_cuda,
-        "total_vram_mb": total_vram_mb if is_cuda else t4_usable_mb,
+        "device_name": device_name,
+        "total_vram_mb": total_vram_mb if is_cuda else None,
+        "assumed_planning_vram_mb": t4_usable_mb,
+        "target_hardware": "NVIDIA Tesla T4 (16GB)",
         "context_length": context_length,
         "weights_size_mb": ESTIMATED_WEIGHTS_MB,
         "cuda_overhead_mb": CUDA_RUNTIME_OVERHEAD_MB,
@@ -174,7 +178,10 @@ def run_benchmark(context_length: int = 4096, repetitions: int = 5) -> Dict[str,
         "repetitions": repetitions,
         "avg_latency_ms": sum(latencies) / len(latencies) * 1000,
         "memory_stable": stable,
-        "t4_compatible": headroom_mb > 2048
+        "analytical_t4_compatible": headroom_mb > 2048,
+        "empirical_t4_verified": False,
+        "t4_compatible": headroom_mb > 2048,
+        "note": "Analytical compatibility estimate calculated on CPU; not empirical GPU validation"
     }
 
     report_path = os.path.join(PROJECT_ROOT, "data", "reports", "t4_compatibility_benchmark.json")

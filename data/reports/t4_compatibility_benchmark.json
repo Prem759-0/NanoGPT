@@ -1,7 +1,11 @@
 {
-  "device_name": "CPU",
+  "benchmark_type": "COMPATIBILITY_ESTIMATE",
+  "is_empirical": false,
   "is_cuda": false,
-  "total_vram_mb": 15360.0,
+  "device_name": "CPU",
+  "total_vram_mb": null,
+  "assumed_planning_vram_mb": 15360.0,
+  "target_hardware": "NVIDIA Tesla T4 (16GB)",
   "context_length": 4096,
   "weights_size_mb": 4683.0,
   "cuda_overhead_mb": 600.0,
@@ -11,7 +15,10 @@
   "headroom_percentage": 61.86848958333333,
   "oom_risk": "VERY_LOW",
   "repetitions": 5,
-  "avg_latency_ms": 12.231800000881776,
+  "avg_latency_ms": 12.62669999996433,
   "memory_stable": true,
-  "t4_compatible": true
+  "analytical_t4_compatible": true,
+  "empirical_t4_verified": false,
+  "t4_compatible": true,
+  "note": "Analytical compatibility estimate calculated on CPU; not empirical GPU validation"
 }

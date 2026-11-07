@@ -33,6 +33,7 @@ from scripts.validate_t4_empirical import (
     verify_checkpoint_roundtrip_isolated,
     run_empirical_t4_validation
 )
+from scripts.benchmark_teacher_t4 import run_benchmark as run_teacher_t4_benchmark
 from webapp.model_service import (
     validate_checkpoint_structure,
     is_verified_genuine_checkpoint,
@@ -285,6 +286,85 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
 
                 promoted = evaluate_and_promote(cand_path, registry_path=reg_path, base_dir=tmp_dir)
                 self.assertFalse(promoted, f"Model with status '{dis_status}' must be rejected by promotion gate!")
+
+    def test_11_strict_t4_device_name_matching_and_spoofing_rejected(self):
+        """Strict regex matching rejects spoofed/non-T4 device names and accepts authentic T4s."""
+        spoofed_or_non_t4_names = [
+            "not4",
+            "fast4",
+            "RTX 4090 T4 compatible",
+            "Virtual T4 emulator",
+            "Generic T4 emulator",
+            "Tesla T4 fake",
+            "T4 mock device",
+            "GeForce RTX 3080 T4 edition",
+            "Tesla T40",
+            "T400",
+            "NVIDIA T4 proxy",
+            "T4-compat-shim",
+            "Intel T4",
+            "CPU"
+        ]
+        for name in spoofed_or_non_t4_names:
+            is_match, reason, _ = check_t4_hardware_identity(
+                device_name=name,
+                compute_capability="7.5",
+                total_vram_mb=15109.0,
+                min_vram_mb=14000.0
+            )
+            self.assertFalse(is_match, f"Spoofed/invalid device name '{name}' was falsely accepted as T4!")
+            self.assertIn("Hardware mismatch", reason)
+
+        authentic_t4_names = [
+            "Tesla T4",
+            "NVIDIA Tesla T4",
+            "NVIDIA T4",
+            "Tesla T4 16GB",
+            "NVIDIA T4 16GB",
+            "T4",
+            "Tesla T4 PCIe",
+            "NVIDIA Tesla T4 PCIe"
+        ]
+        for name in authentic_t4_names:
+            is_match, reason, _ = check_t4_hardware_identity(
+                device_name=name,
+                compute_capability="7.5",
+                total_vram_mb=15109.0,
+                min_vram_mb=14000.0
+            )
+            self.assertTrue(is_match, f"Authentic T4 name '{name}' was unexpectedly rejected: {reason}")
+            self.assertEqual(reason, "NVIDIA_T4_AUTHENTICATED")
+
+    def test_12_compatibility_estimate_metadata_integrity(self):
+        """Analytical compatibility estimates contain explicit metadata and no fabricated VRAM on CPU."""
+        report_path = os.path.join(PROJECT_ROOT, "data", "reports", "t4_compatibility_benchmark.json")
+        self.assertTrue(os.path.isfile(report_path), f"Expected report at {report_path}")
+
+        with open(report_path, "r", encoding="utf-8") as f:
+            original_content = f.read()
+            data = json.loads(original_content)
+
+        self.assertEqual(data.get("benchmark_type"), "COMPATIBILITY_ESTIMATE")
+        self.assertFalse(data.get("is_empirical"))
+        self.assertFalse(data.get("is_cuda"))
+        self.assertEqual(data.get("device_name"), "CPU")
+        self.assertIsNone(data.get("total_vram_mb"), "CPU compatibility estimate must not fabricate VRAM measurements")
+        self.assertEqual(data.get("assumed_planning_vram_mb"), 15360.0)
+        self.assertTrue(data.get("analytical_t4_compatible"))
+        self.assertFalse(data.get("empirical_t4_verified"), "CPU report must not claim empirical T4 verification")
+        self.assertTrue(data.get("t4_compatible"))
+
+        try:
+            # Verify executing run_teacher_t4_benchmark produces the same non-empirical schema
+            fresh_report = run_teacher_t4_benchmark(context_length=1024, repetitions=1)
+            self.assertEqual(fresh_report.get("benchmark_type"), "COMPATIBILITY_ESTIMATE")
+            self.assertFalse(fresh_report.get("is_empirical"))
+            if not fresh_report.get("is_cuda"):
+                self.assertIsNone(fresh_report.get("total_vram_mb"))
+        finally:
+            # Restore original canonical report so tests leave working tree clean
+            with open(report_path, "w", encoding="utf-8") as f:
+                f.write(original_content)
 
 
 if __name__ == "__main__":
