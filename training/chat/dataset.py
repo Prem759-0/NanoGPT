@@ -13,9 +13,20 @@ Implements:
 
 import json
 import os
+import sys
 import torch
 from torch.utils.data import Dataset
 from typing import List, Dict, Any, Optional, Tuple, Set
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if PROJECT_ROOT in sys.path:
+    sys.path.remove(PROJECT_ROOT)
+sys.path.insert(0, PROJECT_ROOT)
+
+if "datasets" in sys.modules:
+    mod = sys.modules["datasets"]
+    if not hasattr(mod, "__file__") or not mod.__file__ or "site-packages" in mod.__file__ or "dist-packages" in mod.__file__:
+        del sys.modules["datasets"]
 
 from datasets.chat.tokenizer import SovereignTokenizer
 

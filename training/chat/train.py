@@ -26,8 +26,14 @@ from torch.utils.data import DataLoader
 
 # Add project root to sys.path
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+if PROJECT_ROOT in sys.path:
+    sys.path.remove(PROJECT_ROOT)
+sys.path.insert(0, PROJECT_ROOT)
+
+if "datasets" in sys.modules:
+    mod = sys.modules["datasets"]
+    if not hasattr(mod, "__file__") or not mod.__file__ or "site-packages" in mod.__file__ or "dist-packages" in mod.__file__:
+        del sys.modules["datasets"]
 
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     try:

@@ -22,8 +22,15 @@ import unittest
 from typing import Dict, Any
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+if PROJECT_ROOT in sys.path:
+    sys.path.remove(PROJECT_ROOT)
+sys.path.insert(0, PROJECT_ROOT)
+
+# If third-party 'datasets' from site-packages was cached, purge it so local sovereign 'datasets' package is loaded
+if "datasets" in sys.modules:
+    mod = sys.modules["datasets"]
+    if not hasattr(mod, "__file__") or not mod.__file__ or "site-packages" in mod.__file__ or "dist-packages" in mod.__file__:
+        del sys.modules["datasets"]
 
 from training.chat.train import train_moon_chat
 from webapp.model_service import (
