@@ -113,7 +113,8 @@ def train_moon_chat(
         gate = ChatReadinessGate(
             train_manifest=train_manifest,
             val_manifest=val_manifest,
-            test_manifest=test_manifest
+            test_manifest=test_manifest,
+            config_path=abs_config_path
         )
         gate_res = gate.run_all_checks()
         if gate_res["status"] != STATUS_READY_FOR_PILOT:
@@ -206,6 +207,18 @@ def train_moon_chat(
     print(f"  • Effective dataset passes (epochs): {dataset_passes:.1f}")
     if dataset_passes > 10 and not is_smoke_test:
         print(f"  ⚠️ HIGH OVERFITTING RISK: {dataset_passes:.1f} passes over {unique_records} unique records!")
+
+    # Enforce Policy B & Zero-Teacher Sovereign Invariants
+    td_cfg = cfg.get("teacher_distillation", {})
+    if td_cfg.get("prohibit_teacher_checkpoint_weights") is not True:
+        raise ValueError("Policy B violation: prohibit_teacher_checkpoint_weights must be True.")
+    if td_cfg.get("student_init_method") != "random_gaussian_scratch":
+        raise ValueError("Policy B violation: student_init_method must be random_gaussian_scratch.")
+    print("\nZero-Teacher Policy B Verification:")
+    print(f"  • Student initialization:           {td_cfg.get('student_init_method')}")
+    print(f"  • Prohibit teacher weights:         {td_cfg.get('prohibit_teacher_checkpoint_weights')}")
+    print(f"  • Allow teacher demonstrations:     {td_cfg.get('allow_teacher_demonstrations')}")
+    print(f"  • Teacher distillation enabled:     {td_cfg.get('enabled')}")
 
     # Initialize Model from Random Gaussian Weights ONLY
     gpt_conf = GPTConfig(
@@ -497,8 +510,8 @@ def train_moon_chat(
             "initialization": "random_gaussian_scratch",
             "student_init_method": "random_gaussian_scratch",
             "teacher_checkpoint_weights_transferred": False,
-            "teacher_models": ["Qwen2.5-7B-Instruct-GGUF"],
-            "teacher_license": "Apache-2.0",
+            "teacher_models": ["Qwen2.5-7B-Instruct-GGUF"] if td_cfg.get("allow_teacher_demonstrations") else [],
+            "teacher_license": td_cfg.get("teacher_license") if td_cfg.get("allow_teacher_demonstrations") else None,
             "dataset_provenance": "DETERMINISTIC_CURRICULUM_TEMPLATE + ORIGINAL_SELF_AUTHORED_QA",
             "run_id": f"moon_chat_run_{int(time.time())}",
             "trained_at": datetime.now(timezone.utc).isoformat(),

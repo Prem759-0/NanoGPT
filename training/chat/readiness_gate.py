@@ -112,7 +112,8 @@ class ChatReadinessGate:
         test_manifest: Optional[str] = None,
         pilot_min_train: Optional[int] = None,
         pilot_min_val: Optional[int] = None,
-        pilot_min_test: Optional[int] = None
+        pilot_min_test: Optional[int] = None,
+        config_path: Optional[str] = None
     ):
         self.root_dir = root_dir
         self.pilot_min_records = pilot_min_records
@@ -121,7 +122,10 @@ class ChatReadinessGate:
         self.val_manifest = val_manifest or os.path.join(root_dir, "datasets", "manifests", "chat_val.jsonl")
         self.test_manifest = test_manifest or os.path.join(root_dir, "datasets", "manifests", "chat_test.jsonl")
         self.tokenizer_path = os.path.join(root_dir, "models", "chat", "tokenizer.json")
-        self.config_path = os.path.join(root_dir, "training", "chat", "config.yaml")
+        default_cfg = os.path.join(root_dir, "training", "chat", "config.yaml")
+        self.config_path = config_path or default_cfg
+        if not os.path.isabs(self.config_path):
+            self.config_path = os.path.join(root_dir, self.config_path)
         self.registry_path = os.path.join(root_dir, "models", "registry.json")
 
         # Pilot split criteria: for standard pilot training (500 records), enforce 400 train, 50 val, 50 test.
