@@ -453,7 +453,15 @@ def run_empirical_t4_validation(
         "hardware_test_inputs_only": True,
         "is_dataset_training": False,
         "ownership_policy": "TEACHER_STUDENT_RANDOM_INIT",
-        "teacher_checkpoint_weights_transferred": False
+        "teacher_checkpoint_weights_transferred": False,
+        "runtime_environment": {
+            "pytorch_version": torch.__version__,
+            "cuda_version": torch.version.cuda,
+            "cudnn_version": torch.backends.cudnn.version() if torch.backends.cudnn.is_available() else None,
+            "python_version": sys.version.split()[0],
+            "platform": sys.platform
+        },
+        "hardware_identity_validation_type": "RUNTIME_CUDA_DRIVER_IDENTITY_ONLY"
     }
 
     report_path = save_benchmark_report(
