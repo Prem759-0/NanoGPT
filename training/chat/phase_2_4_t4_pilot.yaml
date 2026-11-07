@@ -9,14 +9,15 @@ ownership_policy: "TEACHER_STUDENT_RANDOM_INIT"
 legacy_ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
 
 # Teacher Distillation Architecture (Student starts strictly from random Gaussian scratch)
+# Policy B Option 1: Zero teacher influence (no teacher weights, no teacher demonstrations, zero external APIs)
 teacher_distillation:
-  enabled: true
-  strategy: "POLICY_B_TEACHER_STUDENT_RANDOM_INIT"
-  target_teacher: "Qwen2.5-7B-Instruct-GGUF"
-  teacher_provider: "local"
-  teacher_license: "Apache-2.0"
+  enabled: false
+  strategy: "POLICY_B_ZERO_TEACHER_INFLUENCE"
+  target_teacher: null
+  teacher_provider: null
+  teacher_license: null
   student_init_method: "random_gaussian_scratch"
-  allow_teacher_demonstrations: true
+  allow_teacher_demonstrations: false
   prohibit_teacher_checkpoint_weights: true
 
 # Architecture
