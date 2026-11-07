@@ -1,0 +1,30 @@
+{
+  "status": "T4_EMPIRICAL_BENCHMARK_VERIFIED",
+  "device_name": "Tesla T4",
+  "compute_capability": "7.5",
+  "total_vram_mb": 14912.69,
+  "peak_allocated_mb": 601.37,
+  "peak_reserved_mb": 612.0,
+  "vram_headroom_mb": 14300.69,
+  "vram_utilization_pct": 4.1,
+  "model_parameters": 25698816,
+  "fp16_amp_verified": true,
+  "grad_scaler_verified": true,
+  "grad_accumulation_steps": 4,
+  "step_latency_ms": 1124.08,
+  "checkpoint_roundtrip_verified": true,
+  "temporary_file_safety_verified": true,
+  "hardware_test_inputs_only": true,
+  "is_dataset_training": false,
+  "ownership_policy": "TEACHER_STUDENT_RANDOM_INIT",
+  "teacher_checkpoint_weights_transferred": false,
+  "runtime_environment": {
+    "pytorch_version": "2.14.1+cu130",
+    "cuda_version": "13.0",
+    "cudnn_version": 92800,
+    "python_version": "3.13.16",
+    "platform": "linux"
+  },
+  "hardware_identity_validation_type": "RUNTIME_CUDA_DRIVER_IDENTITY_ONLY",
+  "run_id": "t4_bench_1794047809_40ecd041"
+}

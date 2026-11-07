@@ -1,0 +1,12 @@
+{
+  "run_id": "moon_run_1793906698",
+  "model_name": "moon-chat-scaled-25m",
+  "parameters": 25698816,
+  "max_iters": 1,
+  "final_train_loss": 6.269,
+  "final_val_loss": 6.2815,
+  "final_perplexity": 534.6,
+  "best_val_loss": 6.2815,
+  "metrics_history": [],
+  "checkpoint_sha256": "45b51578622f099ab7a1df3db5dd4161b74c826c6c666831660584fda218a9fb"
+}

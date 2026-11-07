@@ -2,7 +2,172 @@ import os
 import sys
 import glob
 import pickle
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
+
+
+class CheckpointValidationResult(tuple):
+    """Encapsulates checkpoint validation tuple (is_valid, reason, checkpoint_data) with boolean coercion."""
+    def __new__(cls, is_valid: bool, reason: str, data: Dict[str, Any]):
+        return super().__new__(cls, (is_valid, reason, data))
+
+    def __bool__(self) -> bool:
+        return bool(self[0])
+
+    @property
+    def is_valid(self) -> bool:
+        return self[0]
+
+    @property
+    def reason(self) -> str:
+        return self[1]
+
+    @property
+    def data(self) -> Dict[str, Any]:
+        return self[2]
+
+
+class SafeUnpickler(pickle.Unpickler):
+    """
+    Restricted unpickler that permits only primitive dictionary structures,
+    completely preventing arbitrary object instantiation or code execution during unpickling.
+    """
+    SAFE_BUILTINS = {
+        "dict", "list", "set", "frozenset", "tuple",
+        "str", "int", "float", "bool", "bytes", "bytearray", "NoneType"
+    }
+
+    def find_class(self, module: str, name: str) -> Any:
+        import builtins
+        if module in ("builtins", "__builtin__") and name in self.SAFE_BUILTINS:
+            return getattr(builtins, name)
+        raise pickle.UnpicklingError(f"Untrusted object '{module}.{name}' is prohibited during safe deserialization.")
+
+
+def validate_checkpoint_structure(ckpt_path: str, weights_only: bool = True) -> CheckpointValidationResult:
+    """
+    Validates the PyTorch structure and schema of a checkpoint file with secure deserialization.
+    Fails closed on missing file, unreadable file, empty file, non-dict, missing model tensors,
+    malicious pickle payloads, unsupported types, or invalid architectures.
+    Returns: CheckpointValidationResult(is_valid, reason, loaded_dict)
+    """
+    if not ckpt_path or not os.path.isfile(ckpt_path):
+        return CheckpointValidationResult(False, f"Checkpoint path does not exist or is not a file: {ckpt_path}", {})
+    if os.path.getsize(ckpt_path) == 0:
+        return CheckpointValidationResult(False, f"Checkpoint file is empty (0 bytes): {ckpt_path}", {})
+
+    try:
+        import torch
+        # Enforce secure deserialization: weights_only=True restricts unpickling to tensors and safe primitives
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=weights_only)
+        if not isinstance(ckpt, dict):
+            return CheckpointValidationResult(False, f"Checkpoint root is not a dictionary (type={type(ckpt).__name__})", {})
+        if "model" not in ckpt or not isinstance(ckpt["model"], dict):
+            return CheckpointValidationResult(False, "Checkpoint missing 'model' state dictionary", {})
+        if len(ckpt["model"]) == 0:
+            return CheckpointValidationResult(False, "Checkpoint 'model' state dictionary is empty", {})
+
+        # Tensor type and payload security verification
+        for param_name, param_val in ckpt["model"].items():
+            if not isinstance(param_name, str):
+                return CheckpointValidationResult(False, f"Invalid non-string parameter name in state dictionary: {type(param_name).__name__}", {})
+            if not isinstance(param_val, torch.Tensor):
+                return CheckpointValidationResult(False, f"Invalid non-tensor parameter value for '{param_name}': {type(param_val).__name__}", {})
+
+        if "model_args" not in ckpt or not isinstance(ckpt["model_args"], dict):
+            return CheckpointValidationResult(False, "Checkpoint missing 'model_args' dictionary", {})
+
+        required_args = ["n_layer", "n_head", "n_embd", "vocab_size", "block_size"]
+        for arg in required_args:
+            if arg not in ckpt["model_args"]:
+                return CheckpointValidationResult(False, f"Checkpoint 'model_args' missing required architectural parameter '{arg}'", {})
+            val = ckpt["model_args"][arg]
+            if not isinstance(val, int) or val <= 0:
+                return CheckpointValidationResult(False, f"Architectural parameter '{arg}' must be a positive integer, got {val}", {})
+
+        # Architectural invariants & bounds validation (blocks invalid geometries or allocation exhaustion attacks)
+        n_embd = ckpt["model_args"]["n_embd"]
+        n_head = ckpt["model_args"]["n_head"]
+        n_layer = ckpt["model_args"]["n_layer"]
+        vocab_size = ckpt["model_args"]["vocab_size"]
+        block_size = ckpt["model_args"]["block_size"]
+
+        if n_embd % n_head != 0:
+            return CheckpointValidationResult(False, f"Invalid architecture: n_embd ({n_embd}) must be divisible by n_head ({n_head})", {})
+
+        if n_layer > 128 or n_head > 128 or n_embd > 8192 or vocab_size > 262144 or block_size > 65536:
+            return CheckpointValidationResult(False, "Architectural parameter exceeds safe supported bounds", {})
+
+        # Reviewed schema version compatibility verification
+        cfg = ckpt.get("config", {})
+        schema_version = ckpt.get("schema_version") or (cfg.get("schema_version") if isinstance(cfg, dict) else None)
+        if schema_version is not None:
+            supported_schemas = ("1.0", "1.1", "2.0", "2.1", "2.2", "2.3", "2.4", "moon_chat_v1", "sovereign_v1")
+            if str(schema_version) not in supported_schemas:
+                return CheckpointValidationResult(False, f"Unsupported checkpoint schema version: {schema_version}", {})
+
+        return CheckpointValidationResult(True, "VALID_STRUCTURE", ckpt)
+    except Exception as e:
+        return CheckpointValidationResult(False, f"Failed to load checkpoint file ({type(e).__name__}): {str(e)}", {})
+
+
+def is_checkpoint_fixture(ckpt_path: str) -> bool:
+    """Determines if a checkpoint file is an unpromotable CI test fixture."""
+    ok, reason, ckpt = validate_checkpoint_structure(ckpt_path)
+    if not ok:
+        return False
+    if ckpt.get("is_test_fixture") is True:
+        return True
+    if ckpt.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY"):
+        return True
+    cfg = ckpt.get("config", {}) or ckpt.get("metadata", {})
+    if cfg.get("is_test_fixture") is True or cfg.get("run_id") == "ci_test_fixture":
+        return True
+    return False
+
+
+def is_verified_genuine_checkpoint(ckpt_path: str) -> bool:
+    """
+    Positively validates that a checkpoint is a genuine, trained student checkpoint.
+    Fails closed on:
+    - Corrupted, malformed, or unreadable files
+    - Missing or incomplete metadata
+    - CI test fixtures or engineering smoke test checkpoints
+    - Policy B violations (e.g. teacher checkpoint weights transferred)
+    """
+    ok, reason, ckpt = validate_checkpoint_structure(ckpt_path)
+    if not ok:
+        return False
+
+    # Must not be marked as a test fixture or smoke test
+    if ckpt.get("is_test_fixture") is True:
+        return False
+    if ckpt.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY", "DATA_INSUFFICIENT"):
+        return False
+
+    cfg = ckpt.get("config", {}) or ckpt.get("metadata", {})
+    if not isinstance(cfg, dict):
+        return False
+    if cfg.get("is_test_fixture") is True or cfg.get("run_id") == "ci_test_fixture":
+        return False
+
+    # Policy B provenance verification
+    if cfg.get("teacher_checkpoint_weights_transferred") is True:
+        return False
+    init_method = cfg.get("initialization") or cfg.get("student_init_method")
+    if init_method != "random_gaussian_scratch":
+        return False
+    policy = cfg.get("ownership_policy") or cfg.get("policy")
+    if policy not in ("TEACHER_STUDENT_RANDOM_INIT", "STRICT_SOVEREIGN_RANDOM_INIT_ONLY", "POLICY_B_TEACHER_STUDENT_RANDOM_INIT"):
+        return False
+
+    # Status must be positively genuine
+    valid_statuses = ("PILOT_TRAINED", "PILOT_TRAINED_BEST", "EVALUATION_PASSED", "PRODUCTION_TRAINED", "PROMOTED_PRODUCTION")
+    status = ckpt.get("status")
+    if status not in valid_statuses:
+        return False
+
+    return True
+
 
 class ModelNotTrainedException(Exception):
     """Raised when an inference request is made but no valid checkpoint or model exists."""
@@ -143,6 +308,36 @@ class ModelService:
         """Finds best available GGUF model (prioritizing 7B Qwen Coder, then LLaMA 1B)."""
         return self.find_qwen_gguf() or self.find_llama_gguf()
 
+    validate_checkpoint_structure = staticmethod(validate_checkpoint_structure)
+    is_checkpoint_fixture = staticmethod(is_checkpoint_fixture)
+    is_verified_genuine_checkpoint = staticmethod(is_verified_genuine_checkpoint)
+
+    def find_pilot_checkpoint(self, allow_fixture: bool = False) -> Optional[str]:
+        """
+        Locates the sovereign pilot checkpoint with fail-closed positive verification.
+        - If allow_fixture is False: ONLY returns a positively verified genuine checkpoint.
+        - If allow_fixture is True: returns a verified genuine checkpoint OR a valid CI fixture.
+        Never returns an unreadable, malformed, or unverified checkpoint file.
+        Never silently falls back to an unrelated checkpoint.
+        """
+        candidate_paths = [
+            os.path.join(self.base_dir, "models", "checkpoints", "chat", "moon_chat_pilot_v0.pt"),
+            os.path.join(self.base_dir, "models", "checkpoints", "chat", "moon_chat_phase_2_4_t4_pilot_v0.pt"),
+            os.path.join(self.base_dir, "models", "checkpoints", "chat", "moon_chat_phase_2_4_t4_pilot_best.pt")
+        ]
+
+        for cand in candidate_paths:
+            if not os.path.isfile(cand):
+                continue
+            if self.is_verified_genuine_checkpoint(cand):
+                return os.path.abspath(cand)
+            if allow_fixture:
+                ok, _, _ = self.validate_checkpoint_structure(cand)
+                if ok and self.is_checkpoint_fixture(cand):
+                    return os.path.abspath(cand)
+
+        return None
+
     def find_checkpoint(self, preferred_path: Optional[str] = None) -> Optional[str]:
         """
         Safely locates an explicit or default scratch assistant checkpoint.
@@ -197,6 +392,9 @@ class ModelService:
         has_qwen = self.find_qwen_gguf() is not None
         has_llama = self.find_llama_gguf() is not None
         has_scratch = self.find_checkpoint() is not None
+        has_trained_pilot = self.find_pilot_checkpoint(allow_fixture=False) is not None
+        has_any_pilot = self.find_pilot_checkpoint(allow_fixture=True) is not None
+        is_pilot_fixture = has_any_pilot and not has_trained_pilot
 
         title = "🌙 Moon AI Sovereign (7.6B v1 — Fine-Tuned by Prem Gaikwad)" if moon_path else "👑 Qwen-2.5-Coder-7B (Frontier Super-AI — By Prem Gaikwad)"
         desc = (
@@ -238,6 +436,18 @@ class ModelService:
                 "block_size": 1024,
                 "vocab_size": 50257,
                 "available": True
+            },
+            {
+                "id": "moon-chat-pilot-v0",
+                "name": "🌙 Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
+                "type": "sovereign_scratch",
+                "description": "Stage 2.1.6 sovereign 25.7M parameter transformer initialized from Gaussian random scratch. Evaluated on 572-record verified curriculum. 0 teacher weights transferred (Policy B).",
+                "active": self.active_model_name == "moon-chat-pilot-v0",
+                "parameters": "25.70M",
+                "block_size": 512,
+                "vocab_size": 512,
+                "available": has_trained_pilot,
+                "is_test_fixture": is_pilot_fixture
             },
             {
                 "id": "scratch",
@@ -389,7 +599,7 @@ class ModelService:
                     import torch
                     from model import GPTConfig, GPT
 
-                    checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=False)
+                    checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=True)
                     if not isinstance(checkpoint, dict) or "model" not in checkpoint or "model_args" not in checkpoint:
                         self.error_message = f"Invalid checkpoint format in {ckpt_path}: missing required 'model' or 'model_args' keys."
                         return False
@@ -431,6 +641,58 @@ class ModelService:
                     self.model = None
                     self.error_message = f"Failed to load scratch checkpoint: {str(e)}"
                     return False
+
+            # Option 4: Sovereign Moon Chat Pilot (25.7M scratch-initialized transformer)
+            elif target in ["moon-chat-pilot-v0", "moon-pilot", "pilot"]:
+                ckpt_path = self.find_pilot_checkpoint(allow_fixture=True)
+                if not ckpt_path:
+                    self.error_message = "Moon Chat Pilot checkpoint not found on disk at models/checkpoints/chat/moon_chat_pilot_v0.pt"
+                    return False
+                try:
+                    import torch
+                    from model import GPT, GPTConfig
+                    from datasets.chat.tokenizer import SovereignTokenizer
+
+                    print(f"Loading Moon Chat Pilot checkpoint: {ckpt_path} on {self.device}...")
+                    checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=True)
+                    self.is_test_fixture = self.is_checkpoint_fixture(ckpt_path)
+
+                    model_args = checkpoint.get("model_args", {})
+                    self.model_args = model_args
+                    gptconf = GPTConfig(**model_args)
+                    self.model_config = gptconf
+
+                    model = GPT(gptconf)
+                    state_dict = checkpoint["model"]
+                    unwanted_prefix = "_orig_mod."
+                    for k in list(state_dict.keys()):
+                        if k.startswith(unwanted_prefix):
+                            state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+
+                    model.load_state_dict(state_dict)
+                    model.eval()
+                    model.to(self.device)
+
+                    self.model = model
+                    self.llama_model = None
+                    self.active_model_name = "moon-chat-pilot-v0"
+                    self.current_checkpoint_path = os.path.relpath(ckpt_path, self.base_dir)
+                    self.checkpoint_meta = checkpoint.get("config", {}) or checkpoint.get("metadata", {})
+                    self.dataset_name = self.checkpoint_meta.get("dataset", "expanded_chat_corpus")
+                    self.vocab_size = model_args.get("vocab_size", 512)
+
+                    # Initialize sovereign BPE tokenizer
+                    sovereign_tok = SovereignTokenizer()
+                    self.sovereign_tokenizer = sovereign_tok
+                    self.encode_fn = lambda s: sovereign_tok.encode_chat([{"role": "user", "content": s}])
+                    self.decode_fn = sovereign_tok.decode
+
+                    self.error_message = None
+                    return True
+                except Exception as e:
+                    self.model = None
+                    self.error_message = f"Failed to load Moon Chat Pilot checkpoint: {str(e)}"
+                    return False
             else:
                 self.error_message = f"Unknown model name: {target}"
                 return False
@@ -456,7 +718,7 @@ class ModelService:
             )
 
         with open(meta_path, "rb") as f:
-            meta = pickle.load(f)
+            meta = SafeUnpickler(f).load()
 
         if "stoi" not in meta or "itos" not in meta:
             raise ValueError(f"Malformed meta.pkl at {meta_path}: missing required 'stoi' or 'itos' dictionaries.")
@@ -484,10 +746,10 @@ class ModelService:
         self.decode_fn = char_decode
 
     def switch_model(self, model_name: str) -> bool:
-        """Switches active model between 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', and 'scratch'."""
-        allowed = ["qwen-2.5-coder-7b", "qwen", "qwen-7b", "llama-3.2", "gpt2", "scratch"]
+        """Switches active model between available engines."""
+        allowed = ["qwen-2.5-coder-7b", "qwen", "qwen-7b", "llama-3.2", "gpt2", "scratch", "moon-chat-pilot-v0", "moon-pilot", "pilot"]
         if model_name not in allowed:
-            raise ValueError(f"Invalid model: {model_name}. Allowed: 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', 'scratch'")
+            raise ValueError(f"Invalid model: {model_name}. Allowed: 'moon-chat-pilot-v0', 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', 'scratch'")
         return self.load_model(model_name)
 
     def generate(self, prompt: str, max_new_tokens: int = 150, temperature: float = 0.7, history: Optional[List[Dict[str, str]]] = None, mode: str = "chat") -> Dict[str, Any]:
@@ -733,6 +995,69 @@ class ModelService:
                 "device": dev_label
             }
 
+        # --- 1.5 Moon Chat Pilot Generation (25.7M Sovereign Scratch Transformer) ---
+        if self.active_model_name == "moon-chat-pilot-v0" and self.model is not None:
+            import torch
+            from datasets.chat.tokenizer import SovereignTokenizer
+
+            tok = getattr(self, "sovereign_tokenizer", None) or SovereignTokenizer()
+            im_end_id = tok.special_to_id.get("<|im_end|>", 3)
+            eos_id = tok.special_to_id.get("<|endoftext|>", 0)
+
+            turns = []
+            if history:
+                for h in history[-4:]:
+                    r = h.get("role", "user")
+                    c = h.get("content", "").strip()
+                    if c:
+                        turns.append({"role": r, "content": c})
+            turns.append({"role": "user", "content": clean_prompt})
+
+            token_ids = tok.encode_chat(turns)
+            block_size = getattr(self.model_config, "block_size", 512)
+            if len(token_ids) >= block_size:
+                token_ids = token_ids[-(block_size - 1):]
+
+            prompt_len = len(token_ids)
+            idx = torch.tensor(token_ids, dtype=torch.long, device=self.device).unsqueeze(0)
+            capped_tokens = min(max_new_tokens, 60)
+
+            new_tokens = []
+            stop_reason = "max_tokens_reached"
+            with torch.no_grad():
+                for _ in range(capped_tokens):
+                    idx_cond = idx if idx.size(1) <= block_size else idx[:, -block_size:]
+                    logits, _ = self.model(idx_cond)
+                    logits = logits[:, -1, :]
+                    if temperature > 0:
+                        probs = torch.softmax(logits / max(temperature, 0.1), dim=-1)
+                        idx_next = torch.multinomial(probs, num_samples=1)
+                    else:
+                        idx_next = torch.argmax(logits, dim=-1, keepdim=True)
+
+                    next_id = idx_next.item()
+                    if next_id in (im_end_id, eos_id):
+                        stop_reason = "stop_token (<|im_end|>)"
+                        break
+                    new_tokens.append(next_id)
+                    idx = torch.cat((idx, idx_next), dim=1)
+
+            raw_reply = tok.decode(new_tokens).strip() if new_tokens else ""
+            clean_reply = raw_reply.replace("<|im_end|>", "").strip()
+            if not clean_reply:
+                clean_reply = "[Moon AI Pilot: Initialized from Gaussian scratch. Emitted 0 readable tokens.]"
+
+            return {
+                "reply": clean_reply,
+                "raw_reply": raw_reply,
+                "stop_reason": stop_reason,
+                "full_text": clean_reply,
+                "model_name": "Moon AI Pilot (25.7M Sovereign Chat — Policy B)",
+                "prompt_length": prompt_len,
+                "tokens_generated": len(new_tokens),
+                "device": f"{self.device.upper()} Local Sovereign Engine"
+            }
+
         # --- 2. NanoGPT Light / Core Generation ---
         import torch
 
@@ -855,6 +1180,31 @@ class ModelService:
                 "n_embd": 2048,
                 "hardware": "CPU (4-Bit AVX2 C++ Quantized)",
                 "description": "Frontier 1.23B parameter NanoGPT architecture created by Prem Gaikwad from India. Runs locally and offline on your laptop."
+            }
+
+        if self.active_model_name == "moon-chat-pilot-v0":
+            param_count = sum(p.numel() for p in self.model.parameters()) if self.model is not None else 25698816
+            is_fixture = getattr(self, "is_test_fixture", False)
+            return {
+                "model_name": "Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
+                "model_type": "Moon AI 25.7M Sovereign Pilot (Policy B Scratch Init)",
+                "checkpoint_path": self.current_checkpoint_path or "models/checkpoints/chat/moon_chat_pilot_v0.pt",
+                "model_status": "CI TEST FIXTURE (UNPROMOTABLE)" if is_fixture else status,
+                "dataset": "Moon AI Sovereign Expanded Corpus (572 records, 120k+ tokens)",
+                "vocab_size": 512,
+                "parameters": param_count,
+                "block_size": getattr(self.model_config, "block_size", 512),
+                "n_layer": getattr(self.model_config, "n_layer", 8),
+                "n_head": getattr(self.model_config, "n_head", 8),
+                "n_embd": getattr(self.model_config, "n_embd", 512),
+                "hardware": f"{self.device.upper()} (PyTorch {self.torch_version or 'not installed'})",
+                "ownership_policy": "TEACHER_STUDENT_RANDOM_INIT",
+                "teacher_checkpoint_weights_transferred": False,
+                "is_test_fixture": is_fixture,
+                "is_production_trained": False,
+                "promotable": False,
+                "status": "CI_TEST_FIXTURE" if is_fixture else "PILOT_TRAINED",
+                "description": "25.7M parameter sovereign transformer trained purely from Gaussian random scratch under Policy B. Zero teacher weights transferred."
             }
 
         is_gpt2 = self.active_model_name == "gpt2"

@@ -1,0 +1,74 @@
+{
+  "report_metadata": {
+    "title": "Moon AI \u2014 Sovereign Chat Dataset Audit Report",
+    "timestamp": "2026-11-02T18:21:46.517981+00:00",
+    "architect": "Prem Gaikwad (Chief ML Systems Architect, India \ud83c\uddee\ud83c\uddf3)",
+    "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
+    "model_track": "moon-chat-v0",
+    "status": "ENGINEERING_SMOKE_TEST_ONLY",
+    "training_ready": false,
+    "smoke_test_ready": true
+  },
+  "summary": {
+    "total_records": 22,
+    "train_records": 18,
+    "val_records": 2,
+    "test_records": 2,
+    "total_tokens": 9445,
+    "mean_tokens_per_dialogue": 429.32,
+    "median_tokens_per_dialogue": 431.5,
+    "min_tokens_per_dialogue": 304,
+    "max_tokens_per_dialogue": 576,
+    "total_turns": 88,
+    "mean_turns_per_dialogue": 4
+  },
+  "integrity_verification": {
+    "total_records_checked": 22,
+    "cryptographic_hashes_verified": 22,
+    "hash_mismatches": 0,
+    "hash_failures_list": [],
+    "cross_split_leakage_detected": false,
+    "leakage_train_val_count": 0,
+    "leakage_train_test_count": 0,
+    "leakage_val_test_count": 0
+  },
+  "provenance_distribution": {
+    "ORIGINAL_SELF_AUTHORED_QA": 6,
+    "SOURCE_DERIVED_EDUCATIONAL_SUMMARY": 16
+  },
+  "license_distribution": {
+    "CustomSovereign": 6,
+    "CC-BY-SA-4.0": 15,
+    "CC0-1.0": 1
+  },
+  "category_distribution": {
+    "beginner_educational": 1,
+    "physics": 1,
+    "computer_science": 3,
+    "cryptography": 1,
+    "mathematics": 3,
+    "programming_fundamentals": 2,
+    "distributed_systems": 1,
+    "instruction_following": 1,
+    "science": 2,
+    "software_engineering": 1,
+    "general_conversation": 2,
+    "operating_systems": 1,
+    "sovereign_identity": 2,
+    "reasoning_explanations": 1
+  },
+  "tokenizer_info": {
+    "type": "byte_level_bpe_scratch",
+    "vocab_size": 512,
+    "special_tokens": [
+      "<|endoftext|>",
+      "<|pad|>",
+      "<|im_start|>",
+      "<|im_end|>",
+      "<|system|>",
+      "<|user|>",
+      "<|assistant|>"
+    ],
+    "zero_third_party_dependencies": true
+  }
+}
