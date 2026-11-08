@@ -1,0 +1,89 @@
+# Moon AI — Stage 2.4 Real T4 GPU 100-Step Pilot Training Configuration
+# Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
+# Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY (Policy B Option 1 Sovereign)
+# Target: Moon Chat GPT (25.7M Parameters, Pure Gaussian Scratch Initialization)
+# Hardware Target: Google Colab NVIDIA T4 (15.3 GB VRAM)
+
+model_track: "moon-chat-v1-stage-2-4-t4-pilot"
+ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
+canonical_ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
+
+# Teacher Distillation Architecture (Student starts strictly from random Gaussian scratch)
+# Policy B Option 1: Zero teacher influence (no teacher weights, no teacher demonstrations, zero external APIs)
+teacher_distillation:
+  enabled: false
+  strategy: "POLICY_B_ZERO_TEACHER_INFLUENCE"
+  target_teacher: null
+  teacher_provider: null
+  teacher_license: null
+  student_init_method: "random_gaussian_scratch"
+  allow_teacher_demonstrations: false
+  prohibit_teacher_checkpoint_weights: true
+
+# Architecture
+architecture_type: "Causal_Decoder_Only_Transformer_PreLayerNorm_GELU"
+architecture_details:
+  normalization: "Pre-LayerNorm"
+  activation: "GELU"
+  position_encoding: "Learned Absolute Embeddings (wpe)"
+  initialization: "Random Gaussian N(0, 0.02^2)"
+  weight_tying: true
+
+# Student Model Architecture (25.7M Parameters)
+model:
+  name: "moon-chat-t4-pilot-25m"
+  n_layer: 8
+  n_head: 8
+  n_embd: 512
+  block_size: 512
+  vocab_size: 512
+  dropout: 0.1
+  bias: false
+  exact_parameters: 25698816
+
+# Training Hyperparameters
+training:
+  max_iters: 100
+  eval_interval: 25
+  eval_iters: 5
+  warmup_iters: 10
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 0.0003
+  min_lr: 0.00003
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  mixed_precision: "fp16"
+  seed: 42
+  loss_masking: "assistant_only"
+
+# Paths: Point to verified high-volume scaled curriculum (1,100 records total, 253,293 supervised assistant tokens):
+# - Train: 990 records (227,751 supervised assistant tokens)
+# - Validation: 50 records (11,581 supervised assistant tokens)
+# - Blind test: 60 records (13,961 supervised assistant tokens)
+paths:
+  train_manifest: "datasets/manifests/scaled_chat_train.jsonl"
+  val_manifest: "datasets/manifests/scaled_chat_val.jsonl"
+  test_manifest: "datasets/manifests/scaled_chat_test.jsonl"
+  tokenizer_path: "models/chat/tokenizer.json"
+  checkpoint_dir: "models/checkpoints/chat"
+  checkpoint_name: "moon_chat_phase_2_4_t4_pilot_v0.pt"
+  best_checkpoint_name: "moon_chat_phase_2_4_t4_pilot_best.pt"
+
+# Hardware Budget on NVIDIA T4 (15.3 GB VRAM)
+hardware_budget:
+  gpu: "NVIDIA T4 (Turing, Compute Capability 7.5)"
+  vram_available_mb: 15360
+  model_params: 25698816
+  model_weights_fp16_mb: 51.4
+  gradients_fp16_mb: 51.4
+  optimizer_states_adamw_fp32_mb: 308.4
+  activations_estimate_mb: 300.9
+  cuda_runtime_context_mb: 600.0
+  estimated_peak_vram_mb: 1312.1
+  vram_safety_margin_mb: 14047.9
+  oom_risk: "LOW"
+  expected_training_time_100_iters_t4: "12-18 seconds"
+

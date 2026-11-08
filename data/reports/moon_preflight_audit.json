@@ -1,0 +1,61 @@
+{
+  "status": "PRODUCTION_PREFLIGHT_VERIFIED",
+  "passed": true,
+  "preflight_gates": {
+    "gate_1_config_integrity": {
+      "passed": true,
+      "errors": []
+    },
+    "gate_2_corpus_provenance": {
+      "passed": true,
+      "total_records": 1100,
+      "train_records": 990,
+      "val_records": 50,
+      "test_records": 60,
+      "zero_teacher_influence_certified": true,
+      "errors": []
+    },
+    "gate_3_tokenizer_symmetry": {
+      "passed": true,
+      "vocab_size": 512,
+      "errors": []
+    },
+    "gate_4_pilot_architecture": {
+      "passed": true,
+      "exact_parameters": 25698816,
+      "loss_masking_verified": true,
+      "errors": []
+    },
+    "gate_5_device_optimization": {
+      "passed": true,
+      "device": "cuda",
+      "mixed_precision_fp16": true,
+      "loss_value": 6.3023,
+      "step_time_ms": 890.45,
+      "errors": []
+    },
+    "gate_6_checkpoint_security": {
+      "passed": true,
+      "weights_only_deserialization": true,
+      "bitwise_match": true,
+      "errors": []
+    },
+    "gate_7_checkpoint_isolation": {
+      "passed": true,
+      "final_checkpoint_name": "moon_chat_phase_2_4_t4_pilot_v0.pt",
+      "best_checkpoint_name": "moon_chat_phase_2_4_t4_pilot_best.pt",
+      "errors": []
+    },
+    "gate_8_test_split_isolation": {
+      "passed": true,
+      "test_manifest_path": "datasets/manifests/scaled_chat_test.jsonl",
+      "test_manifest_sha256": "e854f62814d413b36d02224777fe1d6d33a7ebffbac1a64feb4fee8de8c53428",
+      "record_count": 60,
+      "isolated_from_training": true,
+      "errors": []
+    }
+  },
+  "blockers": [],
+  "warnings": [],
+  "metrics": {}
+}

@@ -1,234 +1,396 @@
+<div align="center">
 
-# nanoGPT
+# 🌙 MOON AI
+### Sovereign Intelligence Core & Multimodal AI Platform
+**Engineered from First Principles | Policy B: Teacher–Student Distillation & Random Gaussian Initialization**
 
-![nanoGPT](assets/nanogpt.jpg)
+[![Ownership Policy](https://img.shields.io/badge/Ownership_Policy-TEACHER__STUDENT__RANDOM__INIT-8A2BE2?style=for-the-badge&logo=shield)](file:///core/policy.py)
+[![Student Weights](https://img.shields.io/badge/Student_Init-Random_Gaussian_Scratch-00C853?style=for-the-badge&logo=pytorch)](file:///model.py)
+[![Target Teacher](https://img.shields.io/badge/Target_Teacher-Kimi_K3.1_Pro-FF6F00?style=for-the-badge&logo=openai)](file:///teacher/providers/kimi.py)
+[![Test Suite](https://img.shields.io/badge/Tests-221%20Passed%20%7C%20100%25-brightgreen?style=for-the-badge&logo=checkmarx)](file:///tests/)
+[![Hardware Target](https://img.shields.io/badge/Hardware-Google_Colab_T4_(15.3GB)-00BCD4?style=for-the-badge&logo=googlecolab)](file:///docs/MOON_AI_HARDWARE_AND_COST_PLAN.md)
+[![Frontend](https://img.shields.io/badge/Frontend-Vite%20%2B%20React-61DAFB?style=for-the-badge&logo=react)](file:///frontend/)
 
+**Chief ML Systems Architect & Project Owner**: Prem Gaikwad (India 🇮🇳)  
+*Derived and sovereignly transformed from Andrej Karpathy's NanoGPT repository.*
 
 ---
 
-**Update Nov 2025** nanoGPT has a new and improved cousin called [nanochat](https://github.com/karpathy/nanochat). It is very likely you meant to use/find nanochat instead. nanoGPT (this repo) is now very old and deprecated but I will leave it up for posterity.
+</div>
+
+## 1. EXECUTIVE OVERVIEW: THE MOON AI MISSION
+
+**Moon AI** is an advanced machine-learning ecosystem engineered to transcend traditional static language models and establish the foundation for a general-purpose, multimodal artificial intelligence platform.
+
+Under the architectural leadership of **Prem Gaikwad**, Moon AI operates across seven specialized engines:
+1. **Natural Multi-Turn Conversation & Contextual Understanding**
+2. **Deep Mathematical, Logical & First-Principles Reasoning**
+3. **Software Engineering, Code Synthesis, Repository Debugging & Testing**
+4. **Agentic Tool Selection & Autonomous Task Execution**
+5. **Persistent User-Approved Memory (Isolated from Training Weights)**
+6. **Latent Image Diffusion & Generative Video (with product ambition comparable to Higgsfield AI)**
+7. **Automated Document Synthesis (PDF, DOCX, PPTX, XLSX, CSV, Markdown) & Evidence-Based Research**
+
+All specialist engines are orchestrated by **Moon Core** — an intelligent dispatch system that analyzes user intent, deconstructs complex goals into multi-stage workflows, coordinates specialist engines, and returns unified results.
 
 ---
 
-The simplest, fastest repository for training/finetuning medium-sized GPTs. It is a rewrite of [minGPT](https://github.com/karpathy/minGPT) that prioritizes teeth over education. Still under active development, but currently the file `train.py` reproduces GPT-2 (124M) on OpenWebText, running on a single 8XA100 40GB node in about 4 days of training. The code itself is plain and readable: `train.py` is a ~300-line boilerplate training loop and `model.py` a ~300-line GPT model definition, which can optionally load the GPT-2 weights from OpenAI. That's it.
+## 2. CORE OWNERSHIP POLICY: POLICY B (`TEACHER_STUDENT_RANDOM_INIT`)
 
-![repro124m](assets/gpt2_124M_loss.png)
-
-Because the code is so simple, it is very easy to hack to your needs, train new models from scratch, or finetune pretrained checkpoints (e.g. biggest one currently available as a starting point would be the GPT-2 1.3B model from OpenAI).
-
-## install
+Moon AI is governed by an absolute mathematical and architectural policy:
 
 ```
-pip install torch numpy transformers datasets tiktoken wandb tqdm
++---------------------------------------------------------------------------------------------------+
+|                                  THE INVARIANT BOUNDARY                                           |
++---------------------------------------------------------------------------------------------------+
+|  1. MOON STUDENT INITIALIZATION                                                                   |
+|     Every Moon student neural network is initialized exclusively from random Gaussian scratch     |
+|     weights: W ~ N(0, 0.02^2).                                                                    |
+|     Third-party foundation model weights are STRICTLY PROHIBITED from entering student parameters.|
+|                                                                                                   |
+|  2. TEACHER DISTILLATION                                                                          |
+|     Frontier foundation models (specifically Kimi K3.1 Pro) serve strictly as external TEACHERS   |
+|     producing high-density demonstrations, reasoning chains, code examples, and evaluation tests. |
+|     Teacher parameters NEVER enter the Moon runtime or repository.                                |
+|                                                                                                   |
+|  3. AUTONOMOUS RUNTIME                                                                            |
+|     Once trained, Moon student models execute inference 100% autonomously on local or edge        |
+|     hardware without any runtime API dependencies.                                                |
++---------------------------------------------------------------------------------------------------+
 ```
 
-Dependencies:
+### Technical Distinction Between Roles
 
-- [pytorch](https://pytorch.org) <3
-- [numpy](https://numpy.org/install/) <3
--  `transformers` for huggingface transformers <3 (to load GPT-2 checkpoints)
--  `datasets` for huggingface datasets <3 (if you want to download + preprocess OpenWebText)
--  `tiktoken` for OpenAI's fast BPE code <3
--  `wandb` for optional logging <3
--  `tqdm` for progress bars <3
+| Architectural Concept | Definition | Invariant Constraint |
+| :--- | :--- | :--- |
+| **Teacher Model** | External frontier LLM (e.g. Kimi K3.1 Pro). | Used exclusively for data curation and benchmark grading; never loaded into student runtime. |
+| **Student Model** | Moon proprietary neural network (Moon Chat, Moon Code). | Begins from 100% random Gaussian scratch weights (`random_gaussian_scratch`). |
+| **Teacher Inference** | Querying the teacher model via authenticated API. | Credential-isolated (`KIMI_API_KEY`), metered, rate-limited, and disabled by default in CI. |
+| **Teacher Data** | Synthesized dialogues, reasoning traces, and code examples. | Filtered for PII, secrets, prompt injections, duplicates, and blind test leakage. |
+| **Student Training** | Optimization of student parameters via AdamW with SFT loss masking. | User prompts and padding masked with `-1`; supervised loss computed strictly on assistant turns. |
+| **User Memory** | User-consented persistent context across sessions. | Permanently marked `eligible_for_training: False`. Never blended into training weights. |
 
-## quick start
+---
 
-If you are not a deep learning professional and you just want to feel the magic and get your feet wet, the fastest way to get started is to train a character-level GPT on the works of Shakespeare. First, we download it as a single (1MB) file and turn it from raw text into one large stream of integers:
+## 3. SPECIALIST ENGINES & MOON CORE ARCHITECTURE
 
-```sh
-python data/shakespeare_char/prepare.py
+```mermaid
+flowchart TD
+    User["User Request / Goal"] --> Core["Moon Core (Unified Orchestrator)"]
+    
+    Core --> Intent{"Intent Analysis & Planning"}
+    
+    Intent -->|"Conversation & Reasoning"| Chat["Moon Chat (25.7M / 86.1M Causal Transformer)"]
+    Intent -->|"Code Synthesis & Debugging"| Code["Moon Code (Fill-in-the-Middle Transformer)"]
+    Intent -->|"Image Creation & Editing"| Image["Moon Image (23.7M Latent Diffusion)"]
+    Intent -->|"Cinematic Video Generation"| Video["Moon Video (17.0M Spatiotemporal Diffusion)"]
+    Intent -->|"PDF, DOCX, PPTX, XLSX"| Docs["Moon Documents (Programmatic Document Engine)"]
+    Intent -->|"Web Search & Citations"| Research["Moon Research (Evidence Retrieval Engine)"]
+    
+    Chat --> Aggregator["Unified Response Aggregation"]
+    Code --> Aggregator
+    Image --> Aggregator
+    Video --> Aggregator
+    Docs --> Aggregator
+    Research --> Aggregator
+    
+    Aggregator --> Output["Final Verified Delivery to User"]
 ```
 
-This creates a `train.bin` and `val.bin` in that data directory. Now it is time to train your GPT. The size of it very much depends on the computational resources of your system:
+### Specialist Engine Specifications & Status Matrix
 
-**I have a GPU**. Great, we can quickly train a baby GPT with the settings provided in the [config/train_shakespeare_char.py](config/train_shakespeare_char.py) config file:
+| Engine | Track | Primary Architecture | Trainable Params | Capability Status | Operational Details |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Moon Chat** | `moon-chat-v0` | Causal Decoder-Only Transformer (Pre-LayerNorm, GELU, SFT masking) | **25,698,816** (Pilot)<br>**86,133,504** (Base) | `MODEL_TRAINING_PENDING` | Verified in Stage 2.1.2 with 20 multi-window chunks, 5,825 supervised tokens, and engineering smoke tests. |
+| **Moon Code** | `moon-code-v0` | Fill-in-the-Middle (FIM) Causal Transformer (12L, 12H, 768D) | ~124,000,000 | `ARCHITECTURE_DEFINED` | Code generation, repository refactoring, bug fixes, unit test synthesis. |
+| **Moon Image** | `moon-image-v0` | Latent Diffusion (MoonUNet2D + MoonTextEncoder + MoonImageVAE) | 23,713,743 | `ARCHITECTURE_DEFINED` | Text-to-image, inpainting, outpainting, variations, super-resolution. Random Gaussian initialization. |
+| **Moon Video** | `moon-video-v0` | Spatiotemporal Diffusion (MoonUNet3D + VideoVAE) | 17,014,643 | `ARCHITECTURE_DEFINED` | Text-to-video, image-to-video, camera control, character consistency (Higgsfield AI ambition). |
+| **Moon Documents** | `moon-documents-v0` | Programmatic Document Engine (`pypdf`, `python-docx`, `openpyxl`) | CPU-bound | `PROVIDER_CONNECTED` | High-fidelity generation and deep parsing of PDF, DOCX, PPTX, XLSX, CSV, and Markdown. |
+| **Moon Research** | `moon-research-v0` | Agentic Evidence Retrieval & Citation Engine | Pipeline | `PROVIDER_CONNECTED` | Multi-source web search, citation verification, fact-checking, and objective synthesis. |
+| **Moon Core** | `moon-core-v0` | Unified Intent Dispatcher & Tool Orchestrator | Pipeline | `PROVIDER_CONNECTED` | Analyzes user prompts, creates multi-step plans, coordinates engines, and aggregates responses. |
 
-```sh
-python train.py config/train_shakespeare_char.py
-```
+---
 
-If you peek inside it, you'll see that we're training a GPT with a context size of up to 256 characters, 384 feature channels, and it is a 6-layer Transformer with 6 heads in each layer. On one A100 GPU this training run takes about 3 minutes and the best validation loss is 1.4697. Based on the configuration, the model checkpoints are being written into the `--out_dir` directory `out-shakespeare-char`. So once the training finishes we can sample from the best model by pointing the sampling script at this directory:
+## 4. TEACHER DISTILLATION DATA FACTORY (`teacher/`)
 
-```sh
-python sample.py --out_dir=out-shakespeare-char
-```
-
-This generates a few samples, for example:
-
-```
-ANGELO:
-And cowards it be strawn to my bed,
-And thrust the gates of my threats,
-Because he that ale away, and hang'd
-An one with him.
-
-DUKE VINCENTIO:
-I thank your eyes against it.
-
-DUKE VINCENTIO:
-Then will answer him to save the malm:
-And what have you tyrannous shall do this?
-
-DUKE VINCENTIO:
-If you have done evils of all disposition
-To end his power, the day of thrust for a common men
-That I leave, to fight with over-liking
-Hasting in a roseman.
-```
-
-lol  `¯\_(ツ)_/¯`. Not bad for a character-level model after 3 minutes of training on a GPU. Better results are quite likely obtainable by instead finetuning a pretrained GPT-2 model on this dataset (see finetuning section later).
-
-**I only have a macbook** (or other cheap computer). No worries, we can still train a GPT but we want to dial things down a notch. I recommend getting the bleeding edge PyTorch nightly ([select it here](https://pytorch.org/get-started/locally/) when installing) as it is currently quite likely to make your code more efficient. But even without it, a simple train run could look as follows:
-
-```sh
-python train.py config/train_shakespeare_char.py --device=cpu --compile=False --eval_iters=20 --log_interval=1 --block_size=64 --batch_size=12 --n_layer=4 --n_head=4 --n_embd=128 --max_iters=2000 --lr_decay_iters=2000 --dropout=0.0
-```
-
-Here, since we are running on CPU instead of GPU we must set both `--device=cpu` and also turn off PyTorch 2.0 compile with `--compile=False`. Then when we evaluate we get a bit more noisy but faster estimate (`--eval_iters=20`, down from 200), our context size is only 64 characters instead of 256, and the batch size only 12 examples per iteration, not 64. We'll also use a much smaller Transformer (4 layers, 4 heads, 128 embedding size), and decrease the number of iterations to 2000 (and correspondingly usually decay the learning rate to around max_iters with `--lr_decay_iters`). Because our network is so small we also ease down on regularization (`--dropout=0.0`). This still runs in about ~3 minutes, but gets us a loss of only 1.88 and therefore also worse samples, but it's still good fun:
-
-```sh
-python sample.py --out_dir=out-shakespeare-char --device=cpu
-```
-Generates samples like this:
+Moon AI features a production-grade teacher data factory that synthesizes, validates, and stages high-density demonstrations from **Kimi K3.1 Pro** across 10 curriculum domains:
 
 ```
-GLEORKEN VINGHARD III:
-Whell's the couse, the came light gacks,
-And the for mought you in Aut fries the not high shee
-bot thou the sought bechive in that to doth groan you,
-No relving thee post mose the wear
+teacher/
+├── config/                  # Provider configurations (disabled-by-default external calls)
+│   ├── teacher_config.yaml
+│   └── __init__.py
+├── providers/               # Provider abstraction layer
+│   ├── base.py              # BaseTeacherProvider with retry backoff & key redaction
+│   ├── kimi.py              # KimiProvider (Kimi K3.1 Pro API & weights tracking)
+│   ├── mock.py              # MockTeacherProvider (deterministic offline CI engine)
+│   └── registry.py          # Provider factory
+├── schemas/                 # Data schemas & 15 required metadata fields
+│   ├── example.py           # TeacherExample dataclass & schema validator
+│   └── __init__.py
+├── validation/              # Multi-stage security & quality filters
+│   ├── filter.py            # SensitiveDataFilter, InjectionFilter, DuplicateDetector, LeakageDetector
+│   └── __init__.py
+├── cost_tracking/           # Financial & token accounting
+│   ├── tracker.py           # TokenCostTracker (records prompt/completion tokens & USD cost)
+│   └── __init__.py
+└── generation/              # High-level demonstration coordination
+    ├── generator.py         # DemonstrationGenerator
+    └── __init__.py
 ```
 
-Not bad for ~3 minutes on a CPU, for a hint of the right character gestalt. If you're willing to wait longer, feel free to tune the hyperparameters, increase the size of the network, the context length (`--block_size`), the length of training, etc.
+### The 10 Curriculum Domains
+1. **General Conversation**: Natural multi-turn cadence, nuanced perspective, conversational intelligence.
+2. **Multi-Turn Instruction Following**: Complex constraints, negative constraints, and contextual adherence.
+3. **Mathematical & Logical Reasoning**: Step-by-step `<thought>` derivation, algebraic proofs, invariant verification.
+4. **Programming & Debugging**: Idiomatic Python/JavaScript, unit test assertions, docstrings, complexity analysis.
+5. **Software Architecture & Systems Engineering**: Distributed systems design, microservices, database schemas.
+6. **Tool Selection & Agentic Execution**: Parsing schemas, formulating structured arguments, error handling.
+7. **Research & Evidence-Based Answering**: Citation anchoring, fact verification, unbiased objective summarization.
+8. **Document Creation & Structured Output**: Strict JSON schemas, CSV tables, and executive briefing formats.
+9. **Multimodal Prompt Understanding**: Deconstructing complex visual prompts, camera parameters, and shot planning.
+10. **Safety, Uncertainty & Refusal**: Firm refusal of dangerous/hazardous tasks, acknowledging epistemic limits.
 
-Finally, on Apple Silicon Macbooks and with a recent PyTorch version make sure to add `--device=mps` (short for "Metal Performance Shaders"); PyTorch then uses the on-chip GPU that can *significantly* accelerate training (2-3X) and allow you to use larger networks. See [Issue 28](https://github.com/karpathy/nanoGPT/issues/28) for more.
-
-## reproducing GPT-2
-
-A more serious deep learning professional may be more interested in reproducing GPT-2 results. So here we go - we first tokenize the dataset, in this case the [OpenWebText](https://openwebtext2.readthedocs.io/en/latest/), an open reproduction of OpenAI's (private) WebText:
-
-```sh
-python data/openwebtext/prepare.py
-```
-
-This downloads and tokenizes the [OpenWebText](https://huggingface.co/datasets/openwebtext) dataset. It will create a `train.bin` and `val.bin` which holds the GPT2 BPE token ids in one sequence, stored as raw uint16 bytes. Then we're ready to kick off training. To reproduce GPT-2 (124M) you'll want at least an 8X A100 40GB node and run:
-
-```sh
-torchrun --standalone --nproc_per_node=8 train.py config/train_gpt2.py
-```
-
-This will run for about 4 days using PyTorch Distributed Data Parallel (DDP) and go down to loss of ~2.85. Now, a GPT-2 model just evaluated on OWT gets a val loss of about 3.11, but if you finetune it it will come down to ~2.85 territory (due to an apparent domain gap), making the two models ~match.
-
-If you're in a cluster environment and you are blessed with multiple GPU nodes you can make GPU go brrrr e.g. across 2 nodes like:
-
-```sh
-# Run on the first (master) node with example IP 123.456.123.456:
-torchrun --nproc_per_node=8 --nnodes=2 --node_rank=0 --master_addr=123.456.123.456 --master_port=1234 train.py
-# Run on the worker node:
-torchrun --nproc_per_node=8 --nnodes=2 --node_rank=1 --master_addr=123.456.123.456 --master_port=1234 train.py
-```
-
-It is a good idea to benchmark your interconnect (e.g. iperf3). In particular, if you don't have Infiniband then also prepend `NCCL_IB_DISABLE=1` to the above launches. Your multinode training will work, but most likely _crawl_. By default checkpoints are periodically written to the `--out_dir`. We can sample from the model by simply `python sample.py`.
-
-Finally, to train on a single GPU simply run the `python train.py` script. Have a look at all of its args, the script tries to be very readable, hackable and transparent. You'll most likely want to tune a number of those variables depending on your needs.
-
-## baselines
-
-OpenAI GPT-2 checkpoints allow us to get some baselines in place for openwebtext. We can get the numbers as follows:
-
-```sh
-$ python train.py config/eval_gpt2.py
-$ python train.py config/eval_gpt2_medium.py
-$ python train.py config/eval_gpt2_large.py
-$ python train.py config/eval_gpt2_xl.py
-```
-
-and observe the following losses on train and val:
-
-| model | params | train loss | val loss |
-| ------| ------ | ---------- | -------- |
-| gpt2 | 124M         | 3.11  | 3.12     |
-| gpt2-medium | 350M  | 2.85  | 2.84     |
-| gpt2-large | 774M   | 2.66  | 2.67     |
-| gpt2-xl | 1558M     | 2.56  | 2.54     |
-
-However, we have to note that GPT-2 was trained on (closed, never released) WebText, while OpenWebText is just a best-effort open reproduction of this dataset. This means there is a dataset domain gap. Indeed, taking the GPT-2 (124M) checkpoint and finetuning on OWT directly for a while reaches loss down to ~2.85. This then becomes the more appropriate baseline w.r.t. reproduction.
-
-## finetuning
-
-Finetuning is no different than training, we just make sure to initialize from a pretrained model and train with a smaller learning rate. For an example of how to finetune a GPT on new text go to `data/shakespeare` and run `prepare.py` to download the tiny shakespeare dataset and render it into a `train.bin` and `val.bin`, using the OpenAI BPE tokenizer from GPT-2. Unlike OpenWebText this will run in seconds. Finetuning can take very little time, e.g. on a single GPU just a few minutes. Run an example finetuning like:
-
-```sh
-python train.py config/finetune_shakespeare.py
-```
-
-This will load the config parameter overrides in `config/finetune_shakespeare.py` (I didn't tune them much though). Basically, we initialize from a GPT2 checkpoint with `init_from` and train as normal, except shorter and with a small learning rate. If you're running out of memory try decreasing the model size (they are `{'gpt2', 'gpt2-medium', 'gpt2-large', 'gpt2-xl'}`) or possibly decreasing the `block_size` (context length). The best checkpoint (lowest validation loss) will be in the `out_dir` directory, e.g. in `out-shakespeare` by default, per the config file. You can then run the code in `sample.py --out_dir=out-shakespeare`:
+### The 6-Stage Defense Pipeline
 
 ```
-THEODORE:
-Thou shalt sell me to the highest bidder: if I die,
-I sell thee to the first; if I go mad,
-I sell thee to the second; if I
-lie, I sell thee to the third; if I slay,
-I sell thee to the fourth: so buy or sell,
-I tell thee again, thou shalt not sell my
-possession.
-
-JULIET:
-And if thou steal, thou shalt not sell thyself.
-
-THEODORE:
-I do not steal; I sell the stolen goods.
-
-THEODORE:
-Thou know'st not what thou sell'st; thou, a woman,
-Thou art ever a victim, a thing of no worth:
-Thou hast no right, no right, but to be sold.
+Candidate Demonstration
+  │
+  ├── [1] Sensitive Data Filter ───────► (Detects emails, phone numbers, SSNs, credit cards, API keys) ──► Quarantine
+  ├── [2] Prompt Injection Filter ─────► (Detects jailbreaks, system prompt overrides, DAN mode) ────────► Quarantine
+  ├── [3] Quality & Repetition Filter ──► (Detects degenerative repetition loops, length violations) ─────► Quarantine
+  ├── [4] Blind Test Leakage Detector ─► (Ensures zero overlap with the 12-category test benchmark) ─────► Quarantine
+  ├── [5] Duplicate Detector ──────────► (Checks exact SHA-256 hash and word 3-gram Jaccard > 0.85) ─────► Quarantine
+  │
+  ▼
+APPROVED for Production Manifests (datasets/manifests/chat_train.jsonl)
 ```
 
-Whoa there, GPT, entering some dark place over there. I didn't really tune the hyperparameters in the config too much, feel free to try!
+---
 
-## sampling / inference
+## 5. INDEPENDENT EVALUATION & CRYPTOGRAPHIC PROMOTION GATE
 
-Use the script `sample.py` to sample either from pre-trained GPT-2 models released by OpenAI, or from a model you trained yourself. For example, here is a way to sample from the largest available `gpt2-xl` model:
+Moon AI does not evaluate models based on training loss alone, nor does it reward superficial stylistic mimicry of the teacher.
 
-```sh
-python sample.py \
-    --init_from=gpt2-xl \
-    --start="What is the answer to life, the universe, and everything?" \
-    --num_samples=5 --max_new_tokens=100
+### 5.1 The 12 Blind Benchmark Categories
+Located in [`evaluation/benchmarks/blind_test_suite.json`](file:///d:/Downloads/linkden%20post/ai/evaluation/benchmarks/blind_test_suite.json), strictly isolated from training manifests:
+1. `general_knowledge`
+2. `unseen_conversation`
+3. `multi_turn_instruction`
+4. `math_reasoning` (evaluated on exact final derivation)
+5. `logical_reasoning` (fallacy detection & formal validity)
+6. `programming` (code syntax, execution, and unit assertions)
+7. `debugging` (root-cause identification & idiomatic repair)
+8. `tool_selection` (tool choice correctness & argument synthesis)
+9. `structured_output` (strict JSON schema compliance)
+10. `long_context` (accurate needle retrieval in multi-thousand word contexts)
+11. `safety_uncertainty` (mandatory refusal of hazardous requests; **100% score required**)
+12. `document_task_planning` (hierarchical document structure & risk analysis)
+
+### 5.2 Promotion Gate & Rollback Invariant
+In [`evaluation/teacher_student_eval.py`](file:///d:/Downloads/linkden%20post/ai/evaluation/teacher_student_eval.py), `PromotionGate` governs production model promotion:
+- **Safety Invariant**: Candidate must score **100.0%** on the `safety_uncertainty` benchmark. Any refusal failure instantly rejects the model.
+- **Minimum Score Floor**: Composite score must reach at least **75.0%**.
+- **Non-Regression Barrier**: Score cannot drop by more than **5.0%** in any critical category (math, code, logic) compared to the active baseline.
+- **Rollback Retention**: When a candidate is promoted, the previous production checkpoint path is permanently recorded in metadata, enabling one-click instant rollback.
+
+---
+
+## 6. CONTROLLED LEARNING & USER PRIVACY SEPARATION
+
+Moon AI enforces strict technical boundaries between personal user context and training infrastructure:
+
+```
++---------------------------------------------------------------------------------------------------+
+|  A. USER MEMORY (core/memory/user_memory.py)                                                      |
+|     Stores user preferences (coding style, language) for live session personalization.            |
+|     * INVARIANT: eligible_for_training == False. Never enters model weights.                     |
+|     * Full user sovereignty: Users can inspect, delete individual keys, or purge all data.        |
++---------------------------------------------------------------------------------------------------+
+|  B. FEEDBACK DATA                                                                                 |
+|     Explicit user ratings (thumbs up/down) and corrections logged for offline audit.              |
++---------------------------------------------------------------------------------------------------+
+|  C. TRAINING DATA                                                                                 |
+|     Validated, PII-scrubbed, injection-filtered examples in signed JSONL manifests.               |
+|     Requires explicit user donation and double opt-in consent.                                     |
++---------------------------------------------------------------------------------------------------+
+|  D. MODEL PARAMETERS                                                                              |
+|     Actual PyTorch neural network weights.                                                        |
+|     * INVARIANT: Live weight updates during conversations are PERMANENTLY FORBIDDEN.              |
+|     * Weights are updated ONLY in scheduled, audited offline batch runs.                          |
++---------------------------------------------------------------------------------------------------+
 ```
 
-If you'd like to sample from a model you trained, use the `--out_dir` to point the code appropriately. You can also prompt the model with some text from a file, e.g. ```python sample.py --start=FILE:prompt.txt```.
+---
 
-## efficiency notes
+## 7. HARDWARE FEASIBILITY & COMPUTE BUDGET
 
-For simple model benchmarking and profiling, `bench.py` might be useful. It's identical to what happens in the meat of the training loop of `train.py`, but omits much of the other complexities.
+Moon AI is designed for affordable, practical execution on commodity and cloud infrastructure:
 
-Note that the code by default uses [PyTorch 2.0](https://pytorch.org/get-started/pytorch-2.0/). At the time of writing (Dec 29, 2022) this makes `torch.compile()` available in the nightly release. The improvement from the one line of code is noticeable, e.g. cutting down iteration time from ~250ms / iter to 135ms / iter. Nice work PyTorch team!
+```
+                            MOON CHAT PILOT (25.7M) ON GOOGLE COLAB T4
++---------------------------------------------------------------------------------------------------+
+| Total VRAM Available: 15,360 MB (15.3 GB)                                                         |
+|                                                                                                   |
+| [Peak VRAM: 1,312.1 MB (8.5%)] ■■■■□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□                          |
+| [VRAM Headroom: 14,047.9 MB (91.5%)]                                                              |
+|                                                                                                   |
+| Model Weights (FP16):          51.4 MB                                                            |
+| Gradients (FP16):              51.4 MB                                                            |
+| AdamW Optimizer States (FP32): 308.4 MB                                                           |
+| Activations (b=4, s=512):      300.9 MB                                                           |
+| CUDA Overhead & PyTorch Context:600.0 MB                                                          |
+| Total Estimated Peak VRAM:     1,312.1 MB (OOM Risk: LOW)                                         |
++---------------------------------------------------------------------------------------------------+
+```
 
-## todos
+### Hardware Environment Mapping
 
-- Investigate and add FSDP instead of DDP
-- Eval zero-shot perplexities on standard evals (e.g. LAMBADA? HELM? etc.)
-- Finetune the finetuning script, I think the hyperparams are not great
-- Schedule for linear batch size increase during training
-- Incorporate other embeddings (rotary, alibi)
-- Separate out the optim buffers from model params in checkpoints I think
-- Additional logging around network health (e.g. gradient clip events, magnitudes)
-- Few more investigations around better init etc.
+| Environment | Supported Workloads | Cost |
+| :--- | :--- | :--- |
+| **Local Windows Laptop (CPU / 16GB RAM)** | Unit tests (221 suites), frontend build, schema validation, document processing, mock runs. | **\$0.00** |
+| **Google Colab Free (1x NVIDIA T4 16GB)** | Moon Chat Pilot (25.7M) training, Baseline (86.1M) training, Image pilot inference. | **\$0.00** |
+| **Google Colab Pro ($10/mo, L4 24GB / A100 40GB)** | 124M-350M student training, Moon Image SFT training, short video clip synthesis. | **\$10.00 / mo** |
+| **Kimi K3.1 Pro Teacher API Distillation** | Synthesizing 10,000 verified demonstrations across all 10 curriculum domains. | **~$37.50 USD total** |
 
-## troubleshooting
+> [!NOTE]
+> **Why 3T Teacher Weights Cannot Run on a 16GB GPU**: A foundation model of the scale of Kimi K3.1 Pro requires 350 GB to 1.5 TB of memory. API distillation is mathematically and financially the optimal strategy for sovereign training.
 
-Note that by default this repo uses PyTorch 2.0 (i.e. `torch.compile`). This is fairly new and experimental, and not yet available on all platforms (e.g. Windows). If you're running into related error messages try to disable this by adding `--compile=False` flag. This will slow down the code but at least it will run.
+---
 
-For some context on this repository, GPT, and language modeling it might be helpful to watch my [Zero To Hero series](https://karpathy.ai/zero-to-hero.html). Specifically, the [GPT video](https://www.youtube.com/watch?v=kCc8FmEb1nY) is popular if you have some prior language modeling context.
+## 8. REPOSITORY STRUCTURE
 
-For more questions/discussions feel free to stop by **#nanoGPT** on Discord:
+```
+NanoGPT/
+├── core/                        # Central policy, user memory, learning lifecycle, and multimodal engines
+│   ├── policy.py                # Policy B (TEACHER_STUDENT_RANDOM_INIT) & invariant definitions
+│   ├── memory/                  # User memory manager (GDPR-compliant, isolated from training)
+│   ├── learning_lifecycle/      # Staged learning progression (no live updates)
+│   └── multimodal/              # Multimodal capability registry & Moon Core orchestrator
+├── teacher/                     # Teacher distillation engine (Kimi K3.1 Pro integration)
+│   ├── config/                  # Provider configs (disabled-by-default external calls)
+│   ├── providers/               # BaseTeacherProvider, KimiProvider, MockTeacherProvider
+│   ├── schemas/                 # TeacherExample dataclass (15 metadata fields, 10 domains)
+│   ├── validation/              # PII, injection, duplicate, quality, and leakage filters
+│   ├── cost_tracking/           # Token & USD cost tracking
+│   └── generation/              # DemonstrationGenerator
+├── evaluation/                  # Independent evaluation and model promotion
+│   ├── benchmarks/              # 12-category blind benchmark suite
+│   ├── teacher_student_eval.py  # Evaluator and PromotionGate with rollback
+│   └── security/                # Ed25519 cryptographic attestation engines
+├── training/                    # Sovereign model training pipelines
+│   └── chat/                    # Moon Chat dataset, config, hardware validation, training loop
+│       ├── config.yaml          # Model architecture & T4 budget
+│       ├── dataset.py           # Multi-window chunking & SFT assistant-only loss masking
+│       ├── readiness_gate.py    # Strict scale & provenance gate (requires >= 500 records)
+│       ├── train.py             # Random Gaussian scratch training with exposure metrics
+│       └── validate_hardware.py # Parameter sizing & empirical CUDA GPU benchmark
+├── datasets/                    # Curated manifests, tokenizers, and audit engines
+│   ├── manifests/               # chat_train.jsonl, chat_val.jsonl, chat_test.jsonl
+│   └── chat/                    # Sovereign tokenizer & corpus definitions
+├── models/                      # Model architectures, registries, and checkpoints
+│   ├── registry.json            # Machine-readable capability registry
+│   └── checkpoints/             # Isolated candidate and production checkpoints
+├── frontend/                    # Modern Vite + React production user interface
+├── webapp/                      # Flask / FastAPI backend service
+├── docs/                        # Complete technical specifications & implementation reports
+└── tests/                       # 221 comprehensive unit & integration tests
+```
 
-[![](https://dcbadge.vercel.app/api/server/3zy8kqD9Cp?compact=true&style=flat)](https://discord.gg/3zy8kqD9Cp)
+---
 
-## acknowledgements
+## 9. QUICK START & DEVELOPER GUIDE
 
-All nanoGPT experiments are powered by GPUs on [Lambda labs](https://lambdalabs.com), my favorite Cloud GPU provider. Thank you Lambda labs for sponsoring nanoGPT!
+### 9.1 Prerequisites & Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/Prem759-0/NanoGPT.git
+cd NanoGPT
+
+# Create and activate Python virtual environment
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 9.2 Running Automated Test Discovery (221 Tests)
+
+```bash
+# Execute full repository test discovery (all suites pass with zero network dependency)
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+### 9.3 Running the Frontend & Backend
+
+```bash
+# Build frontend production bundle
+npm run build --prefix frontend
+
+# Launch development frontend
+npm run dev --prefix frontend
+
+# Launch web backend service
+python webapp/app.py
+```
+
+### 9.4 Running Parameter Sizing & Hardware Validation
+
+```bash
+# Validates parameter math (25.7M pilot, 86.1M base) and measures CUDA allocations if GPU present
+python training/chat/validate_hardware.py
+```
+
+### 9.5 Running an Engineering Smoke Test
+
+```bash
+# Executes 1 iteration to verify PyTorch backward pass, loss masking, and checkpoint creation
+python training/chat/train.py --smoke-test
+```
+
+---
+
+## 10. PROJECT ROADMAP & PROGRESSION
+
+```
+                                    THE MOON AI ROADMAP
+┌───────────────────────────────┐
+│ Stage 2.0.1 - 2.0.7           │  Hardening, Asymmetric Trust, Ed25519 Attestation, Registry Repair
+│ [COMPLETED]                   │  
+└──────────────┬────────────────┘
+               │
+┌──────────────▼────────────────┐
+│ Stage 2.1.1 - 2.1.2           │  Pre-LayerNorm GELU Architecture, Assistant-Only Loss Masking,
+│ [COMPLETED]                   │  Multi-Window Chunking, Scale Readiness Gate (22 Verified Records)
+└──────────────┬────────────────┘
+               │
+┌──────────────▼────────────────┐
+│ Stage 2.1.3                   │  Policy B Migration (TEACHER_STUDENT_RANDOM_INIT), Kimi K3.1 Pro Provider,
+│ [COMPLETED]                   │  Teacher Data Factory, 12-Category Benchmark, Multimodal Orchestrator
+└──────────────┬────────────────┘
+               │
+┌──────────────▼────────────────┐
+│ Stage 2.1.4                   │  Teacher Demonstration Generation (500+ records, 100k+ tokens),
+│ [NEXT STAGE]                  │  Readiness Gate Transition to READY_FOR_PILOT, Live Colab T4 Training
+└──────────────┬────────────────┘
+               │
+┌──────────────▼────────────────┐
+│ Stage 2.2 - 2.3               │  Moon Code Pilot Training, Moon Image (23.7M Diffusion) Training,
+│ [FUTURE]                      │  Moon Video (17.0M Spatiotemporal) Preview, Automated Document Engine
+└───────────────────────────────┘
+```
+
+---
+
+## 11. LICENSE & SOVEREIGN OWNERSHIP
+
+- **Project Lead & Architect**: Prem Gaikwad (India 🇮🇳)
+- **Ownership Policy**: `TEACHER_STUDENT_RANDOM_INIT`
+- **License**: Custom Sovereign Open-Access License (Derived from MIT-licensed NanoGPT components by Andrej Karpathy).
+- **Attribution Notice**: Wikipedia-derived educational summaries are licensed under `CC-BY-SA-4.0`. Teacher-assisted demonstrations adhere to responsible synthetic training and permissive distillation terms.
+- **Integrity Guarantee**: All student models begin from scratch. Zero third-party foundation weights are ever imported into student parameters.

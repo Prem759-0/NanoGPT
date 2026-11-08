@@ -1,0 +1,119 @@
+# Moon AI — Moon Chat v0 Training Configuration
+# Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
+# Ownership Policy: TEACHER_STUDENT_RANDOM_INIT (Legacy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY)
+# Hardware Target: Google Colab NVIDIA T4 (15.3 GB VRAM)
+
+model_track: "moon-chat-v0"
+ownership_policy: "TEACHER_STUDENT_RANDOM_INIT"
+legacy_ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
+
+# Teacher Distillation Architecture (Student starts strictly from random Gaussian scratch)
+# Policy B Option 1: Zero teacher influence (no teacher weights, no teacher demonstrations, zero external APIs)
+teacher_distillation:
+  enabled: false
+  strategy: "POLICY_B_ZERO_TEACHER_INFLUENCE"
+  target_teacher: null
+  teacher_provider: null
+  student_init_method: "random_gaussian_scratch"
+  allow_teacher_demonstrations: false
+  prohibit_teacher_checkpoint_weights: true
+
+# Truthful Architecture Declaration (Matches model.py exactly)
+architecture_type: "Causal_Decoder_Only_Transformer_PreLayerNorm_GELU"
+architecture_details:
+  normalization: "Pre-LayerNorm"
+  activation: "GELU"
+  position_encoding: "Learned Absolute Embeddings (wpe)"
+  initialization: "Random Gaussian N(0, 0.02^2)"
+  weight_tying: true # wte shared with lm_head
+
+# T4 Pilot Model Architecture (Random Gaussian Initialization Only)
+model:
+  name: "moon-chat-pilot-25m"
+  n_layer: 8
+  n_head: 8
+  n_embd: 512
+  block_size: 512
+  vocab_size: 512
+  dropout: 0.1
+  bias: false
+  exact_parameters: 25698816
+
+# Baseline Model Architecture (Reference Scale: 86.1M exact parameters with vocab_size 512)
+# Reconciled in Stage 2.1.3.1: GPT-2 Small hidden geometry (768 dim, 12 layers, 12 heads) yields
+# exactly 86,133,504 parameters when paired with Moon Chat's 512-token pure BPE vocabulary.
+# (The 124M figure only applies to standard GPT-2 with 50,257 vocab size).
+baseline_model:
+  name: "moon-chat-86m"
+  n_layer: 12
+  n_head: 12
+  n_embd: 768
+  block_size: 1024
+  vocab_size: 512
+  dropout: 0.1
+  bias: false
+  exact_parameters: 86133504
+  reference_geometry: "GPT-2 Small Hidden Structure (768 embd, 12 layers, 12 heads)"
+  parameter_reconciliation_note: "Standard GPT-2 124M has vocab_size 50,257. Under Moon Chat's 512-token pure BPE vocabulary, the exact parameter count is 86,133,504 (86.1M)."
+
+# Backward-compatible alias for legacy Stage 2.1.1 suite
+baseline_124m:
+  name: "moon-chat-86m"
+  n_layer: 12
+  n_head: 12
+  n_embd: 768
+  block_size: 1024
+  vocab_size: 512
+  dropout: 0.1
+  bias: false
+  exact_parameters: 86133504
+  alias_of: "baseline_model"
+
+# Google Colab T4 Training Hyperparameters
+training:
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0003
+  min_lr: 0.00003
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  warmup_iters: 50
+  max_iters: 500
+  eval_interval: 50
+  eval_iters: 10
+  mixed_precision: "fp16" # PyTorch torch.cuda.amp on T4
+  seed: 42
+  loss_masking: "assistant_only" # Prompts masked with -1; response tokens calculated
+
+# Paths
+paths:
+  train_manifest: "datasets/manifests/chat_train.jsonl"
+  val_manifest: "datasets/manifests/chat_val.jsonl"
+  test_manifest: "datasets/manifests/chat_test.jsonl"
+  tokenizer_path: "models/chat/tokenizer.json"
+  checkpoint_dir: "models/checkpoints/chat"
+  checkpoint_name: "moon_chat_pilot_v0.pt"
+
+# Hardware Feasibility Budget (NVIDIA T4 15.3 GB VRAM)
+hardware_budget:
+  gpu: "NVIDIA T4 (Turing, Compute Capability 7.5)"
+  vram_available_mb: 15360
+  model_params: 25698816
+  model_weights_fp16_mb: 51.4
+  gradients_fp16_mb: 51.4
+  optimizer_states_adamw_fp32_mb: 308.4
+  activations_estimate_mb: 300.9
+  cuda_runtime_context_mb: 600.0
+  estimated_peak_vram_mb: 1312.1
+  vram_safety_margin_mb: 14047.9
+  oom_risk: "LOW"
+  oom_risk_assessment: "LOW (safe with micro-batch 4 and gradient accumulation 8. Theoretical OOM risk is never zero; elevates if batch_size > 32 or block_size > 2048 without gradient checkpointing)"
+  storage_requirements:
+    checkpoint_size_mb: 98.1
+    full_run_with_checkpoints_mb: 350.0
+    colab_disk_headroom: "Ample (> 50 GB free)"
+  expected_training_time:
+    t4_gpu_500_iters: "45-60 seconds"
+    cpu_500_iters: "25-30 minutes"

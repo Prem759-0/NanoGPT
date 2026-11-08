@@ -1,11 +1,26 @@
 {
-  "version": "1.0.0",
-  "current_best_model": {
-    "name": "Moon AI Sovereign (7.6B v1)",
-    "checkpoint": "Moon-AI-v1.Q4_K_M.gguf",
-    "composite_score": 75.0,
-    "promoted_at": "2026-10-27T16:03:47.493285+00:00"
-  },
+  "version": "2.0.8",
+  "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
+  "reconciled_at": "2026-11-01T22:45:00+00:00",
+  "status": "AWAITING_SOVEREIGN_PRODUCTION_MODEL",
+  "current_best_model": null,
+  "unverified_legacy_artifacts": [
+    {
+      "name": "Moon AI Sovereign (7.6B v1)",
+      "checkpoint": "Moon-AI-v1.Q4_K_M.gguf",
+      "claimed_score": 75.0,
+      "status": "UNVERIFIED_LEGACY_THIRD_PARTY_DERIVATIVE",
+      "provenance": "UNVERIFIED_PRETRAINED_DERIVATIVE (Qwen-2.5-Coder base)",
+      "policy_compliance": "NON_COMPLIANT",
+      "disqualification_reasons": [
+        "Derived from third-party pretrained base weights (unsloth/Qwen2.5-7B-Instruct) via LoRA fine-tuning in Train_Super_AI_Colab.ipynb.",
+        "Violates STRICT_SOVEREIGN_RANDOM_INIT_ONLY project policy prohibiting external pretrained weights.",
+        "Zero cryptographic provenance attestation and zero signed evaluation attestation artifacts exist in the repository.",
+        "Training dataset manifests are unverified and not reproducible from repository code."
+      ],
+      "notes": "Preserved for historical traceability only. Cannot be used as a production sovereign model."
+    }
+  ],
   "promotion_history": [
     {
       "candidate_name": "scratch",
@@ -13,7 +28,7 @@
       "status": "REJECTED",
       "score": 65.3,
       "reasons": [
-        "Candidate score (65.3) regressed compared to current best (75.0)."
+        "Candidate score (65.3) regressed compared to legacy benchmark (75.0)."
       ]
     },
     {
@@ -22,7 +37,7 @@
       "status": "REJECTED",
       "score": 65.3,
       "reasons": [
-        "Candidate score (65.3) regressed compared to current best (75.0)."
+        "Candidate score (65.3) regressed compared to legacy benchmark (75.0)."
       ]
     },
     {
@@ -33,7 +48,7 @@
       "reasons": [
         "Coding syntax validity (0.0%) is below 100% threshold.",
         "Composite score (10.5) is below minimum floor (60.0).",
-        "Candidate score (10.5) regressed compared to current best (75.0)."
+        "Candidate score (10.5) regressed compared to legacy benchmark (75.0)."
       ]
     }
   ]

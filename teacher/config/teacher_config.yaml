@@ -1,0 +1,65 @@
+# Moon AI — Teacher Provider & Data Factory Configuration
+# Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
+# Ownership Policy: TEACHER_STUDENT_RANDOM_INIT
+
+# Safety Rule: External API calls are disabled by default to prevent unexpected network calls or costs
+allow_external_calls: false
+
+# Default teacher provider
+default_provider: "kimi"
+
+providers:
+  kimi:
+    name: "kimi"
+    display_name: "Moonshot Kimi K3.1 Pro"
+    model_id: "kimi-k3.1-pro"
+    api_base_url: "https://api.moonshot.cn/v1"
+    api_key_env_var: "KIMI_API_KEY"
+    fallback_key_env_var: "MOON_TEACHER_API_KEY"
+    timeout_seconds: 30
+    max_retries: 3
+    retry_backoff_factor: 2.0
+    rate_limit_requests_per_minute: 60
+    estimated_pricing_usd_per_1k_tokens:
+      prompt: 0.002
+      completion: 0.008
+    deterministic_parameters:
+      temperature: 0.2
+      top_p: 0.95
+      seed: 42
+    weights_announcement:
+      status: "SCHEDULED_RELEASE"
+      announcement_date: "2026-11-04"
+      url: "https://www.kimi.com/news/kimi-k3-1-pro"
+      local_adapter_enabled: false
+
+  mock:
+    name: "mock"
+    display_name: "Deterministic Offline Mock Teacher"
+    model_id: "mock-teacher-v1"
+    simulated_latency_ms: 0
+    deterministic: true
+
+  local:
+    name: "local"
+    display_name: "Local Offline Teacher (GGUF / PyTorch Checkpoint)"
+    model_id: "local-teacher-v1"
+    checkpoint_path: "models/teachers/checkpoints/teacher_model.gguf"
+    allow_downloads: false
+    backend: "local_checkpoint"
+    require_verified_installation: true
+
+generation_defaults:
+  max_tokens: 1024
+  temperature: 0.3
+  seed: 42
+
+validation_pipeline:
+  min_response_chars: 20
+  max_response_chars: 16000
+  enable_pii_filter: true
+  enable_injection_filter: true
+  enable_duplicate_detector: true
+  duplicate_jaccard_threshold: 0.85
+  enable_leakage_detector: true
+
