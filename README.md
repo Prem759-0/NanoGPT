@@ -137,21 +137,25 @@ Moon AI models are engineered specifically to train and execute on accessible cl
 | **Moon Chat Base** | **86.10M** (86,108,160) | 12 | 12 | 768 | 1024 tokens | ~5.84 GB | Google Colab Tesla T4 |
 | **Moon Code Pilot** | **25.70M** (25,702,400) | 6 | 6 | 384 | 512 tokens | ~1.65 GB | Google Colab Tesla T4 |
 
-### Empirical VRAM Allocation on Tesla T4 (25.7M Pilot)
+---
 
-```
-+--------------------------------------------------------------------+
-|  TESLA T4 VRAM ALLOCATION (25.70M PARAMETERS, BATCH SIZE 4, FP16)  |
-+--------------------------------------------------------------------+
-|  Model Weights (FP16):           51.4 MB                           |
-|  Optimizer States (AdamW):       205.6 MB                          |
-|  Gradients (FP16):               51.4 MB                           |
-|  Activation Memory (Seq 512):    ~380.0 MB                         |
-|  PyTorch CUDA Context Overhead:  ~850.0 MB                         |
-|  Total Peak Allocation:          ~1.54 GB / 15.0 GB (<11% VRAM)    |
-|  Safety Headroom:                >13.4 GB (Zero OOM Risk)          |
-+--------------------------------------------------------------------+
-```
+## 5. DATA MANIFEST PROVENANCE & TRAINING CURRICULUM
+
+Training datasets undergo strict verification, including format normalization, deduplication, and canonical LF SHA-256 integrity audits:
+
+### Manifest Provenance & Accounting
+
+| Dataset Manifest | Records | Training Windows (Seq 512) | Canonical LF SHA-256 Hash | Loss Masking Policy |
+| :--- | :--- | :--- | :--- | :--- |
+| `scaled_chat_train.jsonl` | **990 records** | **990 windows** | `c0f37ba515977e1ea542fed18c78ad01e91307b22fdb21dca9a4734da7d6323c` | Assistant-only (`user` tokens ignored) |
+| `scaled_chat_val.jsonl` | **50 records** | **50 windows** | `b2f53140c0f417d59eabb5cce2163198308bc2ec0ffea575e95a3fc5cbdd27f7` | Assistant-only evaluation loss |
+| `scaled_chat_test.jsonl` | **60 records** | **60 windows** | `26ba7b744d08409ff0306ee1b1ca20d1c9ef00ae011f008890cf5b6ff92aee28` | **Blind holdout** (Excluded from training/val) |
+
+### Key Training Innovations
+
+1. **Assistant-Only Loss Masking**: Cross-entropy loss is computed exclusively on assistant response tokens. User prompt tokens and system instructions are masked with `-100`, preventing the model from wasting capacity predicting user queries.
+2. **Sovereign Pure-BPE Tokenizer**: Vocabulary size fixed at **512 tokens**, minimizing embedding parameter overhead while maximizing compression and throughput on specialized coding/dialogue text.
+3. **Multi-Window Chunking**: Long multi-turn conversations are chunked into contiguous 512-token sequence windows with proper context preservation.
 
 ---
 
