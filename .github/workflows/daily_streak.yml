@@ -1,0 +1,30 @@
+name: Moon AI Daily GitHub Streak Synchronizer
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs every day at 00:00 UTC
+  workflow_dispatch:      # Allows manual one-click trigger from GitHub Actions UI
+
+permissions:
+  contents: write
+
+jobs:
+  daily-streak-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Record Daily Engineering Milestone & Sync Streak
+        run: |
+          git config user.name "premagikwad1213"
+          git config user.email "a70064182@gmail.com"
+          python scripts/daily_streak_update.py --note "Automated daily sovereign verification, health check, and streak sync"
