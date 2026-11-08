@@ -151,12 +151,70 @@ Training datasets undergo strict verification, including format normalization, d
 | `scaled_chat_val.jsonl` | **50 records** | **50 windows** | `b2f53140c0f417d59eabb5cce2163198308bc2ec0ffea575e95a3fc5cbdd27f7` | Assistant-only evaluation loss |
 | `scaled_chat_test.jsonl` | **60 records** | **60 windows** | `26ba7b744d08409ff0306ee1b1ca20d1c9ef00ae011f008890cf5b6ff92aee28` | **Blind holdout** (Excluded from training/val) |
 
-### Key Training Innovations
+---
 
-1. **Assistant-Only Loss Masking**: Cross-entropy loss is computed exclusively on assistant response tokens. User prompt tokens and system instructions are masked with `-100`, preventing the model from wasting capacity predicting user queries.
-2. **Sovereign Pure-BPE Tokenizer**: Vocabulary size fixed at **512 tokens**, minimizing embedding parameter overhead while maximizing compression and throughput on specialized coding/dialogue text.
-3. **Multi-Window Chunking**: Long multi-turn conversations are chunked into contiguous 512-token sequence windows with proper context preservation.
+## 6. QUICK START & DEVELOPER GUIDE
+
+### 6.1 Clone & Environment Setup
+
+```bash
+# Clone the official sovereign repository
+git clone https://github.com/Prem759-0/NanoGPT.git
+cd NanoGPT
+
+# Create Python virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install sovereign dependencies
+pip install -r requirements.txt
+```
+
+### 6.2 Running Automated Test Discovery
+
+```bash
+# Execute full repository unit and regression test suite
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+### 6.3 Running an Engineering Smoke Test
+
+```bash
+# Run 1-iteration smoke test with authentic Tesla T4 verification
+python training/chat/train.py --config training/chat/phase_2_4_t4_pilot.yaml --smoke-test
+```
 
 ---
 
-*(Sections expanding below in active daily release commits)*
+## 7. PROJECT ROADMAP & RELEASE PHASES
+
+```
+                                    THE MOON AI ROADMAP
+┌───────────────────────────────┐
+│ Stage 2.0.1 - 2.0.7           │  Zero-Trust Checkpoints, Asymmetric Attestation, Registry Repair
+│ [COMPLETED]                   │  
+└──────────────┬────────────────┘
+               │
+┌──────────────▼────────────────┐
+│ Stage 2.1.1 - 2.1.3           │  Pre-LN GELU Architecture, Assistant Loss Masking, Policy B Migration,
+│ [COMPLETED]                   │  Teacher Demonstration Integration, 512-Vocab BPE Tokenizer
+└──────────────┬────────────────┘
+               │
+┌──────────────▼────────────────┐
+│ Stage 2.4 - 2.5               │  Hardware Identity Certification (T4), 8 Production Preflight Gates,
+│ [ACTIVE PHASE]                │  Safe Atomic Checkpointing, 100-Iteration Pilot Verification
+└──────────────┬────────────────┘
+               │
+┌──────────────▼────────────────┐
+│ Stage 3.0                     │  Sovereign Production Convergence: Moon Core Multimodal Unified Stack
+│ [FUTURE]                      │  Full Multimodal Serving on HuggingFace Spaces & Edge Silicon
+└───────────────────────────────┘
+```
+
+---
+
+## 8. LICENSE & ATTRIBUTION
+
+- **Chief ML Systems Architect & Owner**: Prem Gaikwad (India 🇮🇳)
+- **Ownership Policy**: `TEACHER_STUDENT_RANDOM_INIT` (Pure Gaussian scratch initialization)
+- **License**: Sovereign Open-Access License (Derived from MIT-licensed NanoGPT components by Andrej Karpathy).
