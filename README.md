@@ -34,4 +34,39 @@ All specialist engines are orchestrated by **Moon Core** — an intelligent disp
 
 ---
 
+## 2. CORE OWNERSHIP POLICY: POLICY B (`TEACHER_STUDENT_RANDOM_INIT`)
+
+Moon AI is governed by an absolute mathematical and architectural policy:
+
+```
++---------------------------------------------------------------------------------------------------+
+|                                  THE INVARIANT BOUNDARY                                           |
++---------------------------------------------------------------------------------------------------+
+|  1. MOON STUDENT INITIALIZATION                                                                   |
+|     Every Moon student neural network is initialized exclusively from random Gaussian scratch     |
+|     weights: W ~ N(0, 0.02^2).                                                                    |
+|     Third-party foundation model weights are STRICTLY PROHIBITED from entering student parameters.|
+|                                                                                                   |
+|  2. TEACHER DISTILLATION                                                                          |
+|     Frontier foundation models serve strictly as external TEACHERS producing high-density         |
+|     demonstrations, reasoning chains, code examples, and evaluation tests.                        |
+|     Teacher parameters NEVER enter the Moon runtime or repository.                                |
+|                                                                                                   |
+|  3. AUTONOMOUS RUNTIME                                                                            |
+|     Once trained, Moon student models execute inference 100% autonomously on local or edge        |
+|     hardware without any runtime API dependencies.                                                |
++---------------------------------------------------------------------------------------------------+
+```
+
+### Technical Distinction Between Roles
+
+| Architectural Concept | Definition | Invariant Constraint |
+| :--- | :--- | :--- |
+| **Teacher Model** | External frontier LLM (e.g. Kimi K3.1 Pro / Claude 3.5 Sonnet). | Used exclusively for data curation and benchmark grading; never loaded into student runtime. |
+| **Student Model** | Moon proprietary neural network (Moon Chat, Moon Code). | Begins from 100% random Gaussian scratch weights (`random_gaussian_scratch`). |
+| **Teacher Inference** | Querying the teacher model via authenticated API. | Credential-isolated, metered, strictly forbidden during student production inference. |
+| **Student Training** | Optimization of student weights via cross-entropy loss. | Assistant-only loss masking, AdamW optimizer, FP16 mixed precision. |
+
+---
+
 *(Sections expanding below in active daily release commits)*
