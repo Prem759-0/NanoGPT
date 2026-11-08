@@ -371,16 +371,27 @@ def run_preflight(
     if p24_final == p24_best:
         g7_errors.append("Final and best checkpoint names cannot be identical.")
 
+    # Real Filesystem Pre-Flight Collision Check
+    ckpt_dir = cfg["paths"]["checkpoint_dir"]
+    abs_ckpt_dir = os.path.join(PROJECT_ROOT, ckpt_dir) if not os.path.isabs(ckpt_dir) else ckpt_dir
+    final_dest = os.path.join(abs_ckpt_dir, p24_final)
+    best_dest = os.path.join(abs_ckpt_dir, p24_best)
+    if os.path.isfile(final_dest):
+        g7_errors.append(f"Production final checkpoint '{final_dest}' already exists on disk! Overwrite blocked.")
+    if os.path.isfile(best_dest):
+        g7_errors.append(f"Production best checkpoint '{best_dest}' already exists on disk! Overwrite blocked.")
+
     g7_ok = len(g7_errors) == 0
     results["preflight_gates"]["gate_7_checkpoint_isolation"] = {
         "passed": g7_ok,
         "final_checkpoint_name": p24_final,
         "best_checkpoint_name": p24_best,
+        "filesystem_collision_cleared": g7_ok,
         "errors": g7_errors
     }
     if not g7_ok:
         results["blockers"].extend(g7_errors)
-    print(f"  Result: {'PASSED' if g7_ok else 'FAILED'} (Isolated destinations: {p24_final}, {p24_best})")
+    print(f"  Result: {'PASSED' if g7_ok else 'FAILED'} (Isolated destinations: {p24_final}, {p24_best}; Filesystem cleared)")
 
     # -------------------------------------------------------------
     # GATE 8: Blind-Test Split Immutability Certification
