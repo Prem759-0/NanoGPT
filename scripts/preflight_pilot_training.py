@@ -398,7 +398,15 @@ def run_preflight(
     # -------------------------------------------------------------
     print("[Gate 8/8] Verifying Blind-Test Split Isolation & Immutability...")
     g8_errors = []
-    test_sha = sha256_file(test_p)
+    with open(test_p, "rb") as f:
+        test_bytes = f.read()
+    test_raw_sha = hashlib.sha256(test_bytes).hexdigest()
+    test_lf_sha = hashlib.sha256(test_bytes.replace(b"\r\n", b"\n")).hexdigest()
+
+    expected_canonical_lf_sha = "e854f62814d413b36d02224777fe1d6d33a7ebffbac1a64feb4fee8de8c53428"
+    if test_lf_sha != expected_canonical_lf_sha:
+        g8_errors.append(f"Blind-test manifest canonical LF SHA-256 mismatch! Expected {expected_canonical_lf_sha}, got {test_lf_sha}.")
+
     # Verify test manifest is distinct from train and val
     if test_p == train_p or test_p == val_p:
         g8_errors.append("Blind-test manifest path points to training/val manifest!")
@@ -407,14 +415,15 @@ def run_preflight(
     results["preflight_gates"]["gate_8_test_split_isolation"] = {
         "passed": g8_ok,
         "test_manifest_path": os.path.relpath(test_p, PROJECT_ROOT),
-        "test_manifest_sha256": test_sha,
+        "test_manifest_canonical_lf_sha256": test_lf_sha,
+        "test_manifest_raw_sha256": test_raw_sha,
         "record_count": len(test_recs),
         "isolated_from_training": True,
         "errors": g8_errors
     }
     if not g8_ok:
         results["blockers"].extend(g8_errors)
-    print(f"  Result: {'PASSED' if g8_ok else 'FAILED'} (60 blind-test records untouched, SHA: {test_sha[:16]}...)")
+    print(f"  Result: {'PASSED' if g8_ok else 'FAILED'} (60 blind-test records untouched, LF SHA: {test_lf_sha[:16]}..., Raw: {test_raw_sha[:16]}...)")
 
     # Final Status
     all_passed = all(g["passed"] for g in results["preflight_gates"].values())

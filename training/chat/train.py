@@ -353,19 +353,28 @@ def train_moon_chat(
             "compute_capability": cc_str,
             "vram_mb": round(vram_mb, 1),
             "authenticated_t4": True,
+            "silicon_identity_status": reason,
             "verification_status": "AUTHENTICATED_TESLA_T4"
         }
     else:
         if device == "cuda" and torch.cuda.is_available():
             gpu_name = torch.cuda.get_device_name(0)
             cc_major, cc_minor = torch.cuda.get_device_capability(0)
+            cc_str = f"{cc_major}.{cc_minor}"
             vram_mb = torch.cuda.get_device_properties(0).total_memory / (1024 * 1024)
+            is_t4, reason, details = check_t4_hardware_identity(
+                device_name=gpu_name,
+                compute_capability=cc_str,
+                total_vram_mb=vram_mb,
+                min_vram_mb=14000.0
+            )
             gpu_identity_info = {
                 "name": gpu_name,
-                "compute_capability": f"{cc_major}.{cc_minor}",
+                "compute_capability": cc_str,
                 "vram_mb": round(vram_mb, 1),
-                "authenticated_t4": "t4" in gpu_name.lower(),
-                "verification_status": "SMOKE_TEST_CUDA"
+                "authenticated_t4": is_t4,
+                "silicon_identity_status": reason,
+                "verification_status": f"SMOKE_TEST_CUDA (Physical Hardware: {reason})"
             }
         else:
             gpu_identity_info = {
@@ -373,6 +382,7 @@ def train_moon_chat(
                 "compute_capability": "N/A",
                 "vram_mb": 0.0,
                 "authenticated_t4": False,
+                "silicon_identity_status": "CPU_ONLY",
                 "verification_status": "SMOKE_TEST_CPU"
             }
 
@@ -494,6 +504,7 @@ def train_moon_chat(
     print(f"  • GPU / Device Name:    {gpu_identity_info.get('name')}")
     print(f"  • Compute Capability:   {gpu_identity_info.get('compute_capability')}")
     print(f"  • Available VRAM:       {gpu_identity_info.get('vram_mb')} MB")
+    print(f"  • Silicon Identity:     {gpu_identity_info.get('silicon_identity_status', 'UNKNOWN')}")
     print(f"  • Hardware Gate Status: {gpu_identity_info.get('verification_status', 'UNKNOWN')}")
 
     print("\n[Data Manifest Provenance & Hash Integrity]")
@@ -504,15 +515,20 @@ def train_moon_chat(
     val_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(val_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
     test_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(test_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
     print(f"  • Train Manifest:       {train_rel} ({unique_records} records)")
-    print(f"    - LF SHA-256:         {train_lf_sha[:32] if train_lf_sha else 'N/A'}... [{train_status_tag}]")
+    print(f"    - Canonical LF SHA:   {train_lf_sha[:32] if train_lf_sha else 'N/A'}... [{train_status_tag}]")
+    print(f"    - Raw Disk SHA:       {train_raw_sha[:32] if train_raw_sha else 'N/A'}...")
     print(f"  • Val Manifest:         {val_rel} ({len(val_dataset)} windows)")
-    print(f"    - LF SHA-256:         {val_lf_sha[:32] if val_lf_sha else 'N/A'}... [{val_status_tag}]")
+    print(f"    - Canonical LF SHA:   {val_lf_sha[:32] if val_lf_sha else 'N/A'}... [{val_status_tag}]")
+    print(f"    - Raw Disk SHA:       {val_raw_sha[:32] if val_raw_sha else 'N/A'}...")
     print(f"  • Blind-Test Manifest:  {test_rel}")
-    print(f"    - LF SHA-256:         {test_lf_sha[:32] if test_lf_sha else 'N/A'}... [{test_status_tag}]")
+    print(f"    - Canonical LF SHA:   {test_lf_sha[:32] if test_lf_sha else 'N/A'}... [{test_status_tag}]")
+    print(f"    - Raw Disk SHA:       {test_raw_sha[:32] if test_raw_sha else 'N/A'}...")
     print("  • Blind-Test Isolation: 100% UNTOUCHED (Strictly excluded from train/val DataLoaders)")
 
+    non_emb_params = model.get_num_params(non_embedding=True)
     print("\n[Hyperparameters & Architecture]")
-    print(f"  • Parameters:           {total_params:,} ({total_params / 1e6:.2f}M)")
+    print(f"  • Total Parameters:     {total_params:,} ({total_params / 1e6:.2f}M)")
+    print(f"  • Non-Embedding Params: {non_emb_params:,} ({non_emb_params / 1e6:.2f}M) [Excludes 512x512 wpe]")
     print(f"  • Geometry:             {m_cfg['n_layer']} layers, {m_cfg['n_head']} heads, {m_cfg['n_embd']} embd, {block_size} ctx")
     print(f"  • Training Iterations:  {max_iters} (Warmup: {t_cfg.get('warmup_iters', 10)}, Eval Interval: {eval_interval})")
     print(f"  • Batch / Accumulation: {batch_size} micro-batch × {grad_accum_steps} accum = {batch_size * grad_accum_steps} effective batch")
