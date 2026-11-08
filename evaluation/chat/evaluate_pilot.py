@@ -143,7 +143,7 @@ def run_pilot_evaluation(
     test_manifest_sha256 = compute_file_sha256(test_manifest_path) if os.path.isfile(test_manifest_path) else "none"
 
     # Load checkpoint
-    ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    ckpt = torch.load(checkpoint_path, map_location=device, weights_only=True)
     ckpt_meta = ckpt.get("config", {}) or ckpt.get("metadata", {})
 
     # Policy B verification
@@ -153,7 +153,10 @@ def run_pilot_evaluation(
         raise ValueError("Policy B violation: model must be initialized from random_gaussian_scratch.")
 
     # Initialize Tokenizer and Model
-    tokenizer = SovereignTokenizer()
+    tok_path = os.path.join(PROJECT_ROOT, "models", "chat", "tokenizer.json")
+    if not os.path.exists(tok_path):
+        raise FileNotFoundError(f"Sovereign tokenizer not found at: {tok_path}")
+    tokenizer = SovereignTokenizer.load(tok_path)
     gpt_conf = GPTConfig(**ckpt["model_args"])
     model = GPT(gpt_conf)
     model.load_state_dict(ckpt["model"])

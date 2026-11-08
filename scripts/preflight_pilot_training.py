@@ -145,22 +145,29 @@ def run_preflight(
     if len(all_recs) != 1100:
         g2_errors.append(f"Expected exactly 1,100 total records, got: {len(all_recs)}")
 
-    # Audit individual records for zero teacher influence
+    # Audit individual records for zero teacher influence and schema validity
     teacher_found_count = 0
     invalid_prov_count = 0
+    schema_invalid_count = 0
     for r in all_recs:
+        valid, err = validate_chat_record(r, is_production=True)
+        if not valid:
+            schema_invalid_count += 1
+            g2_errors.append(f"Record '{r.get('id')}': {err}")
         p_type = r.get("provenance_type")
         if p_type != PROVENANCE_DETERMINISTIC_CURRICULUM_TEMPLATE:
             invalid_prov_count += 1
         if r.get("teacher_model") or r.get("teacher_provider") or r.get("is_teacher_generated"):
             teacher_found_count += 1
 
+    if schema_invalid_count > 0:
+        g2_errors.append(f"{schema_invalid_count} records failed production schema validation.")
     if invalid_prov_count > 0:
         g2_errors.append(f"{invalid_prov_count} records lack deterministic curriculum provenance.")
     if teacher_found_count > 0:
         g2_errors.append(f"{teacher_found_count} records contain teacher influence! Policy B violation.")
 
-    # Split leakage verification
+    # Split leakage verification (hashes and prompt text)
     train_hashes = {r.get("sha256") for r in train_recs}
     val_hashes = {r.get("sha256") for r in val_recs}
     test_hashes = {r.get("sha256") for r in test_recs}
@@ -170,6 +177,16 @@ def run_preflight(
         g2_errors.append("Hash overlap between train and test splits.")
     if val_hashes & test_hashes:
         g2_errors.append("Hash overlap between val and test splits.")
+
+    train_prompts = {normalize_text(r["messages"][0]["content"]) for r in train_recs if r.get("messages")}
+    val_prompts = {normalize_text(r["messages"][0]["content"]) for r in val_recs if r.get("messages")}
+    test_prompts = {normalize_text(r["messages"][0]["content"]) for r in test_recs if r.get("messages")}
+    if train_prompts & val_prompts:
+        g2_errors.append("Prompt text overlap between train and val splits.")
+    if train_prompts & test_prompts:
+        g2_errors.append("Prompt text overlap between train and test splits.")
+    if val_prompts & test_prompts:
+        g2_errors.append("Prompt text overlap between val and test splits.")
 
     g2_ok = len(g2_errors) == 0
     results["preflight_gates"]["gate_2_corpus_provenance"] = {
@@ -229,27 +246,37 @@ def run_preflight(
     if actual_params != 25698816:
         g4_errors.append(f"Instantiated model parameter count is {actual_params:,}, expected 25,698,816.")
 
-    # Verify loss masking on real train dataset
+    # Verify loss masking across all windows of real train dataset
     train_ds = SovereignChatDataset(train_p, tokenizer, block_size=m_cfg["block_size"])
     if len(train_ds) == 0:
         g4_errors.append("Train dataset produced 0 windows.")
     else:
         sample_x, sample_y = train_ds[0]
-        has_masked = (sample_y == -1).any().item()
-        has_active = (sample_y >= 0).any().item()
-        if not (has_masked and has_active):
-            g4_errors.append("Dataset missing assistant-only loss masking (-1 ignore index).")
+        invalid_masking_windows = 0
+        total_supervised_tokens = 0
+        for w_idx in range(len(train_ds)):
+            _, w_y = train_ds[w_idx]
+            has_masked = (w_y == -1).any().item()
+            has_active = (w_y >= 0).any().item()
+            pad_leak = (w_y == 1).any().item()  # pad_token_id must never appear in target
+            if not (has_masked and has_active) or pad_leak:
+                invalid_masking_windows += 1
+            total_supervised_tokens += (w_y >= 0).sum().item()
+        if invalid_masking_windows > 0:
+            g4_errors.append(f"{invalid_masking_windows} dataset windows exhibit invalid loss masking.")
 
     g4_ok = len(g4_errors) == 0
     results["preflight_gates"]["gate_4_pilot_architecture"] = {
         "passed": g4_ok,
         "exact_parameters": actual_params,
-        "loss_masking_verified": has_masked and has_active if g4_ok else False,
+        "loss_masking_verified": g4_ok,
+        "total_windows_verified": len(train_ds),
+        "total_supervised_tokens": total_supervised_tokens if g4_ok else 0,
         "errors": g4_errors
     }
     if not g4_ok:
         results["blockers"].extend(g4_errors)
-    print(f"  Result: {'PASSED' if g4_ok else 'FAILED'} ({actual_params:,} parameters, Assistant Loss Masking Verified)")
+    print(f"  Result: {'PASSED' if g4_ok else 'FAILED'} ({actual_params:,} parameters, All {len(train_ds)} Windows Masking Verified)")
 
     # -------------------------------------------------------------
     # GATE 5: Empirical Forward / Backward / Optimizer Step on Device
@@ -270,6 +297,9 @@ def run_preflight(
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.0003, weight_decay=0.1)
     optimizer.zero_grad(set_to_none=True)
+
+    # Capture model parameters before optimizer step to prove actual parameter change
+    params_before = [p.detach().clone() for p in model.parameters() if p.requires_grad]
 
     batch_x = sample_x.unsqueeze(0).to(device)
     batch_y = sample_y.unsqueeze(0).to(device)
@@ -292,6 +322,12 @@ def run_preflight(
         optimizer.zero_grad(set_to_none=True)
         t_elapsed_ms = (time.time() - t_start) * 1000
 
+        # Verify optimizer step actually changed model parameters
+        params_after = [p.detach().clone() for p in model.parameters() if p.requires_grad]
+        param_updated = any(not torch.equal(b, a) for b, a in zip(params_before, params_after))
+        if not param_updated:
+            g5_errors.append("Optimizer step completed but no model parameters were updated (zero parameter delta).")
+
         if not torch.isfinite(loss):
             g5_errors.append(f"Training loss is non-finite: {loss.item()}")
         if loss.item() <= 0:
@@ -311,6 +347,7 @@ def run_preflight(
         "passed": g5_ok,
         "device": device,
         "mixed_precision_fp16": use_amp,
+        "parameter_delta_verified": param_updated if g5_ok else False,
         "loss_value": round(loss.item(), 4) if g5_ok else None,
         "step_time_ms": round(t_elapsed_ms, 2),
         "errors": g5_errors

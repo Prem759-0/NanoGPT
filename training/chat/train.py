@@ -177,14 +177,19 @@ def train_moon_chat(
             ("test_manifest", test_manifest, test_lf_sha)
         ]:
             bname = os.path.basename(m_path)
-            if bname in CANONICAL_MANIFEST_LF_HASHES:
-                expected_sha = CANONICAL_MANIFEST_LF_HASHES[bname]
-                if m_lf_sha != expected_sha:
-                    raise ValueError(
-                        f"Manifest provenance hash mismatch for {m_name} ({bname})! "
-                        f"Expected canonical LF SHA: {expected_sha}, detected: {m_lf_sha}. "
-                        "Failing closed to prevent training on unverified or tampered data."
-                    )
+            if bname not in CANONICAL_MANIFEST_LF_HASHES:
+                raise ValueError(
+                    f"Production manifest security violation for {m_name} ({bname})! "
+                    f"Manifest is not an approved canonical manifest: {list(CANONICAL_MANIFEST_LF_HASHES.keys())}. "
+                    f"Production training fails closed on unapproved manifest files."
+                )
+            expected_sha = CANONICAL_MANIFEST_LF_HASHES[bname]
+            if m_lf_sha != expected_sha:
+                raise ValueError(
+                    f"Manifest provenance hash mismatch for {m_name} ({bname})! "
+                    f"Expected canonical LF SHA: {expected_sha}, detected: {m_lf_sha}. "
+                    "Failing closed to prevent training on unverified or tampered data."
+                )
 
     manifest_provenance_hashes = {
         "train_manifest": {
@@ -450,9 +455,15 @@ def train_moon_chat(
     model.to(device)
 
     if resume_from_ckpt:
+        if not is_smoke_test:
+            raise RuntimeError(
+                "Production pilot training blocked: resuming from arbitrary checkpoints is strictly prohibited "
+                "under Moon AI Option 1 Sovereign Zero-Teacher Policy. Production training must initialize strictly "
+                "from pure random Gaussian scratch."
+            )
         if not os.path.exists(resume_from_ckpt):
             raise FileNotFoundError(f"Resume checkpoint not found: {resume_from_ckpt}")
-        ckpt_data = torch.load(resume_from_ckpt, map_location=device, weights_only=False)
+        ckpt_data = torch.load(resume_from_ckpt, map_location=device, weights_only=True)
         cfg_meta = ckpt_data.get("config", {}) or ckpt_data.get("metadata", {})
         # Policy B Verification
         if cfg_meta.get("teacher_checkpoint_weights_transferred") is not False:
@@ -661,7 +672,15 @@ def train_moon_chat(
                         "notes": "Best validation checkpoint from pilot training run. Unpromoted pilot requiring independent evaluation before production consideration."
                     }
                 }
-                torch.save(best_payload, best_ckpt_path)
+                # Atomic checkpoint write via temporary file
+                tmp_best_path = f"{best_ckpt_path}.tmp_{int(time.time()*1000)}"
+                torch.save(best_payload, tmp_best_path)
+                if os.path.exists(best_ckpt_path):
+                    try:
+                        os.remove(best_ckpt_path)
+                    except OSError:
+                        pass
+                os.replace(tmp_best_path, best_ckpt_path)
                 print(f"  ⭐ Saved new best validation checkpoint: {best_ckpt_path} (Loss: {best_val_loss:.4f})")
             model.train()
         elif iter_num % 10 == 0 or iter_num == max_iters or is_smoke_test:
@@ -760,6 +779,7 @@ def train_moon_chat(
             "architect": "Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)",
             "final_train_loss": accum_loss,
             "final_val_loss": mean_val_loss,
+            "best_val_loss": best_val_loss if best_val_loss != float("inf") else mean_val_loss,
             "perplexity": perplexity,
             "iterations": iter_num,
             "is_production_trained": False,
@@ -779,10 +799,19 @@ def train_moon_chat(
             )
         },
         "iter_num": iter_num,
-        "best_val_loss": mean_val_loss
+        "final_val_loss": mean_val_loss,
+        "best_val_loss": best_val_loss if best_val_loss != float("inf") else mean_val_loss
     }
 
-    torch.save(checkpoint_payload, checkpoint_path)
+    # Atomic checkpoint write via temporary file
+    tmp_ckpt_path = f"{checkpoint_path}.tmp_{int(time.time()*1000)}"
+    torch.save(checkpoint_payload, tmp_ckpt_path)
+    if os.path.exists(checkpoint_path):
+        try:
+            os.remove(checkpoint_path)
+        except OSError:
+            pass
+    os.replace(tmp_ckpt_path, checkpoint_path)
 
     with open(checkpoint_path, "rb") as f:
         ckpt_sha256 = hashlib.sha256(f.read()).hexdigest()

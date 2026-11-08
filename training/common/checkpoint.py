@@ -447,7 +447,7 @@ def verify_checkpoint_provenance(
         return False, {}, [f"Checkpoint file not found: '{checkpoint_path}'"]
 
     try:
-        ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
     except Exception as e:
         return False, {}, [f"Corrupted or invalid checkpoint file: {e}"]
 

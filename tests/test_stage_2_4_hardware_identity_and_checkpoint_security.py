@@ -45,6 +45,7 @@ from webapp.model_service import (
 )
 from scripts.promote_best_model import evaluate_and_promote
 from model import GPTConfig, GPT
+from datasets.chat.tokenizer import SovereignTokenizer
 
 
 class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
@@ -608,6 +609,98 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
         self.assertEqual(pilot_cfg.get("canonical_ownership_policy"), "STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
         self.assertEqual(scaled_cfg.get("ownership_policy"), "STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
         self.assertEqual(scaled_cfg.get("canonical_ownership_policy"), "STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
+
+    def test_25_weights_only_deserialization_enforced(self):
+        """weights_only=True deserialization loads valid checkpoints and blocks malicious pickle exploits."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            safe_ckpt_path = os.path.join(tmp_dir, "safe_ckpt.pt")
+            safe_payload = {
+                "status": "PILOT_TRAINED",
+                "model": {"weight": torch.randn(4, 4)},
+                "config": {"loss": 6.25, "init": "random_gaussian_scratch"}
+            }
+            torch.save(safe_payload, safe_ckpt_path)
+            # Must succeed under weights_only=True
+            loaded = torch.load(safe_ckpt_path, map_location="cpu", weights_only=True)
+            self.assertEqual(loaded["status"], "PILOT_TRAINED")
+            self.assertTrue(torch.is_tensor(loaded["model"]["weight"]))
+
+            # Exploit payload must fail under weights_only=True
+            class ExploitPayload:
+                def __reduce__(self):
+                    return (os.system, ("echo exploit_blocked",))
+
+            exploit_path = os.path.join(tmp_dir, "exploit.pt")
+            torch.save(ExploitPayload(), exploit_path)
+            with self.assertRaises(Exception):
+                torch.load(exploit_path, map_location="cpu", weights_only=True)
+
+    def test_26_canonical_manifest_unknown_name_fails_closed(self):
+        """Production training fails closed if manifest name is not in CANONICAL_MANIFEST_LF_HASHES."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # Create an unapproved manifest file
+            fake_manifest = os.path.join(tmp_dir, "unapproved_train.jsonl")
+            with open(fake_manifest, "w", encoding="utf-8") as f:
+                f.write('{"id": "test"}\n')
+            cfg["paths"]["train_manifest"] = fake_manifest
+
+            bad_cfg_path = os.path.join(tmp_dir, "bad_manifest_cfg.yaml")
+            with open(bad_cfg_path, "w", encoding="utf-8") as f:
+                yaml.dump(cfg, f)
+
+            with self.assertRaises(ValueError) as ctx:
+                train_moon_chat(config_path=bad_cfg_path, smoke_test=False)
+            self.assertIn("Production manifest security violation", str(ctx.exception))
+
+    def test_27_atomic_checkpoint_replacement(self):
+        """Checkpoint writes use atomic temporary file replacement and leave zero temporary files."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            dest_ckpt = os.path.join(tmp_dir, "atomic_test_ckpt.pt")
+            train_moon_chat(
+                config_path="training/chat/phase_2_4_t4_pilot.yaml",
+                smoke_test=True,
+                device_override="cpu",
+                custom_ckpt_path=dest_ckpt
+            )
+            # Assert destination exists
+            self.assertTrue(os.path.isfile(dest_ckpt))
+            # Assert no .tmp files linger in the directory
+            tmp_files = [f for f in os.listdir(tmp_dir) if ".tmp" in f]
+            self.assertEqual(len(tmp_files), 0, f"Lingering temporary files found: {tmp_files}")
+
+    def test_28_validation_loss_metadata_separation(self):
+        """Saved checkpoints explicitly distinguish final_val_loss from best_val_loss."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            dest_ckpt = os.path.join(tmp_dir, "metadata_test_ckpt.pt")
+            train_moon_chat(
+                config_path="training/chat/phase_2_4_t4_pilot.yaml",
+                smoke_test=True,
+                device_override="cpu",
+                custom_ckpt_path=dest_ckpt
+            )
+            loaded = torch.load(dest_ckpt, map_location="cpu", weights_only=True)
+            self.assertIn("final_val_loss", loaded)
+            self.assertIn("best_val_loss", loaded)
+            cfg_meta = loaded.get("config", {})
+            self.assertIn("final_val_loss", cfg_meta)
+            self.assertIn("best_val_loss", cfg_meta)
+
+    def test_29_from_pretrained_strictly_prohibited(self):
+        """GPT.from_pretrained is locked down and immediately raises RuntimeError."""
+        with self.assertRaises(RuntimeError) as ctx:
+            GPT.from_pretrained("gpt2")
+        self.assertIn("strictly prohibited", str(ctx.exception))
+
+    def test_30_evaluation_tokenizer_loads_512_vocab(self):
+        """SovereignTokenizer loaded for evaluation contains full 512 vocabulary."""
+        tok_path = os.path.join(PROJECT_ROOT, "models", "chat", "tokenizer.json")
+        tok = SovereignTokenizer.load(tok_path)
+        self.assertEqual(tok.vocab_size, 512)
+        self.assertEqual(len(tok.merges), 249)
 
 
 if __name__ == "__main__":
