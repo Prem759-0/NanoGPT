@@ -1,12 +1,12 @@
 # Moon AI — Stage 2.4 Real T4 GPU 100-Step Pilot Training Configuration
 # Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
-# Ownership Policy: TEACHER_STUDENT_RANDOM_INIT (Policy B)
+# Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY (Policy B Option 1 Sovereign)
 # Target: Moon Chat GPT (25.7M Parameters, Pure Gaussian Scratch Initialization)
 # Hardware Target: Google Colab NVIDIA T4 (15.3 GB VRAM)
 
 model_track: "moon-chat-v1-stage-2-4-t4-pilot"
-ownership_policy: "TEACHER_STUDENT_RANDOM_INIT"
-legacy_ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
+ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
+canonical_ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
 
 # Teacher Distillation Architecture (Student starts strictly from random Gaussian scratch)
 # Policy B Option 1: Zero teacher influence (no teacher weights, no teacher demonstrations, zero external APIs)

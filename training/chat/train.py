@@ -483,7 +483,7 @@ def train_moon_chat(
     print("[Config & Policy B Option 1]")
     print(f"  • Config File:          {os.path.relpath(abs_config_path, PROJECT_ROOT)}")
     print(f"  • Model Track:          {cfg.get('model_track', 'N/A')}")
-    print(f"  • Ownership Policy:     {cfg.get('ownership_policy', 'TEACHER_STUDENT_RANDOM_INIT')} [Option 1 Sovereign]")
+    print(f"  • Ownership Policy:     {cfg.get('ownership_policy', 'STRICT_SOVEREIGN_RANDOM_INIT_ONLY')} [Option 1 Sovereign]")
     print(f"  • Student Init:         random_gaussian_scratch (N(0, 0.02^2)) [VERIFIED]")
     print(f"  • Prohibit Weights:     True [VERIFIED]")
     print(f"  • Allow Demonstrations: False [VERIFIED]")
@@ -632,7 +632,7 @@ def train_moon_chat(
                         "best_val_loss": best_val_loss,
                         "iter_num": iter_num,
                         "policy": td_cfg.get("strategy", "POLICY_B_ZERO_TEACHER_INFLUENCE"),
-                        "ownership_policy": cfg.get("ownership_policy", "TEACHER_STUDENT_RANDOM_INIT"),
+                        "ownership_policy": cfg.get("ownership_policy", "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"),
                         "best_checkpoint_path": best_ckpt_path,
                         "effective_config": cfg,
                         "manifest_hashes": manifest_provenance_hashes,
@@ -731,7 +731,7 @@ def train_moon_chat(
         "config": {
             "dataset": cfg.get("model_track", "moon-chat-v0"),
             "model_name": m_cfg["name"],
-            "ownership_policy": cfg.get("ownership_policy", "TEACHER_STUDENT_RANDOM_INIT"),
+            "ownership_policy": cfg.get("ownership_policy", "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"),
             "policy": td_cfg.get("strategy", "POLICY_B_ZERO_TEACHER_INFLUENCE"),
             "initialization": "random_gaussian_scratch",
             "student_init_method": "random_gaussian_scratch",

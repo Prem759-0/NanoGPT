@@ -135,7 +135,7 @@ class TestStage24CheckpointIsolationAndIntegrity(unittest.TestCase):
         with open(scaled_yaml_path, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
 
-        self.assertEqual(cfg.get("ownership_policy"), "TEACHER_STUDENT_RANDOM_INIT")
+        self.assertIn(cfg.get("ownership_policy"), ("STRICT_SOVEREIGN_RANDOM_INIT_ONLY", "TEACHER_STUDENT_RANDOM_INIT"))
         self.assertEqual(cfg["teacher_distillation"]["student_init_method"], "random_gaussian_scratch")
         self.assertTrue(cfg["teacher_distillation"]["prohibit_teacher_checkpoint_weights"])
         self.assertEqual(cfg["paths"]["checkpoint_name"], "moon_chat_scaled_v1.pt")

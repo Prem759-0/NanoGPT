@@ -528,6 +528,87 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
             self.assertIn("Production checkpoint collision: best checkpoint destination", str(ctx.exception))
             self.assertIn(best_ckpt_name, str(ctx.exception))
 
+    def test_22_model_parameter_count_exact_match(self):
+        """Instantiated pilot GPT model parameter count matches exactly 25,698,816."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+        m_cfg = cfg["model"]
+        gpt_conf = GPTConfig(
+            block_size=m_cfg["block_size"],
+            vocab_size=m_cfg["vocab_size"],
+            n_layer=m_cfg["n_layer"],
+            n_head=m_cfg["n_head"],
+            n_embd=m_cfg["n_embd"],
+            dropout=m_cfg.get("dropout", 0.1),
+            bias=m_cfg.get("bias", False)
+        )
+        model = GPT(gpt_conf)
+        total_params = sum(p.numel() for p in model.parameters())
+        self.assertEqual(
+            total_params,
+            m_cfg["exact_parameters"],
+            f"Model parameter count mismatch: got {total_params:,}, expected {m_cfg['exact_parameters']:,}"
+        )
+        self.assertEqual(total_params, 25698816)
+        # Verify non-embedding subtraction: position embeddings = block_size * n_embd = 512 * 512 = 262,144
+        # Non-embedding parameters = 25,698,816 - 262,144 = 25,436,672 (~25.44M)
+        self.assertEqual(model.get_num_params(non_embedding=True), 25436672)
+        self.assertEqual(model.get_num_params(non_embedding=False), 25698816)
+
+    def test_23_dataloader_data_isolation_and_quarantine_exclusion(self):
+        """Training and validation loaders strictly exclude test split and quarantined teacher data."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+
+        train_path = os.path.join(PROJECT_ROOT, cfg["paths"]["train_manifest"])
+        val_path = os.path.join(PROJECT_ROOT, cfg["paths"]["val_manifest"])
+        test_path = os.path.join(PROJECT_ROOT, cfg["paths"]["test_manifest"])
+
+        # 1. Verify train/val manifests are distinct from test manifest
+        self.assertNotEqual(os.path.abspath(train_path), os.path.abspath(test_path))
+        self.assertNotEqual(os.path.abspath(val_path), os.path.abspath(test_path))
+
+        # 2. Verify quarantine files are never referenced as training manifests
+        for forbidden in ["teacher_pilot_demonstrations.jsonl", "quarantined_teacher_data.jsonl"]:
+            self.assertNotIn(forbidden, cfg["paths"]["train_manifest"])
+            self.assertNotIn(forbidden, cfg["paths"]["val_manifest"])
+            self.assertNotIn(forbidden, cfg["paths"]["test_manifest"])
+
+        # 3. Read manifests and verify no record came from quarantined or teacher demonstration files
+        with open(train_path, "r", encoding="utf-8") as f:
+            train_records = [json.loads(line) for line in f if line.strip()]
+        with open(test_path, "r", encoding="utf-8") as f:
+            test_records = [json.loads(line) for line in f if line.strip()]
+
+        train_hashes = {r.get("sha256") for r in train_records}
+        test_hashes = {r.get("sha256") for r in test_records}
+
+        # Zero leakage between train and blind test
+        self.assertEqual(len(train_hashes & test_hashes), 0, "Leakage detected between train and test manifests!")
+
+        # All records in train must be deterministic curriculum provenance
+        for r in train_records:
+            self.assertEqual(r.get("provenance_type"), "DETERMINISTIC_CURRICULUM_TEMPLATE")
+            self.assertIsNone(r.get("teacher_model"))
+            self.assertFalse(r.get("is_teacher_generated", False))
+
+    def test_24_strict_sovereign_ownership_policy_standardized(self):
+        """phase_2_4_t4_pilot.yaml and scaled_config.yaml enforce standardized STRICT_SOVEREIGN_RANDOM_INIT_ONLY."""
+        pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
+        scaled_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "scaled_config.yaml")
+
+        with open(pilot_yaml_path, "r", encoding="utf-8") as f:
+            pilot_cfg = yaml.safe_load(f)
+        with open(scaled_yaml_path, "r", encoding="utf-8") as f:
+            scaled_cfg = yaml.safe_load(f)
+
+        self.assertEqual(pilot_cfg.get("ownership_policy"), "STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
+        self.assertEqual(pilot_cfg.get("canonical_ownership_policy"), "STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
+        self.assertEqual(scaled_cfg.get("ownership_policy"), "STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
+        self.assertEqual(scaled_cfg.get("canonical_ownership_policy"), "STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
+
 
 if __name__ == "__main__":
     unittest.main()
