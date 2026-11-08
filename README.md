@@ -69,4 +69,53 @@ Moon AI is governed by an absolute mathematical and architectural policy:
 
 ---
 
+## 3. MULTIMODAL SYSTEM ARCHITECTURE & 7 SPECIALIST ENGINES
+
+Moon AI deconstructs monolithic AI design into seven decoupled, specialist engines orchestrated by a central coordinator:
+
+```
+                                  +------------------------------------+
+                                  |         USER INTERFACE / API       |
+                                  +-----------------+------------------+
+                                                    |
+                                                    v
+                                  +------------------------------------+
+                                  |          MOON CORE DISPATCH        |
+                                  |   (Intent Router & Coordinator)    |
+                                  +--------+--------+--------+---------+
+                                           |        |        |
+         +---------------------------------+        |        +---------------------------------+
+         |                                          |                                          |
+         v                                          v                                          v
++-------------------+                      +-------------------+                      +-------------------+
+|    MOON CHAT      |                      |    MOON REASON    |                      |     MOON CODE     |
+| 25.7M Sovereign   |                      | Multi-Step Logic  |                      | Ast-Parsed Python |
+| Pre-LN Transformer|                      | Proof Verifier    |                      | Sandbox Execution |
++-------------------+                      +-------------------+                      +-------------------+
+         |                                          |                                          |
+         +---------------------------------+        |        +---------------------------------+
+                                           |        |        |
+                                           v        v        v
+                                  +------------------------------------+
+                                  |        MOON SPECIALIST SUITE       |
+                                  |                                    |
+                                  |  * Moon Tools: Autonomous API Call |
+                                  |  * Moon Memory: Isolated Storage   |
+                                  |  * Moon Vision: Latent Diffusion   |
+                                  |  * Moon Doc: PDF/DOCX/XLSX Engine  |
+                                  +------------------------------------+
+```
+
+### The Seven Specialist Engines
+
+1. **Moon Chat (25.7M Student Transformer)**: Pre-LayerNorm GPT architecture featuring GELU activations, tied input/output embeddings, and rotary/learned positional encodings, optimized for conversational flow.
+2. **Moon Reason (Formal Inference Engine)**: Multi-step chain-of-thought engine breaking non-trivial mathematical and algorithmic challenges into verifiable sub-proofs.
+3. **Moon Code (Sandboxed Code Synthesis)**: Python/TypeScript generator integrated with a deterministic execution sandbox to validate script output before returning it to the user.
+4. **Moon Tools (Agentic Execution Engine)**: Strict JSON-schema-validated tool dispatch for web retrieval, arithmetic, file management, and external service calls.
+5. **Moon Memory (Isolated Key-Value Context)**: Ephemeral and persistent session facts isolated from model weights to ensure zero weight contamination from user data.
+6. **Moon Vision & Media (Generative Diffusion & Video)**: Dedicated latent diffusion pipelines designed for high-resolution graphics and progressive frame interpolation.
+7. **Moon Document (Document Synthesis & Analytics)**: Pure-Python office document generator creating authentic `.pdf`, `.docx`, `.pptx`, and `.xlsx` artifacts directly from conversational output.
+
+---
+
 *(Sections expanding below in active daily release commits)*
