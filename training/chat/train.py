@@ -673,14 +673,17 @@ def train_moon_chat(
                     }
                 }
                 # Atomic checkpoint write via temporary file
-                tmp_best_path = f"{best_ckpt_path}.tmp_{int(time.time()*1000)}"
-                torch.save(best_payload, tmp_best_path)
-                if os.path.exists(best_ckpt_path):
-                    try:
-                        os.remove(best_ckpt_path)
-                    except OSError:
-                        pass
-                os.replace(tmp_best_path, best_ckpt_path)
+                tmp_best_path = f"{best_ckpt_path}.tmp_{os.getpid()}_{int(time.time()*1000)}"
+                try:
+                    torch.save(best_payload, tmp_best_path)
+                    os.replace(tmp_best_path, best_ckpt_path)
+                except Exception:
+                    if os.path.exists(tmp_best_path):
+                        try:
+                            os.remove(tmp_best_path)
+                        except OSError:
+                            pass
+                    raise
                 print(f"  ⭐ Saved new best validation checkpoint: {best_ckpt_path} (Loss: {best_val_loss:.4f})")
             model.train()
         elif iter_num % 10 == 0 or iter_num == max_iters or is_smoke_test:
@@ -804,14 +807,17 @@ def train_moon_chat(
     }
 
     # Atomic checkpoint write via temporary file
-    tmp_ckpt_path = f"{checkpoint_path}.tmp_{int(time.time()*1000)}"
-    torch.save(checkpoint_payload, tmp_ckpt_path)
-    if os.path.exists(checkpoint_path):
-        try:
-            os.remove(checkpoint_path)
-        except OSError:
-            pass
-    os.replace(tmp_ckpt_path, checkpoint_path)
+    tmp_ckpt_path = f"{checkpoint_path}.tmp_{os.getpid()}_{int(time.time()*1000)}"
+    try:
+        torch.save(checkpoint_payload, tmp_ckpt_path)
+        os.replace(tmp_ckpt_path, checkpoint_path)
+    except Exception:
+        if os.path.exists(tmp_ckpt_path):
+            try:
+                os.remove(tmp_ckpt_path)
+            except OSError:
+                pass
+        raise
 
     with open(checkpoint_path, "rb") as f:
         ckpt_sha256 = hashlib.sha256(f.read()).hexdigest()

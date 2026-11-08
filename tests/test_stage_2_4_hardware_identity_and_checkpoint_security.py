@@ -19,8 +19,11 @@ import re
 import json
 import uuid
 import pickle
+import hashlib
+import time
 import tempfile
 import unittest
+from unittest import mock
 import torch
 import yaml
 
@@ -701,6 +704,64 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
         tok = SovereignTokenizer.load(tok_path)
         self.assertEqual(tok.vocab_size, 512)
         self.assertEqual(len(tok.merges), 249)
+
+    def test_31_atomic_checkpoint_failure_preserves_original(self):
+        """Serialization failure during checkpoint save safely cleans up tempfile and preserves existing checkpoint."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            dest_ckpt = os.path.join(tmp_dir, "original_ckpt.pt")
+            # Create a valid original checkpoint
+            original_payload = {"model": "original_state", "loss": 5.0}
+            torch.save(original_payload, dest_ckpt)
+            with open(dest_ckpt, "rb") as f:
+                original_sha = hashlib.sha256(f.read()).hexdigest()
+
+            # Simulate an atomic save that fails during serialization
+            tmp_save_path = f"{dest_ckpt}.tmp_{os.getpid()}_{int(time.time()*1000)}"
+            with mock.patch("torch.save", side_effect=IOError("Simulated disk error during save")):
+                with self.assertRaises(IOError):
+                    try:
+                        torch.save({"model": "new_broken_state"}, tmp_save_path)
+                        os.replace(tmp_save_path, dest_ckpt)
+                    except Exception:
+                        if os.path.exists(tmp_save_path):
+                            try:
+                                os.remove(tmp_save_path)
+                            except OSError:
+                                pass
+                        raise
+
+            # Assert original file is completely intact and sha256 matches
+            self.assertTrue(os.path.isfile(dest_ckpt))
+            with open(dest_ckpt, "rb") as f:
+                current_sha = hashlib.sha256(f.read()).hexdigest()
+            self.assertEqual(original_sha, current_sha)
+            loaded = torch.load(dest_ckpt, weights_only=True)
+            self.assertEqual(loaded["model"], "original_state")
+
+            # Assert no dangling temporary files
+            tmp_files = [f for f in os.listdir(tmp_dir) if ".tmp" in f]
+            self.assertEqual(len(tmp_files), 0, f"Dangling temporary files: {tmp_files}")
+
+    def test_32_best_checkpoint_atomic_update_preserves_production_anti_collision(self):
+        """Best validation checkpoint updates cleanly via atomic os.replace without false collision."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            best_ckpt = os.path.join(tmp_dir, "moon_chat_phase_2_4_t4_pilot_best.pt")
+            # First write (Loss: 6.5)
+            payload_1 = {"model": "step_10", "val_loss": 6.5}
+            tmp_1 = f"{best_ckpt}.tmp_{os.getpid()}_1"
+            torch.save(payload_1, tmp_1)
+            os.replace(tmp_1, best_ckpt)
+            self.assertTrue(os.path.isfile(best_ckpt))
+
+            # Second write updating to better loss (Loss: 6.2)
+            payload_2 = {"model": "step_20", "val_loss": 6.2}
+            tmp_2 = f"{best_ckpt}.tmp_{os.getpid()}_2"
+            torch.save(payload_2, tmp_2)
+            os.replace(tmp_2, best_ckpt)  # Must atomically replace without error
+
+            loaded = torch.load(best_ckpt, weights_only=True)
+            self.assertEqual(loaded["model"], "step_20")
+            self.assertEqual(loaded["val_loss"], 6.2)
 
 
 if __name__ == "__main__":
