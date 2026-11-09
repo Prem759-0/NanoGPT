@@ -1,19 +1,56 @@
 import os
 import sys
 import unittest
+import tempfile
+import pickle
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from fastapi.testclient import TestClient
-from webapp.main import app
+from webapp.main import app, model_service
 
 class TestSuperAIWebApp(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.temp_dir = None
+        if not model_service.find_checkpoint():
+            import torch
+            from model import GPTConfig, GPT
+            cls.temp_dir = tempfile.TemporaryDirectory()
+            ckpt_path = os.path.join(cls.temp_dir.name, "ckpt.pt")
+            meta_path = os.path.join(cls.temp_dir.name, "meta.pkl")
+            conf = GPTConfig(block_size=64, vocab_size=65, n_layer=1, n_head=1, n_embd=32)
+            model = GPT(conf)
+            torch.save({
+                "model": model.state_dict(),
+                "model_args": {"block_size": 64, "vocab_size": 65, "n_layer": 1, "n_head": 1, "n_embd": 32},
+                "config": {"dataset": "assistant_chat"},
+                "iter_num": 1,
+                "best_val_loss": 1.0,
+            }, ckpt_path)
+            meta = {
+                "vocab_size": 65,
+                "stoi": {chr(i): i for i in range(65)},
+                "itos": {i: chr(i) for i in range(65)},
+            }
+            with open(meta_path, "wb") as f:
+                pickle.dump(meta, f)
+            os.environ["NANOGPT_CHECKPOINT_PATH"] = ckpt_path
+            model_service.preferred_checkpoint = ckpt_path
+            model_service.refresh_status()
+
         cls.client = TestClient(app)
+
+    @classmethod
+    def tearDownClass(cls):
+        if getattr(cls, "temp_dir", None):
+            cls.temp_dir.cleanup()
+            os.environ.pop("NANOGPT_CHECKPOINT_PATH", None)
+            model_service.preferred_checkpoint = None
+            model_service.refresh_status()
 
     def test_01_health_endpoint(self):
         """Verify GET /api/health reports active server and PyTorch readiness."""
