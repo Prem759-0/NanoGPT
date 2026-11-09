@@ -54,7 +54,7 @@ class TestStage217EvalUiAndScaledCorpus(unittest.TestCase):
     def test_01_pilot_checkpoint_policy_b_attestation(self):
         """Certifies that moon_chat_pilot_v0.pt exists and maintains strict Policy B attestation."""
         self.assertTrue(os.path.isfile(CHECKPOINT_PATH), f"Checkpoint not found at: {CHECKPOINT_PATH}")
-        ckpt = torch.load(CHECKPOINT_PATH, map_location="cpu", weights_only=False)
+        ckpt = torch.load(CHECKPOINT_PATH, map_location="cpu", weights_only=True)
         meta = ckpt.get("config", {}) or ckpt.get("metadata", {})
 
         self.assertFalse(meta.get("teacher_checkpoint_weights_transferred", True),

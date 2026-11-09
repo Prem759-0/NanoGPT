@@ -52,7 +52,7 @@ class TestStage22ScaledTrainingAndMultimodal(unittest.TestCase):
     def test_01_scaled_training_checkpoint_policy_b_attestation(self):
         """Certifies that moon_chat_scaled_v1.pt exists with strict Policy B attestation."""
         self.assertTrue(os.path.isfile(SCALED_CKPT_PATH), f"Scaled checkpoint not found at: {SCALED_CKPT_PATH}")
-        ckpt = torch.load(SCALED_CKPT_PATH, map_location="cpu", weights_only=False)
+        ckpt = torch.load(SCALED_CKPT_PATH, map_location="cpu", weights_only=True)
         meta = ckpt.get("config", {}) or ckpt.get("metadata", {})
 
         self.assertFalse(meta.get("teacher_checkpoint_weights_transferred", True),

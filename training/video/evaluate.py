@@ -82,7 +82,7 @@ def evaluate(args):
 
     # 1. Enforce Provenance Verification
     try:
-        raw_meta = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        raw_meta = torch.load(ckpt_path, map_location="cpu", weights_only=True)
         provenance = raw_meta.get("provenance")
         if provenance != "moon_ai_random_init":
             print(f"❌ STRICT OWNERSHIP VIOLATION: Unknown provenance '{provenance}'.")

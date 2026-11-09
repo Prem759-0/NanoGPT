@@ -69,7 +69,7 @@ def get_dynamic_model_stats() -> Dict[str, Dict[str, Any]]:
     try:
         ckpt_path = os.path.join(PROJECT_ROOT, "out-assistant", "ckpt.pt")
         if os.path.isfile(ckpt_path):
-            raw = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+            raw = torch.load(ckpt_path, map_location="cpu", weights_only=True)
             state_dict = raw.get("model", raw.get("model_state_dict", {}))
             llm_params = sum(p.numel() for p in state_dict.values())
         else:
@@ -92,7 +92,7 @@ def verify_checkpoint_provenance(checkpoint_path: str) -> bool:
     """Verifies that a checkpoint has sovereign 'moon_ai_random_init' provenance."""
     if not os.path.isfile(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint not found at: {checkpoint_path}")
-    data = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    data = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
     provenance = data.get("provenance")
     if provenance != "moon_ai_random_init":
         raise ValueError(

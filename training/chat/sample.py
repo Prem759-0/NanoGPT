@@ -61,7 +61,7 @@ def load_chat_model(checkpoint_path: str, device: str = "cpu") -> tuple[GPT, Dic
     if not os.path.exists(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint not found at: {checkpoint_path}")
 
-    ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    ckpt = torch.load(checkpoint_path, map_location=device, weights_only=True)
     args = ckpt["model_args"]
     gpt_cfg = GPTConfig(
         block_size=args["block_size"],

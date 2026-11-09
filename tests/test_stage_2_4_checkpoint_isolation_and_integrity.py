@@ -98,7 +98,7 @@ class TestStage24CheckpointIsolationAndIntegrity(unittest.TestCase):
             )
             self.assertTrue(os.path.isfile(temp_ckpt))
 
-            ckpt = torch.load(temp_ckpt, map_location="cpu", weights_only=False)
+            ckpt = torch.load(temp_ckpt, map_location="cpu", weights_only=True)
             cfg_meta = ckpt.get("config", {})
 
             # Effective config saved

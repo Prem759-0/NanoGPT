@@ -20,7 +20,7 @@ class MoonVideoPipeline:
 
     @classmethod
     def from_checkpoint(cls, checkpoint_path: str, device: str = "cpu") -> "MoonVideoPipeline":
-        ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
+        ckpt = torch.load(checkpoint_path, map_location=device, weights_only=True)
         provenance = ckpt.get("provenance")
         if provenance != "moon_ai_random_init":
             raise ValueError(f"Strict Ownership Violation: Checkpoint provenance '{provenance}' is invalid. Must be 'moon_ai_random_init'.")

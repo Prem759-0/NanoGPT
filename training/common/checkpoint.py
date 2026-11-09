@@ -614,7 +614,7 @@ def load_checkpoint(
         if not valid:
             raise ValueError(f"CHECKPOINT SECURITY ERROR: Failed verification on '{checkpoint_path}': {'; '.join(errors)}")
 
-    ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    ckpt = torch.load(checkpoint_path, map_location=device, weights_only=True)
 
     # Load model weights
     if "model_state_dict" in ckpt:

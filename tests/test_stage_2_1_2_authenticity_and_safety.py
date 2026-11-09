@@ -365,7 +365,7 @@ class TestStage212AuthenticityAndSafety(unittest.TestCase):
 
         # Inspect checkpoint
         self.assertTrue(os.path.exists(ckpt_path))
-        checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=True)
         self.assertEqual(checkpoint["status"], STATUS_ENGINEERING_SMOKE_TEST_ONLY)
         self.assertFalse(checkpoint["is_production_trained"])
         self.assertFalse(checkpoint["promotable"])

@@ -137,7 +137,7 @@ class TestStage216StudentPilotTraining(unittest.TestCase):
         self.assertIsInstance(computed_sha, str)
         self.assertEqual(len(computed_sha), 64)
 
-        ckpt = torch.load(PILOT_CKPT, map_location="cpu", weights_only=False)
+        ckpt = torch.load(PILOT_CKPT, map_location="cpu", weights_only=True)
         is_fixture = getattr(self, "created_fixture", False) or ckpt.get("is_test_fixture", False)
 
         if is_fixture:
