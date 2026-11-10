@@ -55,10 +55,19 @@ def compute_file_sha256(filepath: str) -> str:
 
 def get_current_rng_state() -> Dict[str, Any]:
     """Captures all random number generator states for deterministic training resumption."""
+    np_state = np.random.get_state()
+    # Serialize numpy state as pure Python primitives to remain 100% compatible with weights_only=True
+    clean_numpy_state = (
+        str(np_state[0]),
+        [int(x) for x in np_state[1]],
+        int(np_state[2]),
+        int(np_state[3]),
+        float(np_state[4]),
+    )
     rng = {
         "torch_cpu": torch.get_rng_state(),
         "python": random.getstate(),
-        "numpy": np.random.get_state(),
+        "numpy": clean_numpy_state,
     }
     if torch.cuda.is_available():
         try:
@@ -76,7 +85,19 @@ def restore_rng_state(rng: Dict[str, Any]) -> None:
     if "python" in rng and rng["python"] is not None:
         random.setstate(rng["python"])
     if "numpy" in rng and rng["numpy"] is not None:
-        np.random.set_state(rng["numpy"])
+        raw_np = rng["numpy"]
+        if isinstance(raw_np, tuple) and len(raw_np) == 5:
+            if isinstance(raw_np[1], list):
+                raw_np = (
+                    raw_np[0],
+                    np.array(raw_np[1], dtype=np.uint32),
+                    raw_np[2],
+                    raw_np[3],
+                    raw_np[4],
+                )
+            np.random.set_state(raw_np)
+        elif isinstance(raw_np, np.ndarray):
+            np.random.set_state(raw_np)
     if "torch_cuda" in rng and rng["torch_cuda"] is not None and torch.cuda.is_available():
         try:
             torch.cuda.set_rng_state_all(rng["torch_cuda"])

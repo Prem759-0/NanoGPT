@@ -2,12 +2,11 @@
 
 # 🌙 MOON AI
 ### Sovereign Intelligence Core & Multimodal AI Platform
-**Engineered from First Principles | Policy B: Teacher–Student Distillation & Random Gaussian Initialization**
+**Engineered from First Principles | Strict Sovereign Ownership: Random Gaussian Scratch Initialization & Zero Teacher Influence**
 
-[![Ownership Policy](https://img.shields.io/badge/Ownership_Policy-TEACHER__STUDENT__RANDOM__INIT-8A2BE2?style=for-the-badge&logo=shield)](file:///core/policy.py)
+[![Ownership Policy](https://img.shields.io/badge/Ownership_Policy-STRICT__SOVEREIGN__RANDOM__INIT__ONLY-8A2BE2?style=for-the-badge&logo=shield)](file:///core/policy.py)
 [![Student Weights](https://img.shields.io/badge/Student_Init-Random_Gaussian_Scratch-00C853?style=for-the-badge&logo=pytorch)](file:///model.py)
-[![Target Teacher](https://img.shields.io/badge/Target_Teacher-Kimi_K3.1_Pro-FF6F00?style=for-the-badge&logo=openai)](file:///teacher/providers/kimi.py)
-[![Test Suite](https://img.shields.io/badge/Tests-221%20Passed%20%7C%20100%25-brightgreen?style=for-the-badge&logo=checkmarx)](file:///tests/)
+[![Test Suite](https://img.shields.io/badge/Tests-350%20Passed%20%7C%20100%25-brightgreen?style=for-the-badge&logo=checkmarx)](file:///tests/)
 [![Hardware Target](https://img.shields.io/badge/Hardware-Google_Colab_T4_(15.3GB)-00BCD4?style=for-the-badge&logo=googlecolab)](file:///docs/MOON_AI_HARDWARE_AND_COST_PLAN.md)
 [![Frontend](https://img.shields.io/badge/Frontend-Vite%20%2B%20React-61DAFB?style=for-the-badge&logo=react)](file:///frontend/)
 
@@ -35,7 +34,7 @@ All specialist engines are orchestrated by **Moon Core** — an intelligent disp
 
 ---
 
-## 2. CORE OWNERSHIP POLICY: POLICY B (`TEACHER_STUDENT_RANDOM_INIT`)
+## 2. CORE OWNERSHIP POLICY: STRICT SOVEREIGN (`STRICT_SOVEREIGN_RANDOM_INIT_ONLY`)
 
 Moon AI is governed by an absolute mathematical and architectural policy:
 
@@ -48,14 +47,15 @@ Moon AI is governed by an absolute mathematical and architectural policy:
 |     weights: W ~ N(0, 0.02^2).                                                                    |
 |     Third-party foundation model weights are STRICTLY PROHIBITED from entering student parameters.|
 |                                                                                                   |
-|  2. TEACHER DISTILLATION                                                                          |
-|     Frontier foundation models (specifically Kimi K3.1 Pro) serve strictly as external TEACHERS   |
-|     producing high-density demonstrations, reasoning chains, code examples, and evaluation tests. |
-|     Teacher parameters NEVER enter the Moon runtime or repository.                                |
+|  2. ZERO TEACHER DISTILLATION & DATA EXCLUSION                                                    |
+|     Zero teacher demonstrations or distilled examples are permitted in active training pipelines. |
+|     All historical or external teacher-generated data is strictly quarantined and excluded from   |
+|     dataset loading and student training.                                                         |
 |                                                                                                   |
-|  3. AUTONOMOUS RUNTIME                                                                            |
-|     Once trained, Moon student models execute inference 100% autonomously on local or edge        |
-|     hardware without any runtime API dependencies.                                                |
+|  3. AUTONOMOUS RUNTIME & ZERO EXTERNAL GENERATIVE APIS                                            |
+|     Moon AI models execute 100% autonomously without external generative AI APIs at runtime or in |
+|     training data synthesis. Gemini and Kimi may assist strictly with developer engineering and   |
+|     tooling, never as model teachers or data generators.                                          |
 +---------------------------------------------------------------------------------------------------+
 ```
 
@@ -63,11 +63,10 @@ Moon AI is governed by an absolute mathematical and architectural policy:
 
 | Architectural Concept | Definition | Invariant Constraint |
 | :--- | :--- | :--- |
-| **Teacher Model** | External frontier LLM (e.g. Kimi K3.1 Pro). | Used exclusively for data curation and benchmark grading; never loaded into student runtime. |
 | **Student Model** | Moon proprietary neural network (Moon Chat, Moon Code). | Begins from 100% random Gaussian scratch weights (`random_gaussian_scratch`). |
-| **Teacher Inference** | Querying the teacher model via authenticated API. | Credential-isolated (`KIMI_API_KEY`), metered, rate-limited, and disabled by default in CI. |
-| **Teacher Data** | Synthesized dialogues, reasoning traces, and code examples. | Filtered for PII, secrets, prompt injections, duplicates, and blind test leakage. |
-| **Student Training** | Optimization of student parameters via AdamW with SFT loss masking. | User prompts and padding masked with `-1`; supervised loss computed strictly on assistant turns. |
+| **External AI Assistance** | Engineering assistance (Gemini / Kimi). | Code synthesis and tooling review only; never acts as teacher or training data generator. |
+| **Teacher Data** | Historical synthetic demonstrations (e.g. Qwen / Kimi). | Permanently marked `QUARANTINED` with `split: quarantine`; excluded at dataset load time. |
+| **Student Training** | Optimization of student parameters via AdamW with SFT loss masking. | Curated deterministic curriculum templates and self-authored corpora only. Assistant-only loss masking. |
 | **User Memory** | User-consented persistent context across sessions. | Permanently marked `eligible_for_training: False`. Never blended into training weights. |
 
 ---
@@ -103,17 +102,20 @@ flowchart TD
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Moon Chat** | `moon-chat-v0` | Causal Decoder-Only Transformer (Pre-LayerNorm, GELU, SFT masking) | **25,698,816** (Pilot)<br>**86,133,504** (Base) | `MODEL_TRAINING_PENDING` | Verified in Stage 2.1.2 with 20 multi-window chunks, 5,825 supervised tokens, and engineering smoke tests. |
 | **Moon Code** | `moon-code-v0` | Fill-in-the-Middle (FIM) Causal Transformer (12L, 12H, 768D) | ~124,000,000 | `ARCHITECTURE_DEFINED` | Code generation, repository refactoring, bug fixes, unit test synthesis. |
-| **Moon Image** | `moon-image-v0` | Latent Diffusion (MoonUNet2D + MoonTextEncoder + MoonImageVAE) | 23,713,743 | `ARCHITECTURE_DEFINED` | Text-to-image, inpainting, outpainting, variations, super-resolution. Random Gaussian initialization. |
-| **Moon Video** | `moon-video-v0` | Spatiotemporal Diffusion (MoonUNet3D + VideoVAE) | 17,014,643 | `ARCHITECTURE_DEFINED` | Text-to-video, image-to-video, camera control, character consistency (Higgsfield AI ambition). |
+| **Moon Image** | `moon-image-v0` | Latent Diffusion (MoonUNet2D + MoonTextEncoder + MoonImageVAE) | 23,713,743 | `ARCHITECTURE_DEFINED` | Text-to-image, inpainting, outpainting. Random Gaussian init. Lawful data collection pending; production datasets empty. |
+| **Moon Video** | `moon-video-v0` | Spatiotemporal Diffusion (MoonUNet3D + VideoVAE) | 17,014,643 | `ARCHITECTURE_DEFINED` | Text-to-video, camera control. Random Gaussian init. Lawful video collection pending; production datasets empty. |
 | **Moon Documents** | `moon-documents-v0` | Programmatic Document Engine (`pypdf`, `python-docx`, `openpyxl`) | CPU-bound | `PROVIDER_CONNECTED` | High-fidelity generation and deep parsing of PDF, DOCX, PPTX, XLSX, CSV, and Markdown. |
 | **Moon Research** | `moon-research-v0` | Agentic Evidence Retrieval & Citation Engine | Pipeline | `PROVIDER_CONNECTED` | Multi-source web search, citation verification, fact-checking, and objective synthesis. |
 | **Moon Core** | `moon-core-v0` | Unified Intent Dispatcher & Tool Orchestrator | Pipeline | `PROVIDER_CONNECTED` | Analyzes user prompts, creates multi-step plans, coordinates engines, and aggregates responses. |
 
 ---
 
-## 4. TEACHER DISTILLATION DATA FACTORY (`teacher/`)
+## 4. HISTORICAL TEACHER DATA FACTORY & QUARANTINE (`teacher/`)
 
-Moon AI features a production-grade teacher data factory that synthesizes, validates, and stages high-density demonstrations from **Kimi K3.1 Pro** across 10 curriculum domains:
+> [!WARNING]
+> Under `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`, all teacher-generated demonstrations and distillation pipelines are strictly isolated and excluded from training. Historical demonstrations (including Qwen2.5-7B-Instruct outputs) are permanently quarantined in `datasets/manifests/teacher_pilot_demonstrations.jsonl` with `split: "quarantine"`. Active training loaders (`SovereignChatDataset`) enforce fail-closed rejection of any teacher-generated records before tokenization.
+
+The teacher data factory and historical tooling remain preserved as reference and quarantine infrastructure across 10 curriculum domains:
 
 ```
 teacher/
@@ -390,7 +392,7 @@ python training/chat/train.py --smoke-test
 ## 11. LICENSE & SOVEREIGN OWNERSHIP
 
 - **Project Lead & Architect**: Prem Gaikwad (India 🇮🇳)
-- **Ownership Policy**: `TEACHER_STUDENT_RANDOM_INIT`
+- **Ownership Policy**: `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`
 - **License**: Custom Sovereign Open-Access License (Derived from MIT-licensed NanoGPT components by Andrej Karpathy).
-- **Attribution Notice**: Wikipedia-derived educational summaries are licensed under `CC-BY-SA-4.0`. Teacher-assisted demonstrations adhere to responsible synthetic training and permissive distillation terms.
-- **Integrity Guarantee**: All student models begin from scratch. Zero third-party foundation weights are ever imported into student parameters.
+- **Attribution Notice**: Wikipedia-derived educational summaries are licensed under `CC-BY-SA-4.0`. Historical teacher-assisted tooling is strictly quarantined.
+- **Integrity Guarantee**: All student models begin from scratch. Zero third-party foundation weights are ever imported into student parameters. Zero teacher demonstrations enter active training manifests.

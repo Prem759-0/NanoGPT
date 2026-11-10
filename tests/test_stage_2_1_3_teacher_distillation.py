@@ -118,8 +118,8 @@ class TestStage213TeacherDistillation(unittest.TestCase):
     # -------------------------------------------------------------------------
 
     def test_ownership_policy_active_and_legacy_compatibility(self):
-        """Active policy is TEACHER_STUDENT_RANDOM_INIT; legacy policy remains recognized."""
-        self.assertEqual(get_active_policy(), POLICY_TEACHER_STUDENT_RANDOM_INIT)
+        """Active policy is STRICT_SOVEREIGN_RANDOM_INIT; teacher-student policy remains recognized for backward compatibility."""
+        self.assertEqual(get_active_policy(), POLICY_STRICT_SOVEREIGN_RANDOM_INIT)
         self.assertTrue(is_valid_policy(POLICY_TEACHER_STUDENT_RANDOM_INIT))
         self.assertTrue(is_valid_policy(POLICY_STRICT_SOVEREIGN_RANDOM_INIT))
         self.assertFalse(is_valid_policy("THIRD_PARTY_PRETRAINED_IMPORT"))

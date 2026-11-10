@@ -35,6 +35,7 @@ from model import GPTConfig, GPT
 from core.policy import (
     validate_student_initialization,
     ACTIVE_OWNERSHIP_POLICY,
+    POLICY_STRICT_SOVEREIGN_RANDOM_INIT,
     POLICY_TEACHER_STUDENT_RANDOM_INIT
 )
 from teacher.providers.mock import MockTeacherProvider
@@ -189,7 +190,7 @@ class TestStage214OfflineTeacherAndCorpus(unittest.TestCase):
             bias=False
         )
         student_model = GPT(cfg)
-        self.assertEqual(ACTIVE_OWNERSHIP_POLICY, POLICY_TEACHER_STUDENT_RANDOM_INIT)
+        self.assertEqual(ACTIVE_OWNERSHIP_POLICY, POLICY_STRICT_SOVEREIGN_RANDOM_INIT)
 
         valid_init, msg = validate_student_initialization("random_gaussian_scratch")
         self.assertTrue(valid_init)

@@ -278,6 +278,25 @@ class TestStage211ReadinessRepair(unittest.TestCase):
             train_moon_chat(config_path=cfg_file, max_iters_override=1, device_override="cpu", dry_run=True)
         self.assertIn("Validation dataset is empty! Failing closed", str(ctx.exception))
 
+    def test_windows_cross_drive_path_handling_regression(self):
+        """
+        Regression test for Windows cross-drive tempfile paths.
+        Ensures safe_relpath normalizes paths without ValueError across different drive mounts,
+        while maintaining fail-closed boundary enforcement.
+        """
+        from training.chat.train import safe_relpath
+        # 1. Cross-drive path formatting succeeds without exception
+        cross_drive_path = "C:\\Users\\Temp\\dataset.jsonl" if PROJECT_ROOT.startswith("D:") else "D:\\Temp\\dataset.jsonl"
+        norm = safe_relpath(cross_drive_path, start=PROJECT_ROOT)
+        self.assertTrue(os.path.isabs(norm))
+        self.assertEqual(norm, os.path.normpath(cross_drive_path))
+
+        # 2. Within-repo relative path is preserved
+        local_rel = os.path.join("datasets", "manifests", "scaled_chat_train.jsonl")
+        local_full = os.path.join(PROJECT_ROOT, local_rel)
+        computed_rel = safe_relpath(local_full, start=PROJECT_ROOT)
+        self.assertEqual(os.path.normpath(computed_rel), os.path.normpath(local_rel))
+
     # 6. Architecture Consistency Verification
     def test_architecture_consistency(self):
         """Registry, config.yaml, training plan, and model.py must agree on Pre-LayerNorm GELU architecture."""

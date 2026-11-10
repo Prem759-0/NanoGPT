@@ -30,6 +30,113 @@ if "datasets" in sys.modules:
 
 from datasets.chat.tokenizer import SovereignTokenizer
 
+# Approved Sovereign Provenance Allowlist
+SAFE_SOVEREIGN_CHAT_PROVENANCES: Set[str] = {
+    "DETERMINISTIC_CURRICULUM_TEMPLATE",
+    "ORIGINAL_SELF_AUTHORED_QA",
+    "SOURCE_DERIVED_EDUCATIONAL_SUMMARY",
+    "GENUINE_HUMAN_CONVERSATION",
+    "ORIGINAL_SELF_AUTHORED",
+    "GENUINE_SOURCED_EDUCATIONAL",
+}
+
+def validate_chat_record_provenance(rec: Dict[str, Any], manifest_path: str = "") -> None:
+    """
+    Strict Sovereign Ownership Validation Gate.
+    Enforces zero-teacher influence at the record level before tokenization,
+    loss masking, sample construction, or batch collation.
+    Fails closed immediately on:
+    - Quarantined records (split == 'quarantine' or validation_status == 'QUARANTINED')
+    - Non-null teacher_provider, teacher_model_id, or teacher_checkpoint_hash
+    - Case-insensitive 'teacher' or 'distillation' in provenance_type, source, or provenance
+    - Flagged is_teacher_generated == True
+    - Nested teacher-generation metadata in generation_metadata
+    - Missing or unapproved provenance_type
+    """
+    if not isinstance(rec, dict):
+        raise ValueError(f"Strict Sovereign violation: Record in '{manifest_path}' is not a valid JSON dictionary.")
+
+    rec_id = str(rec.get("id", "unknown_record"))
+
+    # 1. Quarantine rejection
+    if (
+        rec.get("validation_status") == "QUARANTINED"
+        or rec.get("review_status") == "QUARANTINED"
+        or rec.get("split") == "quarantine"
+    ):
+        raise ValueError(
+            f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' is QUARANTINED. "
+            f"Quarantined records are strictly excluded from dataset loading and training."
+        )
+
+    # 2. Direct teacher field rejection (fail-closed if non-null)
+    if rec.get("teacher_provider") is not None:
+        raise ValueError(
+            f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' has non-null teacher_provider='{rec.get('teacher_provider')}'. "
+            "Teacher-generated data is strictly prohibited under STRICT_SOVEREIGN_RANDOM_INIT_ONLY."
+        )
+    if rec.get("teacher_model_id") is not None:
+        raise ValueError(
+            f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' has non-null teacher_model_id='{rec.get('teacher_model_id')}'. "
+            "Teacher-generated data is strictly prohibited under STRICT_SOVEREIGN_RANDOM_INIT_ONLY."
+        )
+    if rec.get("teacher_checkpoint_hash") is not None:
+        raise ValueError(
+            f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' has non-null teacher_checkpoint_hash. "
+            "Teacher checkpoints are strictly prohibited under STRICT_SOVEREIGN_RANDOM_INIT_ONLY."
+        )
+    if rec.get("is_teacher_generated", False) is True:
+        raise ValueError(
+            f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' has is_teacher_generated=True. "
+            "Teacher generation is strictly prohibited under STRICT_SOVEREIGN_RANDOM_INIT_ONLY."
+        )
+
+    # 3. Provenance string checks (case-insensitive substring rejection)
+    prov_type = str(rec.get("provenance_type", "")).strip()
+    if not prov_type:
+        raise ValueError(
+            f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' is missing 'provenance_type'. "
+            "Missing provenance fails closed to prevent unverified data from entering training."
+        )
+    if "teacher" in prov_type.lower():
+        raise ValueError(
+            f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' has teacher provenance_type='{prov_type}'. "
+            "Teacher-generated records are strictly prohibited under STRICT_SOVEREIGN_RANDOM_INIT_ONLY."
+        )
+
+    # 4. Source and provenance field checks
+    source_str = str(rec.get("source", "")).lower()
+    if "teacher" in source_str or "distillation" in source_str:
+        raise ValueError(
+            f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' has teacher/distillation in source ('{rec.get('source')}')."
+        )
+    prov_field = str(rec.get("provenance", "")).lower()
+    if "teacher" in prov_field:
+        raise ValueError(
+            f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' has teacher in provenance field ('{rec.get('provenance')}')."
+        )
+
+    # 5. Nested generation_metadata checks
+    gen_meta = rec.get("generation_metadata")
+    if isinstance(gen_meta, dict):
+        if gen_meta.get("teacher_model") is not None:
+            raise ValueError(
+                f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' has generation_metadata.teacher_model='{gen_meta.get('teacher_model')}'. "
+                "Teacher model generation is strictly forbidden."
+            )
+        if gen_meta.get("teacher_provider") is not None:
+            raise ValueError(
+                f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' has generation_metadata.teacher_provider='{gen_meta.get('teacher_provider')}'. "
+                "Teacher providers are strictly forbidden."
+            )
+
+    # 6. Approved provenance allowlist enforcement
+    if prov_type not in SAFE_SOVEREIGN_CHAT_PROVENANCES:
+        raise ValueError(
+            f"Strict Sovereign violation: Record '{rec_id}' in '{manifest_path}' has unapproved provenance_type='{prov_type}'. "
+            f"Only sovereign approved provenances {sorted(list(SAFE_SOVEREIGN_CHAT_PROVENANCES))} are permitted."
+        )
+
 class SovereignChatDataset(Dataset):
     """
     Loads multi-turn ChatML conversations from manifest, encodes with
@@ -71,6 +178,9 @@ class SovereignChatDataset(Dataset):
         target_len = self.block_size + 1
 
         for rec in raw_records:
+            # 1. STRICT SOVEREIGN PROVENANCE AUDIT BEFORE ANY PROCESSING / TOKENIZATION
+            validate_chat_record_provenance(rec, manifest_path=self.manifest_path)
+
             rec_id = rec.get("id", f"record_{len(self.unique_record_ids)}")
             messages = rec.get("messages", [])
             tokens, loss_mask = self.tokenizer.encode_chat_with_loss_mask(messages)

@@ -159,18 +159,21 @@ class SovereignCodeSandbox:
             # Sanitized environment: strip API keys, database connection strings, and tokens
             sanitized_env = {
                 "SYSTEMROOT": os.environ.get("SYSTEMROOT", "C:\\Windows"),
+                "SystemDrive": os.environ.get("SystemDrive", "C:"),
+                "COMSPEC": os.environ.get("COMSPEC", "C:\\Windows\\system32\\cmd.exe"),
                 "PATH": os.environ.get("PATH", ""),
                 "PYTHONIOENCODING": "utf-8",
                 "PYTHONUNBUFFERED": "1",
+                "PYTHONDONTWRITEBYTECODE": "1",
                 "MPLBACKEND": "Agg",  # Ensure matplotlib uses headless non-interactive backend
                 "HOME": work_dir,
                 "TMP": work_dir,
                 "TEMP": work_dir
             }
 
-            # 3. Subprocess execution
+            # 3. Subprocess execution (using -B to avoid writing bytecode files in ephemeral sandbox dir)
             process = subprocess.run(
-                [self.python_executable, "run_script.py"],
+                [self.python_executable, "-B", "run_script.py"],
                 cwd=work_dir,
                 capture_output=True,
                 text=True,

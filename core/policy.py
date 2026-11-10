@@ -2,25 +2,24 @@
 Moon AI — Central Ownership & Training Policy Engine
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 
-Policy Migration: Stage 2.1.3
-Selected Strategy: POLICY B — TEACHER–STUDENT LEARNING (TEACHER_STUDENT_RANDOM_INIT)
+Active Policy: STRICT SOVEREIGN MODEL OWNERSHIP (STRICT_SOVEREIGN_RANDOM_INIT_ONLY)
 
-Maintains strict student model independence:
-- Moon student models MUST begin exclusively with random Gaussian initialization.
-- Student weights are NEVER initialized, transferred, or imported from teacher checkpoints.
-- High-quality teacher demonstrations (e.g. Kimi K3.1 Pro) are permitted for dataset generation,
-  reasoning traces, code examples, tool-use trajectories, and evaluation.
-- All teacher provenance, external dependencies, and API costs must be transparently tracked.
-- Backward compatibility with historical STRICT_SOVEREIGN_RANDOM_INIT_ONLY is strictly preserved.
+Maintains strict sovereign model independence:
+- Moon student models MUST begin exclusively with random Gaussian scratch initialization.
+- Student weights are NEVER initialized, transferred, or imported from teacher checkpoints or pretrained models.
+- Zero teacher-generated training examples or teacher distillation: teacher demonstrations are strictly excluded from all training pipelines.
+- Zero external generative AI inference APIs in runtime or training data generation.
+- Gemini and Kimi may assist with engineering and tooling only, never as model teachers or data generators.
+- Backward compatibility identifiers for historical evaluation are strictly preserved.
 """
 
 from typing import Dict, Any, List, Optional, Tuple, Set
 
 # Policy Identifiers
-POLICY_STRICT_SOVEREIGN_RANDOM_INIT = "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"  # Historical baseline (Stage 2.0 - 2.1.2)
-POLICY_TEACHER_STUDENT_RANDOM_INIT = "TEACHER_STUDENT_RANDOM_INIT"        # Stage 2.1.3+ Active Policy
+POLICY_STRICT_SOVEREIGN_RANDOM_INIT = "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"  # Active Sovereign Policy
+POLICY_TEACHER_STUDENT_RANDOM_INIT = "TEACHER_STUDENT_RANDOM_INIT"        # Historical / Comparative Reference
 
-ACTIVE_OWNERSHIP_POLICY = POLICY_TEACHER_STUDENT_RANDOM_INIT
+ACTIVE_OWNERSHIP_POLICY = POLICY_STRICT_SOVEREIGN_RANDOM_INIT
 
 VALID_OWNERSHIP_POLICIES: Set[str] = {
     POLICY_STRICT_SOVEREIGN_RANDOM_INIT,
@@ -78,7 +77,7 @@ POLICY_RULES: Dict[str, Dict[str, Any]] = {
         "allow_third_party_weights": False,
         "allow_external_apis_in_runtime": False,
         "require_random_initialization": True,
-        "description": "Historical strict sovereign baseline where synthetic teacher demonstrations were prohibited."
+        "description": "Active strict sovereign policy: 100% random scratch initialization and zero teacher influence or distillation."
     },
     POLICY_TEACHER_STUDENT_RANDOM_INIT: {
         "allow_teacher_demonstrations": True,

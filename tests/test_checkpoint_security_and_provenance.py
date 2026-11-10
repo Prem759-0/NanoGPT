@@ -18,6 +18,8 @@ import json
 import unittest
 import tempfile
 import hashlib
+import random
+import numpy as np
 from datetime import datetime, timezone
 import torch
 from PIL import Image
@@ -30,6 +32,8 @@ from training.common.checkpoint import (
     save_checkpoint,
     load_checkpoint,
     verify_checkpoint_provenance,
+    get_current_rng_state,
+    restore_rng_state,
     TRAINING_MODE_PRODUCTION,
     TRAINING_MODE_DEVELOPMENT,
     PROVENANCE_TAG
@@ -395,6 +399,102 @@ class TestCheckpointSecurityAndProvenance(unittest.TestCase):
         self.assertTrue(audit["training_eligible"])
         self.assertEqual(audit["status"], "VERIFIED_PRODUCTION_ELIGIBLE")
         self.assertEqual(audit["ownership_verification_state"], VERIFICATION_STATE_EXTERNALLY_VERIFIED)
+
+    def test_checkpoint_rng_state_pure_primitives_roundtrip(self):
+        """
+        Verifies that checkpoint save serializes NumPy RNG state as pure Python primitives,
+        loads securely under PyTorch weights_only=True without WeightsUnpickler errors,
+        and accurately restores reproducible RNG sequences across Python, NumPy, and PyTorch.
+        """
+        # 1. Establish deterministic seeds
+        random.seed(1337)
+        np.random.seed(4242)
+        torch.manual_seed(9999)
+
+        model = TinyDummyModel()
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+        ckpt_path = os.path.join(self.base_dir, "checkpoints", "dev", "rng_test_ckpt.pt")
+
+        # Save checkpoint
+        save_checkpoint(
+            model=model,
+            optimizer=optimizer,
+            step=100,
+            epoch=5,
+            loss=0.05,
+            config_dict={"test": "rng_validation"},
+            output_path=ckpt_path,
+            training_mode=TRAINING_MODE_DEVELOPMENT
+        )
+
+        # 2. Inspect serialized payload on disk under strict weights_only=True
+        raw_payload = torch.load(ckpt_path, map_location="cpu", weights_only=True)
+        rng = raw_payload.get("rng_state", {})
+        self.assertIn("numpy", rng)
+        self.assertIn("python", rng)
+        self.assertIn("torch_cpu", rng)
+
+        # 3. Assert NumPy state is serialized as pure Python primitives (no ndarray)
+        np_state = rng["numpy"]
+        self.assertIsInstance(np_state, tuple)
+        self.assertEqual(len(np_state), 5)
+        self.assertIsInstance(np_state[0], str)
+        self.assertIsInstance(np_state[1], list)  # Pure Python list, not np.ndarray
+        self.assertTrue(all(isinstance(x, int) for x in np_state[1]))
+        self.assertIsInstance(np_state[2], int)
+        self.assertIsInstance(np_state[3], int)
+        self.assertIsInstance(np_state[4], float)
+
+        # Generate reference outputs from current post-save RNG state
+        ref_py = random.random()
+        ref_np = np.random.rand(5)
+        ref_torch = torch.rand(5)
+
+        # Scramble RNG states completely
+        random.seed(999999)
+        np.random.seed(888888)
+        torch.manual_seed(777777)
+
+        # Restore RNG states from checkpoint via restore_rng_state
+        restore_rng_state(rng)
+
+        # Verify exact reproducibility
+        restored_py = random.random()
+        restored_np = np.random.rand(5)
+        restored_torch = torch.rand(5)
+
+        self.assertEqual(ref_py, restored_py)
+        self.assertTrue(np.allclose(ref_np, restored_np))
+        self.assertTrue(torch.allclose(ref_torch, restored_torch))
+
+    def test_checkpoint_rng_state_legacy_safe_handling(self):
+        """Verifies that checkpoints with missing, empty, or None RNG state load safely without errors."""
+        model = TinyDummyModel()
+        fresh_model = TinyDummyModel()
+        ckpt_path = os.path.join(self.base_dir, "checkpoints", "dev", "no_rng_ckpt.pt")
+        os.makedirs(os.path.dirname(ckpt_path), exist_ok=True)
+
+        payload = {
+            "provenance": PROVENANCE_TAG,
+            "training_mode": TRAINING_MODE_DEVELOPMENT,
+            "is_production_eligible": False,
+            "synthetic_sample_count": 0,
+            "model_state_dict": model.state_dict(),
+            "step": 1,
+            "epoch": 1,
+            "loss": 0.1,
+            "rng_state": None  # Missing/None RNG
+        }
+        torch.save(payload, ckpt_path)
+
+        # Must load cleanly in DEVELOPMENT mode without raising exceptions
+        loaded = load_checkpoint(
+            checkpoint_path=ckpt_path,
+            model=fresh_model,
+            mode=TRAINING_MODE_DEVELOPMENT,
+            enforce_provenance=True
+        )
+        self.assertEqual(loaded["step"], 1)
 
 if __name__ == "__main__":
     unittest.main()

@@ -138,7 +138,7 @@ class TestStage23SandboxAndTraining(unittest.TestCase):
         })
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertTrue(data["success"])
+        self.assertTrue(data["success"], f"Sandbox execute failed: {data}")
         self.assertEqual(data["exit_code"], 0)
         self.assertEqual(data["ast_security"], "APPROVED")
         self.assertIn("Sovereign Sandbox HTTP Endpoint OK", data["output"])

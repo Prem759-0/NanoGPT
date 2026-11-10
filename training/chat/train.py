@@ -55,6 +55,19 @@ CANONICAL_MANIFEST_LF_HASHES = {
     "scaled_chat_test.jsonl": "e854f62814d413b36d02224777fe1d6d33a7ebffbac1a64feb4fee8de8c53428"
 }
 
+def safe_relpath(path: str, start: str = PROJECT_ROOT) -> str:
+    """
+    Safely calculates relative path to start directory.
+    If path is on a different filesystem drive or mount (e.g. Windows cross-drive temp dirs),
+    returns normalized absolute path without raising ValueError or breaking containment.
+    """
+    if not path:
+        return ""
+    try:
+        return os.path.relpath(path, start)
+    except (ValueError, OSError):
+        return os.path.normpath(os.path.abspath(path))
+
 def compute_manifest_hashes(fpath: str) -> Tuple[Optional[str], Optional[str]]:
     """Compute (raw_sha256, normalized_lf_sha256) for a manifest file."""
     if os.path.isfile(fpath):
@@ -193,17 +206,17 @@ def train_moon_chat(
 
     manifest_provenance_hashes = {
         "train_manifest": {
-            "path": os.path.relpath(train_manifest, PROJECT_ROOT),
+            "path": safe_relpath(train_manifest, PROJECT_ROOT),
             "sha256": train_lf_sha or "",
             "raw_sha256": train_raw_sha
         },
         "val_manifest": {
-            "path": os.path.relpath(val_manifest, PROJECT_ROOT),
+            "path": safe_relpath(val_manifest, PROJECT_ROOT),
             "sha256": val_lf_sha or "",
             "raw_sha256": val_raw_sha
         },
         "test_manifest": {
-            "path": os.path.relpath(test_manifest, PROJECT_ROOT),
+            "path": safe_relpath(test_manifest, PROJECT_ROOT),
             "sha256": test_lf_sha or "",
             "raw_sha256": test_raw_sha
         }
@@ -502,7 +515,7 @@ def train_moon_chat(
     print(f"   Execution Mode: {'ENGINEERING SMOKE TEST' if is_smoke_test else 'PRODUCTION PILOT RUN'}")
     print("=" * 70)
     print("[Config & Policy B Option 1]")
-    print(f"  • Config File:          {os.path.relpath(abs_config_path, PROJECT_ROOT)}")
+    print(f"  • Config File:          {safe_relpath(abs_config_path, PROJECT_ROOT)}")
     print(f"  • Model Track:          {cfg.get('model_track', 'N/A')}")
     print(f"  • Ownership Policy:     {cfg.get('ownership_policy', 'STRICT_SOVEREIGN_RANDOM_INIT_ONLY')} [Option 1 Sovereign]")
     print(f"  • Student Init:         random_gaussian_scratch (N(0, 0.02^2)) [VERIFIED]")
@@ -519,9 +532,9 @@ def train_moon_chat(
     print(f"  • Hardware Gate Status: {gpu_identity_info.get('verification_status', 'UNKNOWN')}")
 
     print("\n[Data Manifest Provenance & Hash Integrity]")
-    train_rel = os.path.relpath(train_manifest, PROJECT_ROOT)
-    val_rel = os.path.relpath(val_manifest, PROJECT_ROOT)
-    test_rel = os.path.relpath(test_manifest, PROJECT_ROOT)
+    train_rel = safe_relpath(train_manifest, PROJECT_ROOT)
+    val_rel = safe_relpath(val_manifest, PROJECT_ROOT)
+    test_rel = safe_relpath(test_manifest, PROJECT_ROOT)
     train_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(train_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
     val_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(val_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
     test_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(test_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
@@ -547,7 +560,7 @@ def train_moon_chat(
     print(f"  • Mixed Precision:      {'FP16 AMP (autocast + GradScaler enabled)' if use_amp else 'FP32 standard'}")
 
     print("\n[Checkpoint Isolation & Anti-Collision]")
-    print(f"  • Output Directory:     {os.path.relpath(checkpoint_dir, PROJECT_ROOT)}")
+    print(f"  • Output Directory:     {safe_relpath(checkpoint_dir, PROJECT_ROOT)}")
     print(f"  • Final Checkpoint:     {ckpt_filename}")
     print(f"  • Best Checkpoint:      {best_ckpt_filename}")
     print("  • Stage Isolation:      CLEARED (Stage 2.2 / earlier checkpoints protected)")

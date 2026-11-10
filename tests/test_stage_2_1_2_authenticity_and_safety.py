@@ -257,6 +257,7 @@ class TestStage212AuthenticityAndSafety(unittest.TestCase):
 
         record = {
             "id": "long_convo_001",
+            "provenance_type": "ORIGINAL_SELF_AUTHORED",
             "messages": long_turns
         }
 
@@ -340,13 +341,19 @@ class TestStage212AuthenticityAndSafety(unittest.TestCase):
     # -------------------------------------------------------------------------
 
     def test_production_training_blocked_without_readiness(self):
-        """Calling train_moon_chat without smoke_test=True raises RuntimeError."""
-        with self.assertRaises(RuntimeError) as ctx:
+        """Calling train_moon_chat without smoke_test=True fails closed and blocks production training."""
+        with self.assertRaises((ValueError, RuntimeError)) as ctx:
             train_moon_chat(
                 config_path=os.path.join(PROJECT_ROOT, "training", "chat", "config.yaml"),
                 smoke_test=False,
             )
-        self.assertIn("Production pilot training blocked by readiness gate", str(ctx.exception))
+        err = str(ctx.exception)
+        is_manifest_security_block = "Production manifest security violation" in err
+        is_readiness_block = "Production pilot training blocked by readiness gate" in err
+        self.assertTrue(
+            is_manifest_security_block or is_readiness_block,
+            f"Expected fail-closed production training block, got: {err}"
+        )
 
     def test_smoke_test_mode_creates_unpromotable_checkpoint(self):
         """Smoke test mode executes 1 iteration and produces unpromotable checkpoint."""
