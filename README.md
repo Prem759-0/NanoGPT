@@ -155,6 +155,14 @@ Moon AI models are engineered specifically to train and execute on accessible cl
 - **Tensor Cores**: Second-Generation Turing Tensor Cores
 - **Precision Mode**: Mixed Precision FP16 with PyTorch AMP (`torch.cuda.amp.autocast`)
 
+### Hardware Compatibility Matrix
+| Platform | Target Device | Precision | Status |
+| :--- | :--- | :--- | :--- |
+| Cloud GPU | NVIDIA Tesla T4 (15.3GB) | FP16 (AMP) | **Certified Primary** |
+| Workstation | NVIDIA RTX 3060/4090 | FP16 / BF16 | Supported |
+| Apple Silicon | Apple M1/M2/M3 (MPS) | FP32 / FP16 | Supported |
+| Universal CPU | x86_64 / ARM64 | FP32 | Fallback |
+
 ### Parameter Sizing & Allocation Breakdown
 
 | Model Track | Parameters (Exact) | Layers | Heads | Embedding Dim | Context Window | Peak VRAM (Train) | Target Hardware |
