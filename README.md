@@ -24,6 +24,9 @@
 Under the architectural leadership of **Prem Gaikwad**, Moon AI operates across seven specialized sovereign engines:
 1. **Natural Multi-Turn Conversation & Contextual Understanding**
 2. **Deep Mathematical, Logical & First-Principles Reasoning**
+   - *Deterministic Math Engine*: Evaluates arithmetic, symbolic equations, and numeric equivalence without hallucination.
+   - *AST Security Sandbox*: Parses untrusted code via Python AST to detect forbidden system calls prior to execution.
+   - *Tamper-Evident WAL*: Preserves verified candidates in an append-only WAL with SHA-256 integrity validation.
 3. **Software Engineering, Code Synthesis, Repository Debugging & Testing**
 4. **Agentic Tool Selection & Autonomous Task Execution**
 5. **Persistent User-Approved Memory (Isolated from Training Weights)**
