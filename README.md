@@ -266,7 +266,15 @@ python training/chat/train.py --config training/chat/phase_2_4_t4_pilot.yaml --s
 
 ---
 
-## 8. LICENSE & ATTRIBUTION
+## 8. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
+
+- **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership and user privacy.
+- **Commit Signing & Verification**: Commits must adhere to conventional commit specifications (`docs:`, `feat:`, `fix:`).
+- **Issue Reporting**: Security-sensitive issues should be reported directly to the Chief ML Systems Architect.
+
+---
+
+## 9. LICENSE & ATTRIBUTION
 
 - **Chief ML Systems Architect & Owner**: Prem Gaikwad (India 🇮🇳)
 - **Ownership Policy**: `TEACHER_STUDENT_RANDOM_INIT` (Pure Gaussian scratch initialization)
