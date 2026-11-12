@@ -35,6 +35,9 @@ Under the architectural leadership of **Prem Gaikwad**, Moon AI operates across 
    - *Motion Vector Guidance*: Enforces physical consistency across multi-second frame sequences.
    - *Mixed-Precision Optimization*: Operates within 15.3GB VRAM bounds for cloud and local execution.
 7. **Automated Document Synthesis (PDF, DOCX, PPTX, XLSX, CSV, Markdown) & Evidence-Based Research**
+   - *Office Document Artifacts*: Generates production-ready `.pdf`, `.docx`, `.pptx`, and `.xlsx` artifacts directly from chat.
+   - *Evidence-Based Citation*: Links synthesized reports with verifiable source references.
+   - *Structured Data Formats*: Exports clean tabular data in CSV, JSON, and Markdown formats.
 
 All specialist engines are orchestrated by **Moon Core** — an intelligent dispatch system that analyzes user intent, deconstructs complex goals into multi-stage workflows, coordinates specialist engines, and returns unified results.
 
