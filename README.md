@@ -141,6 +141,11 @@ Moon AI deconstructs monolithic AI design into seven decoupled, specialist engin
 
 ## 4. PHYSICAL HARDWARE TARGET & EMPIRICAL BENCHMARKS
 
+### 4.1 Production Training Authorization Gates
+- **Fail-Closed Sovereign Invariant**: `AUTHORIZED_BY_PREM = False` is enforced platform-wide across all 12 training entry points.
+- **Unauthorized Execution Block**: Calling `train.py`, `training/image/train.py`, or `training/video/train.py` without explicit owner signature immediately raises `PermissionError`.
+- **Mechanical Validation Isolation**: Smoke tests run purely as mechanical tensor and pipeline verifications without weight updates.
+
 Moon AI models are engineered specifically to train and execute on accessible cloud hardware, targeting the **NVIDIA Tesla T4** GPU (Google Colab free tier / T4 instance):
 
 ### Hardware Profile: NVIDIA Tesla T4
