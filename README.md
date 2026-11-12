@@ -32,6 +32,12 @@ Under the architectural leadership of **Prem Gaikwad**, Moon AI operates across 
 
 All specialist engines are orchestrated by **Moon Core** — an intelligent dispatch system that analyzes user intent, deconstructs complex goals into multi-stage workflows, coordinates specialist engines, and returns unified results.
 
+### 1.1 Moon Core Dispatch & Orchestration Engine
+Moon Core functions as the central neural switchboard of the platform:
+- **Intent Decomposition**: Classifies user queries into conversational, algorithmic, generative, or tool-assisted intents.
+- **Specialist Routing**: Directs complex multi-step workflows to the optimal specialist engine.
+- **Asymmetric Synthesis**: Aggregates multi-modal outputs into a unified, coherent response stream.
+
 ---
 
 ## 2. CORE OWNERSHIP POLICY: POLICY B (`TEACHER_STUDENT_RANDOM_INIT`)
