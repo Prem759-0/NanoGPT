@@ -211,7 +211,16 @@ pip install -r requirements.txt
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-### 6.3 Running an Engineering Smoke Test
+### 6.3 Running Automated Verification Battery
+
+```bash
+# Execute isolated governance, containment, and authorization closure test suites
+python -m unittest tests/test_phase_2_6_2_remediation.py
+python -m unittest tests/test_phase_2_6_2_2_containment.py
+python -m unittest tests/test_phase_2_6_2_8_authorization_closure.py
+```
+
+### 6.4 Running an Engineering Smoke Test
 
 ```bash
 # Run 1-iteration smoke test with authentic Tesla T4 verification
