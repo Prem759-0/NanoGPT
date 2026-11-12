@@ -28,6 +28,9 @@ Under the architectural leadership of **Prem Gaikwad**, Moon AI operates across 
 4. **Agentic Tool Selection & Autonomous Task Execution**
 5. **Persistent User-Approved Memory (Isolated from Training Weights)**
 6. **Latent Image Diffusion & Generative Video (with product ambition comparable to Higgsfield AI)**
+   - *Spatiotemporal Convolutions*: Generates temporally coherent video frames in latent space.
+   - *Motion Vector Guidance*: Enforces physical consistency across multi-second frame sequences.
+   - *Mixed-Precision Optimization*: Operates within 15.3GB VRAM bounds for cloud and local execution.
 7. **Automated Document Synthesis (PDF, DOCX, PPTX, XLSX, CSV, Markdown) & Evidence-Based Research**
 
 All specialist engines are orchestrated by **Moon Core** — an intelligent dispatch system that analyzes user intent, deconstructs complex goals into multi-stage workflows, coordinates specialist engines, and returns unified results.
