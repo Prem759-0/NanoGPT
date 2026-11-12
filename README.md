@@ -245,7 +245,17 @@ python training/chat/train.py --config training/chat/phase_2_4_t4_pilot.yaml --s
                │
 ┌──────────────▼────────────────┐
 │ Stage 2.4 - 2.5               │  Hardware Identity Certification (T4), 8 Production Preflight Gates,
-│ [ACTIVE PHASE]                │  Safe Atomic Checkpointing, 100-Iteration Pilot Verification
+│ [COMPLETED]                   │  Safe Atomic Checkpointing, 100-Iteration Pilot Verification
+└──────────────┬────────────────┘
+               │
+┌──────────────▼────────────────┐
+│ Stage 2.6                     │  Zero-Trust Memory Isolation, Platform-Wide Training Lock,
+│ [ACTIVE PHASE]                │  Sovereign Policy Hardening, Quarantine Data Governance
+└──────────────┬────────────────┘
+               │
+┌──────────────▼────────────────┐
+│ Stage 2.7                     │  Autonomous Multi-Turn Evaluation, Benchmark Graduation,
+│ [UPCOMING]                    │  Controlled Sovereign Pilot Verification
 └──────────────┬────────────────┘
                │
 ┌──────────────▼────────────────┐
