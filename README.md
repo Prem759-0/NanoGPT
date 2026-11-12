@@ -64,6 +64,12 @@ Moon AI is governed by an absolute mathematical and architectural policy:
 +---------------------------------------------------------------------------------------------------+
 ```
 
+### 2.1 Zero-Trust Data Security & Privacy Controls
+Moon AI adheres to rigorous data privacy and memory isolation invariants:
+- **Memory Training Isolation**: Persistent user memories are strictly isolated with permanent `eligible_for_training = False`.
+- **Sensitive Data Redaction**: Automatic AST and regex filters redact PII, API tokens, and private credentials before memory storage.
+- **Fail-Closed Consent Gate**: Unconsented background logging is disabled; all data collection requires explicit affirmative user consent.
+
 ### Technical Distinction Between Roles
 
 | Architectural Concept | Definition | Invariant Constraint |
