@@ -47,6 +47,12 @@ Moon Core functions as the central neural switchboard of the platform:
 - **Specialist Routing**: Directs complex multi-step workflows to the optimal specialist engine.
 - **Asymmetric Synthesis**: Aggregates multi-modal outputs into a unified, coherent response stream.
 
+### 1.2 First-Principles Sovereign AI Foundation
+Moon AI adheres to three non-negotiable architectural mandates:
+1. **Pure Random Gaussian Scratch Initialization**: Student models must originate exclusively from random Gaussian scratch weights ($\mathcal{N}(0, 0.02^2)$). Resuming from or initializing with third-party foundation model checkpoints is strictly prohibited.
+2. **Zero Teacher Distillation**: Production training operates with complete cognitive independence. Teacher demonstrations and closed-source foundation models are prohibited from influencing student training weights.
+3. **Fail-Closed Platform Safety Invariants**: The central training lock (`AUTHORIZED_BY_PREM = False`) and unconsented data collection blocks are hardcoded platform invariants that fail closed across all 12 execution pathways.
+
 ---
 
 ## 2. CORE OWNERSHIP POLICY: POLICY B (`TEACHER_STUDENT_RANDOM_INIT`)
