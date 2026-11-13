@@ -214,21 +214,25 @@ Moon AI introduces an uncompromised verification tier to ensure mathematical and
 
 ---
 
-## 6. DATA MANIFEST PROVENANCE & TRAINING CURRICULUM
+## 6. DATA MANIFEST PROVENANCE, CURRICULUM & QUARANTINE ARCHITECTURE
 
-Training datasets undergo strict verification, including format normalization, deduplication, and canonical LF SHA-256 integrity audits:
+Training datasets undergo strict cryptographic provenance verification, format normalization, and canonical LF SHA-256 integrity audits:
 
-### Manifest Provenance & Accounting
+### 6.1 Sovereign High-Volume Curriculum (1,100 Records)
 
 | Dataset Manifest | Records | Training Windows (Seq 512) | Canonical LF SHA-256 Hash | Loss Masking Policy |
 | :--- | :--- | :--- | :--- | :--- |
-| `scaled_chat_train.jsonl` | **990 records** | **990 windows** | `c0f37ba515977e1ea542fed18c78ad01e91307b22fdb21dca9a4734da7d6323c` | Assistant-only (`user` tokens ignored) |
-| `scaled_chat_val.jsonl` | **50 records** | **50 windows** | `b2f53140c0f417d59eabb5cce2163198308bc2ec0ffea575e95a3fc5cbdd27f7` | Assistant-only evaluation loss |
-| `scaled_chat_test.jsonl` | **60 records** | **60 windows** | `26ba7b744d08409ff0306ee1b1ca20d1c9ef00ae011f008890cf5b6ff92aee28` | **Blind holdout** (Excluded from training/val) |
+| `scaled_chat_train.jsonl` | **990 records** | **990 windows** | `c0f37ba515977e1ea542fed18c78ad018b3dce2f5b02d5f6213beab47e03eebe` | Assistant-only (`user` tokens ignored) |
+| `scaled_chat_val.jsonl` | **50 records** | **50 windows** | `b2f53140c0f417d59eabb5cce2163198a2a35f5bd7732a4bb51f143ebaa059cd` | Assistant-only evaluation loss |
+| `scaled_chat_test.jsonl` | **60 records** | **60 windows** | `e854f62814d413b36d02224777fe1d6d33a7ebffbac1a64feb4fee8de8c53428` | **Blind holdout** (Excluded from training/val) |
+
+### 6.2 Assistant-Only Loss Masking & Data Quarantine
+- **Assistant-Only Loss Masking**: User prompt tokens and padding tokens are assigned label `-1` during cross-entropy loss computation. Gradient updates reflect only high-density assistant responses.
+- **Data Quarantine Boundary**: Historical unconsented chat turns and teacher demonstrations are removed from active training splits and preserved in `data/splits/quarantine_unconsented_legacy_splits/` for audit accountability with tamper-evident tracking.
 
 ---
 
-## 6. QUICK START & DEVELOPER GUIDE
+## 7. QUICK START & DEVELOPER GUIDE
 
 ### 6.1 Clone & Environment Setup
 
