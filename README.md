@@ -201,7 +201,19 @@ Moon AI models are engineered specifically to train and execute on accessible cl
 
 ---
 
-## 5. DATA MANIFEST PROVENANCE & TRAINING CURRICULUM
+## 5. OBJECTIVE VERIFICATION & MATHEMATICAL PROOF ENGINE
+
+Moon AI introduces an uncompromised verification tier to ensure mathematical and algorithmic outputs are objectively correct prior to synthesis:
+
+### 5.1 Verification Architecture
+1. **Deterministic Mathematical Verification**: Evaluates arithmetic expressions, polynomial equations, and numerical equivalence using deterministic symbolic algorithms, eliminating statistical hallucination on arithmetic and algebraic logic.
+2. **AST Security Sandbox & Static Code Analysis**: Untrusted Python code is inspected via Python Abstract Syntax Trees (`ast.parse`) before execution. Dangerous system calls (`os.system`, `subprocess`, file deletion, socket connections) and infinite loop constructs are caught and blocked statically.
+3. **Non-Override Governance Rule**: Subjective user ratings (e.g. a 5-star user rating) can **never** override a failing objective verifier. Candidates that fail mathematical equivalence or unit tests are permanently excluded from promotion.
+4. **Tamper-Evident Write-Ahead Log (WAL)**: Candidates and verification results are persisted to an append-only WAL with cryptographic SHA-256 integrity hashing to prevent state corruption across process lifecycles.
+
+---
+
+## 6. DATA MANIFEST PROVENANCE & TRAINING CURRICULUM
 
 Training datasets undergo strict verification, including format normalization, deduplication, and canonical LF SHA-256 integrity audits:
 
