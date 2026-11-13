@@ -55,29 +55,39 @@ Moon AI adheres to three non-negotiable architectural mandates:
 
 ---
 
-## 2. CORE OWNERSHIP POLICY: POLICY B (`TEACHER_STUDENT_RANDOM_INIT`)
+## 2. STRICT SOVEREIGN OWNERSHIP POLICY & ARCHITECTURAL GEOMETRY
 
 Moon AI is governed by an absolute mathematical and architectural policy:
 
 ```
 +---------------------------------------------------------------------------------------------------+
-|                                  THE INVARIANT BOUNDARY                                           |
+|                            THE SOVEREIGN INVARIANT BOUNDARY                                       |
 +---------------------------------------------------------------------------------------------------+
 |  1. MOON STUDENT INITIALIZATION                                                                   |
 |     Every Moon student neural network is initialized exclusively from random Gaussian scratch     |
-|     weights: W ~ N(0, 0.02^2).                                                                    |
-|     Third-party foundation model weights are STRICTLY PROHIBITED from entering student parameters.|
+|     weights: W ~ N(0, 0.02^2). Resuming from external pre-trained checkpoints is blocked.         |
 |                                                                                                   |
-|  2. TEACHER DISTILLATION                                                                          |
-|     Frontier foundation models serve strictly as external TEACHERS producing high-density         |
-|     demonstrations, reasoning chains, code examples, and evaluation tests.                        |
-|     Teacher parameters NEVER enter the Moon runtime or repository.                                |
+|  2. ZERO TEACHER DISTILLATION                                                                     |
+|     Production training is completely autonomous and sovereign. Demonstrations, distillation,    |
+|     and weights from third-party foundation models are strictly quarantined and excluded.         |
 |                                                                                                   |
-|  3. AUTONOMOUS RUNTIME                                                                            |
+|  3. AUTONOMOUS RUNTIME INFERENCE                                                                  |
 |     Once trained, Moon student models execute inference 100% autonomously on local or edge        |
 |     hardware without any runtime API dependencies.                                                |
 +---------------------------------------------------------------------------------------------------+
 ```
+
+### 2.1 Exact Parameter Accounting (Moon Chat v0 — 25.70M)
+Moon Chat v0 implements a causal decoder-only transformer with Pre-LayerNorm and GELU activations:
+
+| Component | Layer / Tensor Name | Dimensions | Parameter Count |
+| :--- | :--- | :--- | :--- |
+| **Token Embeddings** | `transformer.wte` | `512 × 512` | 262,144 |
+| **Positional Embeddings** | `transformer.wpe` | `256 × 512` | 131,072 |
+| **Transformer Blocks (8×)** | `transformer.h[0..7]` | 8 layers, 8 heads, 512 embd | 25,301,504 |
+| **Final LayerNorm** | `transformer.ln_f` | `weight(512) + bias(512)` | 1,024 |
+| **Language Modeling Head** | `lm_head` | Shared with `wte` (Weight-Tied) | *Tied (0 additional)* |
+| **Total Exact Parameters** | — | — | **25,698,816 (25.70M)** |
 
 ### 2.1 Zero-Trust Data Security & Privacy Controls
 Moon AI adheres to rigorous data privacy and memory isolation invariants:
