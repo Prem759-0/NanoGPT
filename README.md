@@ -171,6 +171,18 @@ Moon AI models are engineered specifically to train and execute on accessible cl
 - **Tensor Cores**: Second-Generation Turing Tensor Cores
 - **Precision Mode**: Mixed Precision FP16 with PyTorch AMP (`torch.cuda.amp.autocast`)
 
+#### VRAM Allocation & Feasibility Budget (Moon Chat v0 — 25.7M)
+| Memory Allocation Category | Technical Derivation / Configuration | Allocated VRAM |
+| :--- | :--- | :--- |
+| **Model Parameters (FP16)** | $25,698,816 \times 2 \text{ bytes}$ | 51.4 MB |
+| **Gradients (FP16)** | $25,698,816 \times 2 \text{ bytes}$ | 51.4 MB |
+| **AdamW Optimizer States (FP32)** | Master weights + First & second moments ($12 \text{ bytes/param}$) | 308.4 MB |
+| **Forward Activations** | Micro-batch 4, Sequence length 256, Pre-LN GELU tensors | ~300.9 MB |
+| **CUDA Runtime & Framework Context** | PyTorch CUDA context, cuBLAS workspaces | ~600.0 MB |
+| **Total Peak VRAM Footprint** | Micro-batch 4 + Gradient Accumulation 4 | **~1,312.1 MB (~1.31 GB)** |
+| **Available Hardware Headroom** | $15,360 \text{ MB} - 1,312 \text{ MB}$ | **~14,047.9 MB (> 14 GB free)** |
+| **Out-of-Memory (OOM) Risk** | Sizing verification across pilot window | **LOW (Safe with micro-batch $\le 32$)** |
+
 ### Hardware Compatibility Matrix
 | Platform | Target Device | Precision | Status |
 | :--- | :--- | :--- | :--- |
