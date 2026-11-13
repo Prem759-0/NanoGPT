@@ -308,7 +308,7 @@ Before any authorized training launch, `scripts/preflight_pilot_training.py` cer
 
 ---
 
-## 7. PROJECT ROADMAP & RELEASE PHASES
+## 8. PROJECT ROADMAP & RELEASE PHASES
 
 ```
                                     THE MOON AI ROADMAP
@@ -329,7 +329,7 @@ Before any authorized training launch, `scripts/preflight_pilot_training.py` cer
                │
 ┌──────────────▼────────────────┐
 │ Stage 2.6                     │  Zero-Trust Memory Isolation, Platform-Wide Training Lock,
-│ [ACTIVE PHASE]                │  Sovereign Policy Hardening, Quarantine Data Governance
+│ [ACTIVE PHASE]                │  Sovereign Policy Closure, Adversarial Safety & Quarantine Governance
 └──────────────┬────────────────┘
                │
 ┌──────────────▼────────────────┐
@@ -345,16 +345,17 @@ Before any authorized training launch, `scripts/preflight_pilot_training.py` cer
 
 ---
 
-## 8. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
+## 9. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
 
-- **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership and user privacy.
+- **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership, mathematical verification, and user privacy.
+- **Fail-Closed Security**: New training or data acquisition pathways must adhere to `AUTHORIZED_BY_PREM = False` invariants.
 - **Commit Signing & Verification**: Commits must adhere to conventional commit specifications (`docs:`, `feat:`, `fix:`).
 - **Issue Reporting**: Security-sensitive issues should be reported directly to the Chief ML Systems Architect.
 
 ---
 
-## 9. LICENSE & ATTRIBUTION
+## 10. LICENSE & ATTRIBUTION
 
 - **Chief ML Systems Architect & Owner**: Prem Gaikwad (India 🇮🇳)
-- **Ownership Policy**: `TEACHER_STUDENT_RANDOM_INIT` (Pure Gaussian scratch initialization)
+- **Ownership Policy**: `STRICT_SOVEREIGN_RANDOM_INIT_ONLY` (Pure Gaussian scratch initialization, zero teacher distillation)
 - **License**: Sovereign Open-Access License (Derived from MIT-licensed NanoGPT components by Andrej Karpathy).
