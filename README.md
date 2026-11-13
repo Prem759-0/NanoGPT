@@ -234,7 +234,7 @@ Training datasets undergo strict cryptographic provenance verification, format n
 
 ## 7. QUICK START & DEVELOPER GUIDE
 
-### 6.1 Clone & Environment Setup
+### 7.1 Clone & Environment Setup
 
 ```bash
 # Clone the official sovereign repository
@@ -249,20 +249,42 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 6.2 Running Automated Test Discovery
+### 7.2 Running Localhost Full-Stack Services
+
+Moon AI features a dual-server architecture uniting a high-performance Python FastAPI backend with a reactive Vite + React 19 interface:
+
+```bash
+# Terminal 1: Launch FastAPI Backend (Port 8000)
+python -m uvicorn webapp.main:app --host 127.0.0.1 --port 8000
+
+# Terminal 2: Launch Vite React Frontend with HMR (Port 5173)
+cd frontend
+npm install
+npm run dev
+```
+
+* **Frontend UI (Hot Reloading)**: [http://localhost:5173](http://localhost:5173)
+* **Backend API & Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+* **Reverse Proxy**: Vite automatically proxies `/api` and `/static` endpoints to the FastAPI backend.
+
+### 7.3 Running Automated Test Discovery
 
 ```bash
 # Execute full repository unit and regression test suite
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-### 6.3 Running Automated Verification Battery
+### 7.4 Running Sovereign Verification Batteries
 
 ```bash
-# Execute isolated governance, containment, and authorization closure test suites
+# Execute Phase 2.6 security, governance, and adversarial policy test suites
+python -m unittest tests/test_phase_2_6_governance.py
 python -m unittest tests/test_phase_2_6_2_remediation.py
 python -m unittest tests/test_phase_2_6_2_2_containment.py
+python -m unittest tests/test_phase_2_6_2_5_sovereign_policy_hardening.py
 python -m unittest tests/test_phase_2_6_2_8_authorization_closure.py
+python -m unittest tests/test_phase_2_6_4_adversarial_policy_closure.py
+```
 ```
 
 ### 6.4 Running an Engineering Smoke Test
