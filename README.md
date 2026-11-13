@@ -89,11 +89,12 @@ Moon Chat v0 implements a causal decoder-only transformer with Pre-LayerNorm and
 | **Language Modeling Head** | `lm_head` | Shared with `wte` (Weight-Tied) | *Tied (0 additional)* |
 | **Total Exact Parameters** | — | — | **25,698,816 (25.70M)** |
 
-### 2.1 Zero-Trust Data Security & Privacy Controls
+### 2.2 Zero-Trust Data Security, User Memory & Privacy Controls
 Moon AI adheres to rigorous data privacy and memory isolation invariants:
-- **Memory Training Isolation**: Persistent user memories are strictly isolated with permanent `eligible_for_training = False`.
-- **Sensitive Data Redaction**: Automatic AST and regex filters redact PII, API tokens, and private credentials before memory storage.
-- **Fail-Closed Consent Gate**: Unconsented background logging is disabled; all data collection requires explicit affirmative user consent.
+- **Memory Training Isolation**: Persistent user memories are strictly isolated from model training weights with permanent `eligible_for_training = False`. User personal context is never converted into gradient updates or model parameters.
+- **Sensitive Data & PII Redaction**: Automatic regex and lexical filters redact email addresses, phone numbers, API keys, credentials, and private keys (`[REDACTED_API_KEY]`, `[REDACTED_EMAIL]`) prior to local SQLite memory storage.
+- **Cross-User Memory Isolation**: User memories are partitioned by cryptographic user IDs. Memories stored for User A are inaccessible to User B, and queries without valid credentials return empty dictionaries.
+- **Unconsented Chat Logging Removal**: Automatic writing of conversational interaction turns into training JSONL manifests is permanently removed fail-closed (`SERVER_AUTHENTICATION_VERIFIED = False`, `DONATION_INGESTION_ENABLED = False`). User donation requires affirmative consent and server authentication.
 
 ### Technical Distinction Between Roles
 
