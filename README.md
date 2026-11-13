@@ -285,14 +285,26 @@ python -m unittest tests/test_phase_2_6_2_5_sovereign_policy_hardening.py
 python -m unittest tests/test_phase_2_6_2_8_authorization_closure.py
 python -m unittest tests/test_phase_2_6_4_adversarial_policy_closure.py
 ```
-```
 
-### 6.4 Running an Engineering Smoke Test
+### 7.5 Mechanical Pipeline Smoke Testing
 
 ```bash
-# Run 1-iteration smoke test with authentic Tesla T4 verification
-python training/chat/train.py --config training/chat/phase_2_4_t4_pilot.yaml --smoke-test
+# Execute parameter-frozen mechanical forward validation (zero weight updates, zero disk writes)
+python training/chat/train.py --config training/chat/pilot_config.yaml --smoke-test
 ```
+
+### 7.6 The 8 Independent Production Preflight Gates
+
+Before any authorized training launch, `scripts/preflight_pilot_training.py` certifies the environment against 8 strict gates:
+
+1. **Gate 1: Configuration Integrity & Sovereign Policy Validation**: Validates that `ownership_policy` is strictly `STRICT_SOVEREIGN_RANDOM_INIT_ONLY` and teacher distillation is disabled.
+2. **Gate 2: Comprehensive Corpus Provenance Audit**: Verifies all 1,100 records across active manifests originate exclusively from vetted sovereign sources with zero teacher influence.
+3. **Gate 3: Tokenizer & Model Vocabulary Symmetry**: Ensures tokenizer vocab size matches model `vocab_size` (512 tokens) with byte-level fallback.
+4. **Gate 4: 25.7M Parameter Architecture & Loss Masking**: Confirms exact 25,698,816 parameters, 8 layers, 8 heads, 512 embedding dim, and assistant-only loss masking.
+5. **Gate 5: Device Execution Verification**: Executes empirical forward/backward passes and optimizer step with PyTorch AMP + GradScaler under authorization.
+6. **Gate 6: Checkpoint Round-Trip & Safe Deserialization**: Validates serialization integrity using `torch.load(..., weights_only=True)` without arbitrary object code execution.
+7. **Gate 7: Anti-Overwrite Checkpoint Isolation**: Verifies safe naming guards that refuse to overwrite existing production checkpoints.
+8. **Gate 8: Blind-Test Split Isolation & Immutability**: Certifies that test set records remain strictly isolated from training/validation datasets.
 
 ---
 
