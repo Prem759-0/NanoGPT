@@ -380,6 +380,14 @@ All conversational inputs pass through `core/security/filtering.py` prior to can
 
 ---
 
+### 2.6.6 Durable User Memory Subsystem & Privacy Isolation
+User memory (`core/memory/user_memory.py`) is decoupled from model parameters:
+- Stored exclusively in local, isolated, user-approved storage
+- Filtered for sensitive credentials before persistence
+- Never ingested into model weights without explicit user consent (`moon-learning-donation-v1`)
+
+---
+
 ## 9. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
 
 - **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership, mathematical verification, and user privacy.
