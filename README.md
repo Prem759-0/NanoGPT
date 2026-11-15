@@ -396,6 +396,14 @@ Production pilot configurations are certified for NVIDIA T4 (15.3GB VRAM) cloud 
 
 ---
 
+### 2.6.8 Secure Checkpoint Serialization & Integrity Hashing
+Checkpoint saving (`training/common/checkpoint.py`) writes atomic temporary payloads before replacing destination files:
+- Checkpoints stamp `ownership_policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY`
+- Checkpoint payloads record dataset manifest SHA-256 hashes
+- Unpromotable smoke test checkpoints are strictly isolated and rejected by production gates
+
+---
+
 ## 9. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
 
 - **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership, mathematical verification, and user privacy.
