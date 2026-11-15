@@ -388,6 +388,14 @@ User memory (`core/memory/user_memory.py`) is decoupled from model parameters:
 
 ---
 
+### 2.6.7 Silicon Identity Profiling & T4 Hardware Constraints
+Production pilot configurations are certified for NVIDIA T4 (15.3GB VRAM) cloud environments:
+- Total Model Parameters: 25.70M (25,698,816 total, 25,436,672 non-embedding)
+- Peak VRAM Allocation: 4.86 GB during fp16 mixed-precision training
+- Silicon Identity Checks: Deterministic GPU clock, memory bandwidth, and compute capability verification
+
+---
+
 ## 9. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
 
 - **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership, mathematical verification, and user privacy.
