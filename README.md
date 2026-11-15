@@ -364,6 +364,14 @@ Execution time across the full discovery suite: 1,373.88s (100% passing, 0 failu
 
 ---
 
+### 2.6.4 Write-Ahead Candidate Store & Objective Verifiers
+The continuous self-learning subsystem (`core/learning_lifecycle/`) routes user-donated candidates through an atomic Write-Ahead Log (WAL) store. Candidates require objective verification across three deterministic engines:
+1. Python AST syntax integrity and import sandboxing
+2. Symbolic mathematics and numerical equivalence verification
+3. Deterministic test execution in isolated runtime sandboxes
+
+---
+
 ## 9. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
 
 - **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership, mathematical verification, and user privacy.
