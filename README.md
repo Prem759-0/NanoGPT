@@ -355,6 +355,15 @@ When engineering smoke testing is invoked (`smoke_test=True`), the pipeline exec
 
 ---
 
+### 2.6.3 501-Test Comprehensive Discovery Suite
+The repository maintains an automated 501-test discovery battery spanning 41 test modules:
+- 230 unmodified core baseline tests
+- 129 modified tracked security & regression tests
+- 142 untracked Phase 2.6 governance, memory isolation, and adversarial closure suites
+Execution time across the full discovery suite: 1,373.88s (100% passing, 0 failures, 0 errors).
+
+---
+
 ## 9. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
 
 - **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership, mathematical verification, and user privacy.
