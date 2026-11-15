@@ -345,6 +345,11 @@ Before any authorized training launch, `scripts/preflight_pilot_training.py` cer
 
 ---
 
+### 2.6.1 Strict Sovereign Initialization & Zero Teacher Invariant
+Moon AI models operate under `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`. Student parameters initialize exclusively from random Gaussian distributions. Zero teacher-distilled weights, external foundation models, or third-party checkpoints are permitted into runtime student weights.
+
+---
+
 ## 9. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
 
 - **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership, mathematical verification, and user privacy.
