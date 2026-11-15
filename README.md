@@ -372,6 +372,14 @@ The continuous self-learning subsystem (`core/learning_lifecycle/`) routes user-
 
 ---
 
+### 2.6.5 Sensitive Data Filtering & Injection Defense Matrix
+All conversational inputs pass through `core/security/filtering.py` prior to candidate processing:
+- Automated regex redaction of API keys (OpenAI, Anthropic, HuggingFace, GitHub tokens)
+- Personally Identifiable Information (PII) pattern sanitization
+- Prompt injection defense detecting jailbreaks, system-prompt extraction, and token boundary manipulation
+
+---
+
 ## 9. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
 
 - **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership, mathematical verification, and user privacy.
