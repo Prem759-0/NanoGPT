@@ -350,6 +350,11 @@ Moon AI models operate under `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`. Student parame
 
 ---
 
+### 2.6.2 Mechanical Tensor Validation Architecture
+When engineering smoke testing is invoked (`smoke_test=True`), the pipeline executes strictly under `torch.no_grad()` in evaluation mode (`model.eval()`). In-memory parameter tensors are sampled and verified bit-for-bit identical before and after forward execution. Zero backward passes, zero optimizer steps, and zero disk writes occur.
+
+---
+
 ## 9. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
 
 - **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership, mathematical verification, and user privacy.
