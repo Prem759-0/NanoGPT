@@ -404,6 +404,16 @@ Checkpoint saving (`training/common/checkpoint.py`) writes atomic temporary payl
 
 ---
 
+### 2.6.9 Multi-Tier Production Gate Classification
+All platform pipelines enforce `AUTHORIZED_BY_PREM = False`:
+- **Tier 1 (Direct Training):** `train.py`, `training/chat/train.py`, `training/image/train.py`, `training/video/train.py`
+- **Tier 2 (Fine-Tuning):** `scripts/train_assistant.py`
+- **Tier 3 (Accelerated Runners):** `scripts/colab_train.py`
+- **Tier 4 (Pipeline Wrappers):** `scripts/preflight_pilot_training.py`, `scripts/daily_pipeline.py`
+- **Tier 5 (Benchmarks):** `bench.py`, `scripts/validate_t4_empirical.py`
+
+---
+
 ## 9. CONTRIBUTOR GUIDELINES & ETHICAL PRINCIPLES
 
 - **Sovereign Code of Conduct**: All contributions must respect strict sovereign model ownership, mathematical verification, and user privacy.
