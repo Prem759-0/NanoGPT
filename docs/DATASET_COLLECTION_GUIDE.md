@@ -1,86 +1,98 @@
-# Moon AI — Sovereign Dataset Collection & Curation Guide
+# Moon AI — Sovereign Dataset Collection & Ingestion Guide
 
 **Chief ML Systems Architect**: Prem Gaikwad (India 🇮🇳)  
-**Strict Ownership Policy**: Permissive open-license and public-domain data only. ZERO scraping of copyrighted or proprietary assets.
+**Version**: `2.0.0` (Stage 2.0 Balanced Foundation)  
+**Ownership Policy**: STRICT SOVEREIGN — Permissible Open Licenses Only, Zero AI-Assisted Auto-Labeling.
 
 ---
 
-## 1. Permissible Licenses & Data Sources
+## 1. Balanced Category Taxonomy
 
-All training assets included in Moon AI manifests must hold one of the following permissible licenses:
-- `CC0` (Public Domain Dedication)
-- `CC-BY-4.0` / `CC-BY-SA-4.0` (Attribution required)
-- `MIT` / `Apache-2.0` / `BSD-3-Clause`
-- `OpenData` / `PublicDomain`
-- `CustomSovereign` (Authored directly by Prem Gaikwad / Moon AI project)
-
----
-
-## 2. Manifest Schema Specifications
-
-### 2.1 Image Manifest (`datasets/image/manifest.jsonl`)
-Every line is a valid JSON object:
-```json
-{
-  "id": "img_sample_01",
-  "media_path": "data/images/neon_landscape.png",
-  "caption": "A futuristic city with gleaming cybernetic towers and neon reflections in the rain",
-  "sha256": "8f31b...",
-  "split": "train",
-  "license": "CC0"
-}
-```
-
-### 2.2 Video Manifest (`datasets/video/manifest.jsonl`)
-Must point to genuine video containers (`.mp4`, `.webm`):
-```json
-{
-  "id": "real_vid_01",
-  "media_path": "data/videos/sample_real_video.mp4",
-  "caption": "Drone camera orbiting a mountain pass at sunset",
-  "camera_motion": "orbit_left",
-  "fps": 8.0,
-  "duration_sec": 3.0,
-  "num_frames": 24,
-  "sha256": "4b92c...",
-  "split": "train",
-  "license": "CustomSovereign"
-}
-```
+All collected images and videos must be classified into one of the 10 balanced categories:
+1. `landscapes`: Mountains, oceans, forests, beaches, sunsets, natural terrain.
+2. `architecture`: Modern skyscrapers, historic temples, bridges, interior design, pavilions.
+3. `products`: Watches, electronics, fragrances, footwear, crafted goods.
+4. `technology`: Semiconductors, circuit boards, fiber optics, datacenters, robotics.
+5. `people`: Studio portraits, silhouettes, hands crafting, athletic movement.
+6. `animals`: Wildlife, birds in flight, marine life, insects.
+7. `vehicles`: Cars, trains, aircraft, ships, bicycles.
+8. `food`: Baked goods, culinary bowls, fresh fruits, vegetables, beverages.
+9. `illustration_design`: Bauhaus graphics, geometric posters, ukiyo-e woodblock, synthwave.
+10. `abstract_scientific`: Molecular orbitals, fractal mathematics, astronomy, crystal lattices.
 
 ---
 
-## 3. Step-by-Step Dataset Ingestion Workflow
+## 2. Ingestion Commands
 
-### Step 1: Place Media in Designated Folder
-- Place new images in `data/images/`
-- Place new video files in `data/videos/`
-
-### Step 2: Calculate File SHA-256 Checksum
-In Python:
+### 2.1 Ingesting an Image File
+Use [`datasets/tools/collect_images.py`](file:///d:/Downloads/linkden%20post/ai/datasets/tools/collect_images.py):
 ```python
-import hashlib
-def get_sha256(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        while chunk := f.read(65536):
-            h.update(chunk)
-    return h.hexdigest()
+from datasets.tools.collect_images import ImageCollector
+
+collector = ImageCollector()
+record = collector.ingest_image(
+    src_file_path="path/to/my_photo.jpg",
+    caption="A snow-covered alpine mountain summit glowing in the morning sunrise",
+    category="landscapes",
+    creator="Prem Gaikwad",
+    source_url="https://github.com/Prem759-0/NanoGPT",
+    license_id="CustomSovereign",
+    split="train"  # "train", "val", or "test"
+)
 ```
+**Automated Safeguards**:
+- Rejects missing/invalid licenses.
+- Rejects exact SHA-256 duplicates.
+- Rejects near-duplicates using dHash perceptual hashing (Hamming distance $\le 4$).
+- Preserves raw original in `data/raw/images/`.
+- Normalizes processed copy to 256x256 RGB PNG in `data/images/`.
 
-### Step 3: Append Record to JSONL Manifest
-Ensure the record has: `id`, `media_path`, `caption`, `sha256`, `split` (`train`, `val`, or `test`), and `license`.
+### 2.2 Ingesting a Video Clip
+Use [`datasets/tools/collect_videos.py`](file:///d:/Downloads/linkden%20post/ai/datasets/tools/collect_videos.py):
+```python
+from datasets.tools.collect_videos import VideoCollector
 
-### Step 4: Run Automated Hygiene Audit
-Execute the automated dataset manager:
+collector = VideoCollector()
+record = collector.ingest_video(
+    src_video_path="path/to/my_clip.mp4",
+    caption="Drone footage orbiting a coastal lighthouse at sunset",
+    motion_description="Camera orbits 180 degrees counter-clockwise around lighthouse",
+    category="architecture",
+    creator="Prem Gaikwad",
+    source_url="https://github.com/Prem759-0/NanoGPT",
+    license_id="CustomSovereign",
+    camera_motion="orbit_left",
+    split="train"
+)
+```
+**Automated Safeguards**:
+- Rejects corrupted or truncated video streams.
+- Rejects clips shorter than 1.0 second or with fewer than 8 frames.
+- Decodes real ordered frames with timestamps.
+- Preserves raw original in `data/raw/videos/`.
+
+---
+
+## 3. Manifest Splitting & Leakage Prevention Rules
+
+1. **Source / Creator-Level Grouping**: Never place assets from the same specific creator or source batch across both `train` and `test` splits.
+2. **Versioned Manifest Locations**:
+   - `datasets/manifests/image_train.jsonl`
+   - `datasets/manifests/image_val.jsonl`
+   - `datasets/manifests/image_test.jsonl`
+   - `datasets/manifests/video_train.jsonl`
+   - `datasets/manifests/video_val.jsonl`
+   - `datasets/manifests/video_test.jsonl`
+
+---
+
+## 4. Running the Quality Gate Audit
+
+Always run the quality gate audit after adding media:
 ```bash
 python datasets/tools/dataset_manager.py
 ```
-This guarantees:
-1. No missing media paths.
-2. No corrupted image or video headers.
-3. No duplicate SHA-256 files.
-4. No split leakage (an asset appearing in both train and val).
-5. All licenses are permissible.
-6. Refreshed `datasets/dataset_report.json` and `datasets/dataset_report.md`.
-
+This produces:
+- `datasets/dataset_report.json`
+- `datasets/dataset_report.md`
+With explicit reporting of both `HYGIENE_VALID` and `TRAINING_DATA_ADEQUATE`.
