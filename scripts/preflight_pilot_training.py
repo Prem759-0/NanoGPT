@@ -75,7 +75,7 @@ def run_preflight(
 ) -> Dict[str, Any]:
     from core.policy import assert_production_training_authorized
     # Centralized Fail-Closed Owner Authorization Barrier
-    assert_production_training_authorized()
+    assert_production_training_authorized("PREFLIGHT TRAINING EXECUTION BLOCKED")
 
     print("=" * 70)
     print("   MOON AI -- PHASE 2.4.8 PRODUCTION TRAINING PREFLIGHT ENGINE")
