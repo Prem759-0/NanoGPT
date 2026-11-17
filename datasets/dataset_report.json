@@ -1,70 +1,111 @@
 {
-  "report_generated_at": "2026-10-31T18:53:33.201307+00:00",
+  "report_generated_at": "2026-11-01T06:01:32.257686+00:00",
   "architect": "Prem Gaikwad (Chief ML Systems Architect, India \ud83c\uddee\ud83c\uddf3)",
   "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
+  "stage": "STAGE_2_0_DATASET_FOUNDATION",
+  "overall_status": {
+    "HYGIENE_VALID": true,
+    "TRAINING_DATA_ADEQUATE": false
+  },
   "datasets": {
     "image": {
-      "valid": true,
-      "manifest_path": "D:\\Downloads\\linkden post\\ai\\datasets\\image\\manifest.jsonl",
-      "manifest_sha256": "8e65f42efb4656ee359be130c7c3afc3f1b1425894541a6ac38c5d5df8c56bc5",
-      "records_count": 7,
+      "manifest_path": "D:\\Downloads\\linkden post\\ai\\datasets\\manifests\\image_train.jsonl",
+      "media_type": "image",
+      "records_count": 20,
+      "hygiene_valid": true,
+      "training_data_adequate": false,
+      "adequacy_assessment": {
+        "status": "INSUFFICIENT",
+        "current_genuine_count": 20,
+        "target_pilot_count": 500,
+        "shortfall": 480,
+        "categories_covered": 10,
+        "target_categories": 8
+      },
       "missing_files": [],
       "corrupted_files": [],
-      "caption_quality_issues": [],
-      "duplicates": [],
+      "exact_duplicates": [],
+      "near_duplicates": [],
+      "split_leakages": [],
+      "creator_leakages": [],
       "invalid_licenses": [],
-      "split_leakage": [],
-      "stats": {
-        "total_records": 7,
-        "unique_media_count": 7,
-        "splits_distribution": {
-          "train": 5,
-          "val": 1,
-          "test": 1,
-          "other": 0
-        },
-        "media_resolutions": {
-          "256x256": 1,
-          "128x128": 6
-        },
-        "avg_caption_length_chars": 128.4,
-        "min_caption_length": 124,
-        "max_caption_length": 132
-      }
-    },
-    "video": {
-      "valid": true,
-      "manifest_path": "D:\\Downloads\\linkden post\\ai\\datasets\\video\\manifest.jsonl",
-      "manifest_sha256": "1235b9e69391f6f3546ae4d7214969a442182a6352c006e0f38006c08f273d67",
-      "records_count": 2,
-      "missing_files": [],
-      "corrupted_files": [],
       "caption_quality_issues": [],
-      "duplicates": [],
-      "invalid_licenses": [],
-      "split_leakage": [],
       "stats": {
-        "total_records": 2,
-        "unique_media_count": 2,
+        "total_records": 20,
+        "unique_media_count": 20,
+        "genuine_count": 20,
+        "synthetic_count": 0,
         "splits_distribution": {
-          "train": 1,
-          "val": 1,
+          "train": 20,
+          "val": 0,
           "test": 0,
           "other": 0
         },
+        "category_distribution": {
+          "landscapes": 2,
+          "architecture": 2,
+          "products": 2,
+          "technology": 2,
+          "people": 2,
+          "animals": 2,
+          "vehicles": 2,
+          "food": 2,
+          "illustration_design": 2,
+          "abstract_scientific": 2
+        },
+        "media_resolutions": {
+          "256x256": 20
+        },
+        "video_fps_distribution": {},
+        "avg_duration_sec": null
+      }
+    },
+    "video": {
+      "manifest_path": "D:\\Downloads\\linkden post\\ai\\datasets\\manifests\\video_train.jsonl",
+      "media_type": "video",
+      "records_count": 5,
+      "hygiene_valid": true,
+      "training_data_adequate": false,
+      "adequacy_assessment": {
+        "status": "INSUFFICIENT",
+        "current_genuine_count": 5,
+        "target_pilot_count": 50,
+        "shortfall": 45,
+        "categories_covered": 5,
+        "target_categories": 5
+      },
+      "missing_files": [],
+      "corrupted_files": [],
+      "exact_duplicates": [],
+      "near_duplicates": [],
+      "split_leakages": [],
+      "creator_leakages": [],
+      "invalid_licenses": [],
+      "caption_quality_issues": [],
+      "stats": {
+        "total_records": 5,
+        "unique_media_count": 5,
+        "genuine_count": 5,
+        "synthetic_count": 0,
+        "splits_distribution": {
+          "train": 5,
+          "val": 0,
+          "test": 0,
+          "other": 0
+        },
+        "category_distribution": {
+          "vehicles": 1,
+          "landscapes": 1,
+          "technology": 1,
+          "architecture": 1,
+          "abstract_scientific": 1
+        },
         "media_resolutions": {},
-        "avg_caption_length_chars": 74.5,
-        "min_caption_length": 71,
-        "max_caption_length": 78
+        "video_fps_distribution": {
+          "8.0": 5
+        },
+        "avg_duration_sec": 2.0
       }
     }
-  },
-  "summary": {
-    "all_manifests_valid": true,
-    "total_media_samples": 9,
-    "total_missing_files": 0,
-    "total_corrupt_files": 0,
-    "total_duplicates": 0,
-    "total_split_leakages": 0
   }
 }
