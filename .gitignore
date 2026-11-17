@@ -33,3 +33,16 @@ data/sandbox/*
 !data/sandbox/.gitkeep
 /t4_empirical_benchmark.json
 /moon_preflight_audit.json
+
+# Ephemeral test evaluation reports and mock test artifacts (Phase 2.7 Hygiene)
+data/reports/eval_*.json
+data/reports/daily_report_*.md
+data/reports/eval_*_latest.md
+data/reports/dataset_contamination_scan_report.json
+data/learning/*.sqlite
+
+# Quarantined teacher demonstration manifests and unconsented chat logs (Phase 2.7.1)
+datasets/manifests/quarantined_teacher_data.jsonl
+datasets/manifests/teacher_pilot_demonstrations.jsonl
+datasets/quarantine/
+data/splits/
