@@ -1,11 +1,12 @@
 {
-  "registry_version": "2.0.0",
+  "registry_version": "2.0.1",
   "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
   "rules": {
     "prohibit_third_party_weights": true,
     "prohibit_external_apis": true,
     "require_random_initialization": true,
-    "require_manifest_hash_provenance": true
+    "require_manifest_hash_provenance": true,
+    "prohibit_synthetic_fixtures_in_production": true
   },
   "models": {
     "moon-image-v0": {
@@ -15,17 +16,16 @@
       "architecture": "MoonUNet2D + MoonTextEncoder + MoonImageAutoencoder",
       "initialization_source": "moon_ai_random_init",
       "trainable_parameters": 23713743,
-      "status": "INITIALIZED_READY_FOR_TRAINING",
+      "status": "DATA_INSUFFICIENT",
+      "training_ready": false,
+      "genuine_samples_count": 0,
+      "quarantined_synthetic_fixtures_count": 37,
       "training_config": "training/image/config.yaml",
-      "dataset_manifest": "datasets/image/manifest.jsonl",
+      "dataset_manifest": "datasets/manifests/image_train.jsonl",
+      "synthetic_dev_manifest": "datasets/manifests/synthetic_image_dev.jsonl",
       "provenance": "moon_ai_random_init",
       "evaluation_score": null,
-      "parameter_breakdown": {
-        "text_encoder_params": 5276416,
-        "autoencoder_params": 8032587,
-        "unet_params": 10404740,
-        "total_trainable_params": 23713743
-      }
+      "notes": "Architecture implemented with 100% random Gaussian initialization. Production training manifest contains 0 verified genuine images. Procedural fixtures quarantined to synthetic dev manifest. Production training blocked pending genuine media collection."
     },
     "moon-video-v0": {
       "model_name": "moon-video-v0",
@@ -34,17 +34,16 @@
       "architecture": "MoonUNet3D + MoonVideoTextEncoder + MoonVideoAutoencoder",
       "initialization_source": "moon_ai_random_init",
       "trainable_parameters": 17014643,
-      "status": "INITIALIZED_READY_FOR_TRAINING",
+      "status": "DATA_INSUFFICIENT",
+      "training_ready": false,
+      "genuine_samples_count": 0,
+      "quarantined_synthetic_fixtures_count": 10,
       "training_config": "training/video/config.yaml",
-      "dataset_manifest": "datasets/video/manifest.jsonl",
+      "dataset_manifest": "datasets/manifests/video_train.jsonl",
+      "synthetic_dev_manifest": "datasets/manifests/synthetic_video_dev.jsonl",
       "provenance": "moon_ai_random_init",
       "evaluation_score": null,
-      "parameter_breakdown": {
-        "text_encoder_params": 5284608,
-        "autoencoder_params": 4521519,
-        "spatiotemporal_unet_params": 7208516,
-        "total_trainable_params": 17014643
-      }
+      "notes": "Architecture implemented with 100% random Gaussian initialization. Production training manifest contains 0 verified genuine video clips. Procedural fixtures quarantined to synthetic dev manifest. Production training blocked pending genuine media collection."
     },
     "moon-llm-scratch": {
       "model_name": "moon-llm-scratch",
@@ -57,6 +56,42 @@
       "status": "EXPERIMENTAL_BENCHMARK_ONLY",
       "composite_score": 10.5,
       "provenance": "moon_ai_random_init"
+    },
+    "moon-chat-v0": {
+      "model_name": "moon-chat-v0",
+      "version": "0.1.0",
+      "type": "causal_autoregressive_transformer",
+      "architecture": "Causal Decoder-Only Transformer (12L, 12H, 768D, RoPE, SwiGLU)",
+      "initialization_source": "moon_ai_random_init",
+      "trainable_parameters": 124000000,
+      "status": "DATA_INSUFFICIENT",
+      "training_ready": false,
+      "genuine_samples_count": 0,
+      "dev_fixtures_count": 4,
+      "training_config": "docs/MOON_CHAT_TRAINING_PLAN.md",
+      "dataset_manifest": "datasets/manifests/chat_train.jsonl",
+      "synthetic_dev_manifest": "datasets/manifests/synthetic_chat_dev.jsonl",
+      "provenance": "moon_ai_random_init",
+      "evaluation_score": null,
+      "notes": "Development examples only (4 records in synthetic_chat_dev.jsonl). Production conversational corpus collection required."
+    },
+    "moon-code-v0": {
+      "model_name": "moon-code-v0",
+      "version": "0.1.0",
+      "type": "fim_transformer",
+      "architecture": "Fill-In-The-Middle Causal Transformer (12L, 12H, 768D)",
+      "initialization_source": "moon_ai_random_init",
+      "trainable_parameters": 124000000,
+      "status": "DATA_INSUFFICIENT",
+      "training_ready": false,
+      "genuine_samples_count": 0,
+      "dev_fixtures_count": 3,
+      "training_config": "docs/MOON_CODE_TRAINING_PLAN.md",
+      "dataset_manifest": "datasets/manifests/code_train.jsonl",
+      "synthetic_dev_manifest": "datasets/manifests/synthetic_code_dev.jsonl",
+      "provenance": "moon_ai_random_init",
+      "evaluation_score": null,
+      "notes": "Development examples only (3 records in synthetic_code_dev.jsonl). Production coding corpus collection required."
     }
   },
   "promotion_history": [

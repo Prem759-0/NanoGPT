@@ -3,6 +3,7 @@ training/video/dataset.py
 Strict Video Datasets for Moon Video Engine.
 Separates real video training data from synthetic development data.
 Prohibits silent substitution of synthetic still-image animations in production training.
+Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
 """
 import os
 import json
@@ -11,20 +12,19 @@ from torch.utils.data import Dataset
 from typing import Optional, List, Dict, Any, Tuple
 
 from backend.engines.moon_image.text_encoder import SimpleTextTokenizer
+from datasets.tools.provenance_validator import (
+    validate_provenance_record,
+    validate_safe_path,
+    verify_file_checksum,
+    ALLOWED_VIDEO_EXTENSIONS,
+    VALID_CAMERA_MOTIONS
+)
 from .frame_sampling import decode_real_video_clip, create_synthetic_motion_clip, CorruptVideoError
 
 CAMERA_MOTION_CLASSES = (
-    "static",
-    "orbit_left",
-    "orbit_right",
-    "zoom_in",
-    "zoom_out",
-    "pan_left",
-    "pan_right",
-    "tilt_up",
-    "tilt_down",
-    "crane_up",
-    "crane_down"
+    "static", "orbit_left", "orbit_right", "dolly_in", "dolly_out",
+    "zoom_in", "zoom_out", "pan_left", "pan_right", "tilt_up", "tilt_down",
+    "crane_up", "crane_down"
 )
 
 REAL_VIDEO_EXTENSIONS = (".mp4", ".webm", ".avi", ".mov", ".mkv")
@@ -54,24 +54,30 @@ class MoonRealVideoDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         rec = self.records[idx]
         rel_path = rec.get("video_path") or rec.get("media_path") or ""
-        full_path = os.path.normpath(os.path.join(self.base_dir, rel_path))
-
-        # Decode actual video clip
-        video_tensor, meta = decode_real_video_clip(
-            video_path=full_path,
-            target_frames=self.num_frames,
-            frame_size=self.frame_size,
-            start_sec=float(rec.get("start_sec", 0.0)),
-            duration_sec=float(rec["duration_s"]) if "duration_s" in rec else None
+        safe_ok, full_path, path_err = validate_safe_path(
+            rel_path,
+            base_dir=self.base_dir,
+            allowed_extensions=ALLOWED_VIDEO_EXTENSIONS
         )
+        if not safe_ok:
+            raise ValueError(f"Security error opening video: {path_err}")
+
+        try:
+            video_tensor, meta = decode_real_video_clip(
+                video_path=full_path,
+                target_num_frames=self.num_frames,
+                target_size=self.frame_size
+            )
+        except Exception as e:
+            raise CorruptVideoError(f"Failed to decode video file '{full_path}': {e}")
 
         caption = rec.get("caption", "")
         input_ids = self.tokenizer.encode(caption)
 
-        motion_label = rec.get("camera_motion", "static").lower()
+        motion_str = rec.get("camera_motion", "static")
         cam_id = (
-            CAMERA_MOTION_CLASSES.index(motion_label) + 1
-            if motion_label in CAMERA_MOTION_CLASSES
+            CAMERA_MOTION_CLASSES.index(motion_str) + 1
+            if motion_str in CAMERA_MOTION_CLASSES
             else 0
         )
 
@@ -167,6 +173,7 @@ class MoonVideoDataset(Dataset):
         self.num_frames = num_frames
         self.frame_size = frame_size
         self.allow_synthetic = allow_synthetic
+        self.is_synthetic_dev = False
 
         self.real_records: List[Dict[str, Any]] = []
         self.synthetic_records: List[Dict[str, Any]] = []
@@ -177,7 +184,7 @@ class MoonVideoDataset(Dataset):
         if not self.allow_synthetic:
             if len(self.real_records) == 0:
                 raise ValueError(
-                    f"STRICT VIDEO INTEGRITY ERROR: Production video training requires real video files (.mp4, .webm). "
+                    f"STRICT PROVENANCE ERROR / STRICT VIDEO INTEGRITY ERROR: Production video training requires real video files (.mp4, .webm). "
                     f"Manifest '{manifest_path}' for split='{split}' contained 0 real video records. "
                     f"Found {len(self.synthetic_records)} synthetic records. "
                     "Synthetic development data is strictly prohibited in production training."
@@ -190,19 +197,19 @@ class MoonVideoDataset(Dataset):
                 max_length=max_length
             )
         else:
+            self.is_synthetic_dev = True
             # Dev / unit testing mode
-            if len(self.real_records) > 0:
-                self._underlying_dataset = MoonRealVideoDataset(
-                    records=self.real_records,
+            if len(self.synthetic_records) > 0:
+                self._underlying_dataset = MoonSyntheticVideoDataset(
+                    records=self.synthetic_records,
                     base_dir=self.base_dir,
                     num_frames=self.num_frames,
                     frame_size=self.frame_size,
                     max_length=max_length
                 )
-            elif len(self.synthetic_records) > 0:
-                print(f"⚠️ [DEV MODE NOTICE] Utilizing synthetic motion dataset ({len(self.synthetic_records)} samples) for pipeline validation.")
-                self._underlying_dataset = MoonSyntheticVideoDataset(
-                    records=self.synthetic_records,
+            elif len(self.real_records) > 0:
+                self._underlying_dataset = MoonRealVideoDataset(
+                    records=self.real_records,
                     base_dir=self.base_dir,
                     num_frames=self.num_frames,
                     frame_size=self.frame_size,
@@ -215,6 +222,14 @@ class MoonVideoDataset(Dataset):
         if not os.path.isfile(self.manifest_path):
             raise FileNotFoundError(f"Video manifest not found at '{self.manifest_path}'.")
 
+        norm_path = self.manifest_path.replace("\\", "/").lower()
+        if not self.allow_synthetic and ("synthetic" in norm_path or "dev" in norm_path):
+            raise ValueError(
+                f"STRICT PROVENANCE ERROR / STRICT VIDEO INTEGRITY ERROR: Attempted to load synthetic development manifest "
+                f"'{self.manifest_path}' in production mode (allow_synthetic=False). "
+                "Synthetic development manifests cannot be used for production training."
+            )
+
         with open(self.manifest_path, "r", encoding="utf-8") as f:
             for line_no, line in enumerate(f, 1):
                 line = line.strip()
@@ -222,23 +237,54 @@ class MoonVideoDataset(Dataset):
                     continue
                 try:
                     data = json.loads(line)
-                except Exception:
-                    continue
+                except Exception as e:
+                    raise ValueError(f"JSON decode error in '{self.manifest_path}' line {line_no}: {e}")
 
                 if data.get("split", "train").lower() != self.split.lower():
                     continue
 
                 # Determine if real video or synthetic
                 path_val = (data.get("video_path") or data.get("media_path") or "").lower()
+                is_synth = (
+                    data.get("is_synthetic") is not False
+                    or data.get("source_type") == "procedural_synthetic_fixture"
+                )
                 is_real = (
                     any(path_val.endswith(ext) for ext in REAL_VIDEO_EXTENSIONS)
-                    and not data.get("is_synthetic", False)
+                    and not is_synth
                 )
 
+                if not self.allow_synthetic and is_synth:
+                    raise ValueError(
+                        f"STRICT PROVENANCE ERROR / STRICT VIDEO INTEGRITY ERROR: Record '{data.get('id')}' in '{self.manifest_path}' "
+                        f"line {line_no} is synthetic. Synthetic animations are strictly prohibited in production manifests."
+                    )
+
                 if is_real:
+                    if not self.allow_synthetic:
+                        audit = validate_provenance_record(
+                            record=data,
+                            modality="video",
+                            base_dir=self.base_dir,
+                            allow_synthetic=False,
+                            verify_file=True
+                        )
+                        if not audit["training_eligible"]:
+                            raise ValueError(
+                                f"STRICT PROVENANCE ERROR / STRICT VIDEO INTEGRITY ERROR: Record '{data.get('id')}' in '{self.manifest_path}' "
+                                f"line {line_no} failed production verification ({audit['status']}): {'; '.join(audit['errors'])}"
+                            )
                     self.real_records.append(data)
                 else:
                     self.synthetic_records.append(data)
+
+    @property
+    def synthetic_sample_count(self) -> int:
+        return len(self.synthetic_records)
+
+    @property
+    def production_eligible_sample_count(self) -> int:
+        return len(self.real_records)
 
     def __len__(self) -> int:
         return len(self._underlying_dataset)
