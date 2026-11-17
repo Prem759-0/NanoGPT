@@ -1,7 +1,7 @@
 """
 Moon AI — Phase 2.4.8 Production Training Preflight Verification Engine
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
-Ownership Policy: STRICT_SOVEREIGN_OPTION_1 (Zero Teacher Influence)
+Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY (Zero Teacher Influence)
 
 Rigorous preflight certifying that the real 25.7M parameter model,
 the actual scaled dataset, tokenizer, and hardware environment are
@@ -48,6 +48,7 @@ from datasets.chat.schema import (
     PROVENANCE_DETERMINISTIC_CURRICULUM_TEMPLATE,
 )
 from training.chat.dataset import SovereignChatDataset
+from core.policy import validate_production_policy, SovereignPolicyViolationError
 
 
 def sha256_file(path: str) -> str:
@@ -72,10 +73,14 @@ def run_preflight(
     config_path: str = "training/chat/phase_2_4_t4_pilot.yaml",
     device_override: str = None
 ) -> Dict[str, Any]:
+    from core.policy import assert_production_training_authorized
+    # Centralized Fail-Closed Owner Authorization Barrier
+    assert_production_training_authorized()
+
     print("=" * 70)
     print("   MOON AI -- PHASE 2.4.8 PRODUCTION TRAINING PREFLIGHT ENGINE")
     print("   Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)")
-    print("   Policy: OPTION 1 SOVEREIGN (Zero Teacher Influence)")
+    print("   Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY (Zero Teacher Influence)")
     print("=" * 70 + "\n")
 
     results = {
@@ -100,6 +105,14 @@ def run_preflight(
     # -------------------------------------------------------------
     print("[Gate 1/8] Checking Pilot YAML Configuration & Policy B Option 1...")
     g1_errors = []
+
+    # Strict Sovereign Policy Enforcement
+    declared_policy = cfg.get("ownership_policy")
+    try:
+        validate_production_policy(declared_policy)
+    except (SovereignPolicyViolationError, PermissionError, ValueError) as pe:
+        g1_errors.append(f"Ownership policy violation: {pe}")
+
     td_cfg = cfg.get("teacher_distillation", {})
     if td_cfg.get("enabled") is not False:
         g1_errors.append("teacher_distillation.enabled must be False under Option 1 Sovereign Policy.")
@@ -120,6 +133,8 @@ def run_preflight(
     results["preflight_gates"]["gate_1_config_integrity"] = {"passed": g1_ok, "errors": g1_errors}
     if not g1_ok:
         results["blockers"].extend(g1_errors)
+        print("  Result: FAILED -- Configuration integrity violation, blocking execution.")
+        return results
     print(f"  Result: {'PASSED' if g1_ok else 'FAILED'}")
 
     # -------------------------------------------------------------

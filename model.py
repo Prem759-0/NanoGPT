@@ -216,6 +216,9 @@ class GPT(nn.Module):
         )
 
     def configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
+        from core.policy import assert_production_training_authorized
+        assert_production_training_authorized("GPT_CONFIGURE_OPTIMIZERS")
+
         # start with all of the candidate parameters
         param_dict = {pn: p for pn, p in self.named_parameters()}
         # filter out those that do not require grad

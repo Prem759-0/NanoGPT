@@ -51,6 +51,16 @@ def load_split_dataset(dataset_path: str):
     return records
 
 def train(args):
+    from core.policy import (
+        AUTHORIZED_BY_PREM,
+        validate_production_policy,
+        POLICY_STRICT_SOVEREIGN_RANDOM_INIT,
+        assert_production_training_authorized,
+    )
+
+    # Centralized Fail-Closed Owner Authorization Barrier
+    assert_production_training_authorized("ASSISTANT")
+
     check_environment()
 
     # Try importing Unsloth (fastest fine-tuning for Colab)

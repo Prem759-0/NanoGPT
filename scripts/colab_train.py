@@ -187,6 +187,16 @@ def run_video_track(args, hw, drive_dir: str):
     return 0
 
 def main():
+    from core.policy import (
+        AUTHORIZED_BY_PREM,
+        validate_production_policy,
+        POLICY_STRICT_SOVEREIGN_RANDOM_INIT,
+        assert_production_training_authorized,
+    )
+
+    # Centralized Fail-Closed Owner Authorization Barrier
+    assert_production_training_authorized("COLAB TRAINING RUNNER")
+
     parser = argparse.ArgumentParser(description="Moon AI Google Colab Sovereign Training Runner")
     parser.add_argument("--track", choices=["image", "video", "all"], default="image", help="Training track to execute")
     parser.add_argument("--smoke_test", action="store_true", help="Execute short 5-step validation run")

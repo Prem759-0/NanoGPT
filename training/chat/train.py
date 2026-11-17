@@ -43,6 +43,12 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
         pass
 
 from model import GPTConfig, GPT
+from core.policy import (
+    AUTHORIZED_BY_PREM,
+    validate_production_policy,
+    POLICY_STRICT_SOVEREIGN_RANDOM_INIT,
+    assert_production_training_authorized as _core_assert_production_training_authorized,
+)
 from datasets.chat.tokenizer import SovereignTokenizer
 from training.chat.dataset import SovereignChatDataset
 from training.chat.readiness_gate import ChatReadinessGate, STATUS_READY_FOR_PILOT
@@ -85,8 +91,8 @@ def parse_args():
     parser.add_argument("--eval-interval", type=int, default=None, help="Override validation evaluation interval")
     parser.add_argument("--device", type=str, default=None, help="Device to use (cuda, cpu, mps)")
     parser.add_argument("--resume-from", type=str, default=None, help="Resume training from an existing random-init checkpoint")
-    parser.add_argument("--dry-run", action="store_true", help="Run 1 iteration to verify pipeline integrity")
-    parser.add_argument("--smoke-test", action="store_true", help="Run 1 iteration engineering smoke test without production checkpointing")
+    parser.add_argument("--dry-run", action="store_true", help="Perform preflight config, manifest, and dataset verification without model instantiation")
+    parser.add_argument("--smoke-test", action="store_true", help="Perform parameter-frozen mechanical tensor validation without production training or checkpoint writes")
     return parser.parse_args()
 
 def get_lr(it: int, warmup_iters: int, max_iters: int, lr: float, min_lr: float) -> float:
@@ -99,6 +105,20 @@ def get_lr(it: int, warmup_iters: int, max_iters: int, lr: float, min_lr: float)
     coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
     return min_lr + coeff * (lr - min_lr)
 
+def assert_production_training_authorized():
+    """
+    Enforces cryptographic/owner launch authorization for production pilot training.
+    Fail-closed secondary barrier invoked immediately prior to optimizer instantiation
+    and gradient buffer allocation.
+    """
+    if not AUTHORIZED_BY_PREM:
+        raise PermissionError(
+            "🔒 CRITICAL DEFENSE-IN-DEPTH INTERCEPT: Production optimizer allocation blocked! "
+            "AUTHORIZED_BY_PREM is False. Optimizer instantiation, gradient tracking, "
+            "and model parameter mutations require explicit authorization from Prem Gaikwad (India 🇮🇳)."
+        )
+
+
 def train_moon_chat(
     config_path: str,
     max_iters_override: Optional[int] = None,
@@ -109,7 +129,29 @@ def train_moon_chat(
     smoke_test: bool = False,
     custom_ckpt_path: Optional[str] = None
 ) -> Dict[str, Any]:
-    is_smoke_test = dry_run or smoke_test
+    # -------------------------------------------------------------------------
+    # Mode Validation: Enforce Mutual Exclusivity
+    # -------------------------------------------------------------------------
+    if dry_run and smoke_test:
+        raise ValueError(
+            "Mutually exclusive execution modes: cannot set both dry_run=True and smoke_test=True. "
+            "Pass dry_run=True for preflight manifest/config validation, or smoke_test=True "
+            "for mechanical tensor verification."
+        )
+
+    is_dry_run = bool(dry_run)
+    is_smoke_test = bool(smoke_test)
+
+    # -------------------------------------------------------------------------
+    # SAFEGUARD 0: Owner Launch Authorization Lock (SEC-05)
+    # -------------------------------------------------------------------------
+    if not is_dry_run and not is_smoke_test and not AUTHORIZED_BY_PREM:
+        raise PermissionError(
+            "🔒 TRAINING EXECUTION BLOCKED: AUTHORIZED_BY_PREM is False. "
+            "Production training, checkpoint generation, and model weight modification require "
+            "explicit cryptographic/owner authorization from Prem Gaikwad (India 🇮🇳). "
+            "Pass --dry-run for preflight validation or --smoke-test for mechanical tensor verification."
+        )
 
     # Load configuration
     abs_config_path = os.path.abspath(config_path)
@@ -120,8 +162,38 @@ def train_moon_chat(
         cfg = yaml.safe_load(f)
 
     # -------------------------------------------------------------------------
-    # SAFEGUARD 1: Fail-Closed Zero-Teacher Policy B Option 1 Enforcement
+    # SAFEGUARD 1: Fail-Closed Strict Sovereign Policy & Zero-Teacher Enforcement
     # -------------------------------------------------------------------------
+    if resume_from_ckpt:
+        if not is_smoke_test:
+            raise RuntimeError(
+                "Production pilot training blocked: resuming from arbitrary checkpoints is strictly prohibited "
+                "under Moon AI Option 1 Sovereign Zero-Teacher Policy. Production training must initialize strictly "
+                "from pure random Gaussian scratch."
+            )
+        if not os.path.exists(resume_from_ckpt):
+            raise FileNotFoundError(f"Resume checkpoint not found: {resume_from_ckpt}")
+        ckpt_data_pre = torch.load(resume_from_ckpt, map_location="cpu", weights_only=True)
+        cfg_meta_pre = ckpt_data_pre.get("config", {}) or ckpt_data_pre.get("metadata", {})
+        if cfg_meta_pre.get("teacher_checkpoint_weights_transferred") is not False:
+            raise ValueError("Policy B violation: teacher_checkpoint_weights_transferred must be False.")
+        ckpt_policy_pre = cfg_meta_pre.get("ownership_policy")
+        if not ckpt_policy_pre:
+            raise ValueError("Policy B violation / Strict Sovereign Policy Violation: missing ownership_policy metadata (must be STRICT_SOVEREIGN_RANDOM_INIT_ONLY).")
+        validate_production_policy(ckpt_policy_pre)
+        if ckpt_policy_pre != "STRICT_SOVEREIGN_RANDOM_INIT_ONLY":
+            raise ValueError(f"Strict Sovereign Policy Violation: checkpoint ownership_policy '{ckpt_policy_pre}' is not approved (must be STRICT_SOVEREIGN_RANDOM_INIT_ONLY).")
+        if cfg_meta_pre.get("initialization") != "random_gaussian_scratch":
+            raise ValueError("Policy B violation: checkpoint must originate from random_gaussian_scratch.")
+        base_weights_pre = cfg_meta_pre.get("base_weights") or cfg_meta_pre.get("pretrained_source")
+        if base_weights_pre and base_weights_pre not in ("none", "scratch", "random_gaussian", "random_gaussian_scratch"):
+            raise ValueError(f"Sovereign Policy Violation: external base weights '{base_weights_pre}' detected.")
+        if cfg_meta_pre.get("teacher_checkpoint") or cfg_meta_pre.get("teacher_model"):
+            raise ValueError("Sovereign Policy Violation: checkpoint references external teacher model/checkpoint.")
+
+    declared_policy = cfg.get("ownership_policy", POLICY_STRICT_SOVEREIGN_RANDOM_INIT)
+    validate_production_policy(declared_policy)
+
     td_cfg = cfg.get("teacher_distillation", {})
     if td_cfg.get("enabled", False) is not False:
         raise ValueError(
@@ -183,7 +255,7 @@ def train_moon_chat(
     test_raw_sha, test_lf_sha = compute_manifest_hashes(test_manifest)
 
     # Production run manifest hash verification against audited values
-    if not is_smoke_test:
+    if not is_smoke_test and not is_dry_run:
         for m_name, m_path, m_lf_sha in [
             ("train_manifest", train_manifest, train_lf_sha),
             ("val_manifest", val_manifest, val_lf_sha),
@@ -203,6 +275,21 @@ def train_moon_chat(
                     f"Expected canonical LF SHA: {expected_sha}, detected: {m_lf_sha}. "
                     "Failing closed to prevent training on unverified or tampered data."
                 )
+    elif is_dry_run:
+        for m_name, m_path, m_lf_sha in [
+            ("train_manifest", train_manifest, train_lf_sha),
+            ("val_manifest", val_manifest, val_lf_sha),
+            ("test_manifest", test_manifest, test_lf_sha)
+        ]:
+            bname = os.path.basename(m_path)
+            if bname in CANONICAL_MANIFEST_LF_HASHES:
+                expected_sha = CANONICAL_MANIFEST_LF_HASHES[bname]
+                if m_lf_sha != expected_sha:
+                    raise ValueError(
+                        f"Manifest provenance hash mismatch for {m_name} ({bname})! "
+                        f"Expected canonical LF SHA: {expected_sha}, detected: {m_lf_sha}. "
+                        "Failing closed to prevent training on unverified or tampered data."
+                    )
 
     manifest_provenance_hashes = {
         "train_manifest": {
@@ -235,7 +322,7 @@ def train_moon_chat(
         os.makedirs(os.path.dirname(os.path.abspath(checkpoint_path)), exist_ok=True)
         ckpt_filename = os.path.basename(checkpoint_path)
     else:
-        ckpt_filename = "smoke_test_ckpt.pt" if is_smoke_test else cfg["paths"]["checkpoint_name"]
+        ckpt_filename = cfg["paths"]["checkpoint_name"]
         checkpoint_path = os.path.join(checkpoint_dir, ckpt_filename)
 
     best_ckpt_filename = cfg["paths"].get("best_checkpoint_name")
@@ -255,7 +342,7 @@ def train_moon_chat(
     track_name = cfg.get("model_track", "")
     is_phase_2_4 = "stage-2-4" in track_name or "t4_pilot" in track_name or "phase_2_4" in abs_config_path
 
-    if not is_smoke_test and is_phase_2_4:
+    if not is_smoke_test and not is_dry_run and is_phase_2_4:
         if ckpt_filename in FORBIDDEN_LEGACY_CHECKPOINTS:
             raise ValueError(
                 f"Checkpoint anti-collision failure: checkpoint_name '{ckpt_filename}' collides with "
@@ -277,7 +364,7 @@ def train_moon_chat(
             )
 
     # Real Filesystem Pre-Flight Collision Gate (Production Pilot Run)
-    if not is_smoke_test:
+    if not is_smoke_test and not is_dry_run:
         if os.path.isfile(checkpoint_path):
             raise FileExistsError(
                 f"Production checkpoint collision: destination '{checkpoint_path}' already exists! "
@@ -294,6 +381,7 @@ def train_moon_chat(
     # -------------------------------------------------------------------------
     # READINESS GATE: Preflight Verification
     # -------------------------------------------------------------------------
+    readiness_gate_info = {}
     if not is_smoke_test:
         gate = ChatReadinessGate(
             train_manifest=train_manifest,
@@ -302,7 +390,8 @@ def train_moon_chat(
             config_path=abs_config_path
         )
         gate_res = gate.run_all_checks()
-        if gate_res["status"] != STATUS_READY_FOR_PILOT:
+        readiness_gate_info = gate_res
+        if not is_dry_run and gate_res["status"] != STATUS_READY_FOR_PILOT:
             print("!" * 65)
             print("❌ PRODUCTION PILOT TRAINING BLOCKED BY READINESS GATE")
             print("!" * 65)
@@ -311,11 +400,11 @@ def train_moon_chat(
             for b in gate_res["blockers"]:
                 print(f"  • {b}")
             print("\nMeaningful pilot training for a 25.7M model requires at least 500 records and 100,000+ tokens.")
-            print("To verify pipeline mechanics without producing a production checkpoint, pass --smoke-test.")
+            print("To verify pipeline mechanics without producing a production checkpoint, pass --smoke-test or --dry-run.")
             print("!" * 65 + "\n")
             raise RuntimeError(
                 f"Production pilot training blocked by readiness gate (status: {gate_res['status']}). "
-                f"Use --smoke-test to execute pipeline verification only."
+                f"Use --smoke-test or --dry-run to execute verification only."
             )
 
     # -------------------------------------------------------------------------
@@ -336,12 +425,12 @@ def train_moon_chat(
         device = "cpu"
 
     gpu_identity_info = {}
-    if not is_smoke_test:
+    if not is_smoke_test and not is_dry_run:
         if not torch.cuda.is_available():
             raise RuntimeError(
                 "Production pilot training blocked: CUDA is unavailable. "
                 "An authenticated NVIDIA Tesla T4 GPU (Compute Capability 7.5, >=14GB VRAM) is strictly required for Phase 2.4. "
-                "Use --smoke-test to execute an engineering verification dry-run on CPU."
+                "Use --smoke-test or --dry-run to execute verification on CPU."
             )
         if device != "cuda":
             raise RuntimeError(
@@ -392,7 +481,7 @@ def train_moon_chat(
                 "vram_mb": round(vram_mb, 1),
                 "authenticated_t4": is_t4,
                 "silicon_identity_status": reason,
-                "verification_status": f"SMOKE_TEST_CUDA (Physical Hardware: {reason})"
+                "verification_status": f"{'DRY_RUN' if is_dry_run else 'SMOKE_TEST'}_CUDA (Physical Hardware: {reason})"
             }
         else:
             gpu_identity_info = {
@@ -401,7 +490,7 @@ def train_moon_chat(
                 "vram_mb": 0.0,
                 "authenticated_t4": False,
                 "silicon_identity_status": "CPU_ONLY",
-                "verification_status": "SMOKE_TEST_CPU"
+                "verification_status": f"{'DRY_RUN' if is_dry_run else 'SMOKE_TEST'}_CPU"
             }
 
     # Set random seed
@@ -453,6 +542,43 @@ def train_moon_chat(
     effective_samples = max_iters * batch_size * grad_accum_steps
     dataset_passes = effective_samples / max(1, total_train_windows)
 
+    # -------------------------------------------------------------------------
+    # SAFEGUARD: Preflight Configuration Validation Exit (Dry-Run Mode)
+    # Exits BEFORE model construction. Zero model parameters allocated in RAM/VRAM.
+    # Zero forward passes, zero backward steps, zero optimizer construction, zero disk writes.
+    # -------------------------------------------------------------------------
+    if is_dry_run:
+        print("\n" + "=" * 70)
+        print("   MOON AI -- PREFLIGHT CONFIGURATION & MANIFEST VALIDATION ONLY")
+        print("   Notice: Dry-run mode. Zero model parameters allocated. Zero training.")
+        print("=" * 70)
+        return {
+            "status": "COMPLETED_PREFLIGHT_DRY_RUN",
+            "dry_run": True,
+            "smoke_test": False,
+            "model_instantiated": False,
+            "parameters": 0,
+            "config_path": abs_config_path,
+            "model_name": m_cfg["name"],
+            "ownership_policy": cfg.get("ownership_policy", "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"),
+            "manifest_hashes": manifest_provenance_hashes,
+            "tokenizer_vocab_size": tokenizer.vocab_size,
+            "train_records": unique_records,
+            "train_chunks": len(train_dataset),
+            "supervised_tokens": supervised_tokens,
+            "val_chunks": len(val_dataset),
+            "device": str(device),
+            "readiness_status": readiness_gate_info.get("status", "NOT_CHECKED"),
+            "forward_executed": False,
+            "backward_executed": False,
+            "optimizer_stepped": False,
+            "optimizer_constructed": False,
+            "checkpoint_written": False,
+            "checkpoint_writes": 0,
+            "optimizer_updates": 0,
+            "authorized_by_prem": AUTHORIZED_BY_PREM
+        }
+
     # Initialize Model from Random Gaussian Weights ONLY
     gpt_conf = GPTConfig(
         block_size=m_cfg["block_size"],
@@ -478,17 +604,162 @@ def train_moon_chat(
             raise FileNotFoundError(f"Resume checkpoint not found: {resume_from_ckpt}")
         ckpt_data = torch.load(resume_from_ckpt, map_location=device, weights_only=True)
         cfg_meta = ckpt_data.get("config", {}) or ckpt_data.get("metadata", {})
-        # Policy B Verification
+        # Policy B and Strict Sovereign Policy Verification
         if cfg_meta.get("teacher_checkpoint_weights_transferred") is not False:
             raise ValueError("Policy B violation: teacher_checkpoint_weights_transferred must be False.")
+        ckpt_policy = cfg_meta.get("ownership_policy")
+        if not ckpt_policy:
+            raise ValueError("Policy B violation / Strict Sovereign Policy Violation: missing ownership_policy metadata (must be STRICT_SOVEREIGN_RANDOM_INIT_ONLY).")
+        validate_production_policy(ckpt_policy)
+        if ckpt_policy != "STRICT_SOVEREIGN_RANDOM_INIT_ONLY":
+            raise ValueError(f"Strict Sovereign Policy Violation: checkpoint ownership_policy '{ckpt_policy}' is not approved (must be STRICT_SOVEREIGN_RANDOM_INIT_ONLY).")
         if cfg_meta.get("initialization") != "random_gaussian_scratch":
             raise ValueError("Policy B violation: checkpoint must originate from random_gaussian_scratch.")
+        base_weights = cfg_meta.get("base_weights") or cfg_meta.get("pretrained_source")
+        if base_weights and base_weights not in ("none", "scratch", "random_gaussian", "random_gaussian_scratch"):
+            raise ValueError(f"Sovereign Policy Violation: external base weights '{base_weights}' detected.")
+        if cfg_meta.get("teacher_checkpoint") or cfg_meta.get("teacher_model"):
+            raise ValueError("Sovereign Policy Violation: checkpoint references external teacher model/checkpoint.")
         model.load_state_dict(ckpt_data["model"])
-        print(f"✅ Policy B Verified: Resumed weights from student checkpoint: {resume_from_ckpt}")
+        print(f"✅ Sovereign Policy Verified: Resumed weights from student checkpoint: {resume_from_ckpt}")
 
     total_params = sum(p.numel() for p in model.parameters())
 
-    # Optimizer
+    # -------------------------------------------------------------------------
+    # SAFEGUARD: Mechanical Validation for Smoke Tests (Phase 2.6.2.2 Task 2)
+    # Zero gradient calculation, zero optimizer steps, zero checkpoint writes.
+    # Parameter-frozen forward verification of pipeline mechanics only.
+    # -------------------------------------------------------------------------
+    if is_smoke_test:
+        print("\n" + "=" * 70)
+        print("   MOON AI -- MECHANICAL PIPELINE & TENSOR VALIDATION ONLY")
+        print("   Notice: Non-training verification. ZERO optimizer steps. ZERO checkpoints.")
+        print("=" * 70)
+
+        # Snapshot 100% of named parameters and buffers on CPU to verify absolute freeze
+        params_before = {name: p.detach().cpu().clone() for name, p in model.named_parameters()}
+        buffers_before = {name: b.detach().cpu().clone() for name, b in model.named_buffers()}
+
+        # Fetch 1 batch from DataLoader to verify data loading mechanics
+        train_iter = iter(train_loader)
+        x, y = next(train_iter)
+        assert x.shape == (batch_size, block_size), f"Expected x shape {(batch_size, block_size)}, got {x.shape}"
+        assert y.shape == (batch_size, block_size), f"Expected y shape {(batch_size, block_size)}, got {y.shape}"
+        assert x.dtype == torch.long, f"Expected x dtype torch.long, got {x.dtype}"
+        assert y.dtype == torch.long, f"Expected y dtype torch.long, got {y.dtype}"
+
+        # Evaluation mode verification: NO gradients, NO backward pass
+        model.eval()
+        with torch.no_grad():
+            logits, loss = model(x.to(device), y.to(device))
+
+        assert logits.shape == (batch_size, block_size, tokenizer.vocab_size), (
+            f"Expected logits shape {(batch_size, block_size, tokenizer.vocab_size)}, got {logits.shape}"
+        )
+        assert loss.dim() == 0 and not torch.isnan(loss) and not torch.isinf(loss), (
+            f"Expected valid scalar loss, got {loss}"
+        )
+
+        # Parameter freeze invariant: verify EVERY named parameter remains bit-for-bit identical
+        for p_name, p_after in model.named_parameters():
+            p_orig = params_before[p_name]
+            assert torch.equal(p_orig, p_after.detach().cpu()), (
+                f"CRITICAL: Parameter mutation detected during mechanical validation in {p_name}!"
+            )
+
+        # Buffer freeze invariant: verify EVERY named buffer remains bit-for-bit identical
+        for b_name, b_after in model.named_buffers():
+            b_orig = buffers_before[b_name]
+            assert torch.equal(b_orig, b_after.detach().cpu()), (
+                f"CRITICAL: Buffer mutation detected during mechanical validation in {b_name}!"
+            )
+
+        # Verify checkpoint payload schema in memory WITHOUT writing to disk
+        test_payload_schema = {
+            "status": "MECHANICAL_VALIDATION_SCHEMA_VERIFIED",
+            "is_production_trained": False,
+            "promotable": False,
+            "is_production_eligible": False,
+            "is_test_fixture": True,
+            "model_args": {
+                "block_size": gpt_conf.block_size,
+                "vocab_size": gpt_conf.vocab_size,
+                "n_layer": gpt_conf.n_layer,
+                "n_head": gpt_conf.n_head,
+                "n_embd": gpt_conf.n_embd,
+                "dropout": gpt_conf.dropout,
+                "bias": gpt_conf.bias
+            },
+            "config": {
+                "model_name": m_cfg["name"],
+                "initialization": "random_gaussian_scratch",
+                "manifest_hashes": manifest_provenance_hashes,
+                "ownership_policy": cfg.get("ownership_policy", "STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
+            }
+        }
+        assert "model_args" in test_payload_schema and "config" in test_payload_schema
+
+        print(f"✅ Mechanical validation successful:")
+        print(f"  • Model Parameters:   {total_params:,} ({total_params/1e6:.2f}M)")
+        print(f"  • Checked Parameters: {len(params_before)} (100% verified frozen)")
+        print(f"  • Checked Buffers:    {len(buffers_before)} (100% verified frozen)")
+        print(f"  • Batch Input Shape:  {list(x.shape)}")
+        print(f"  • Logits Output:      {list(logits.shape)}")
+        print(f"  • Forward Pass Loss:  {loss.item():.4f}")
+        print(f"  • Parameter Freeze:   100% VERIFIED (Zero weight changes)")
+        print(f"  • Backward Step:      0 calls (loss.backward() NOT executed)")
+        print(f"  • Optimizer Step:     0 calls (optimizer.step() NOT executed)")
+        print(f"  • Checkpoint Writes:  0 files (No checkpoints written to disk)")
+        print(f"  • Metrics Overwrite:  0 files (data/reports untouched)")
+        print("=" * 70 + "\n")
+
+        return {
+            "status": "COMPLETED_MECHANICAL_VALIDATION_ONLY",
+            "dry_run": False,
+            "smoke_test": True,
+            "model_instantiated": True,
+            "forward_verified": True,
+            "all_parameters_verified_frozen": True,
+            "all_buffers_verified_frozen": True,
+            "total_parameters_checked": len(params_before),
+            "total_buffers_checked": len(buffers_before),
+            "backward_executed": False,
+            "optimizer_stepped": False,
+            "optimizer_constructed": False,
+            "checkpoint_written": False,
+            "checkpoint_writes": 0,
+            "optimizer_updates": 0,
+            "metrics_written": False,
+            "parameters": total_params,
+            "batch_shape": list(x.shape),
+            "logits_shape": list(logits.shape),
+            "initial_loss": round(loss.item(), 4),
+            "final_train_loss": round(loss.item(), 4),
+            "final_val_loss": round(loss.item(), 4),
+            "perplexity": round(math.exp(min(20.0, loss.item())), 2),
+            "device": str(device),
+            "is_smoke_test": True,
+            "authorized_by_prem": AUTHORIZED_BY_PREM,
+            "total_iterations": 0,
+            "iterations": 0,
+            "unique_records": unique_records,
+            "chunks_generated": len(train_dataset),
+            "supervised_tokens": train_dataset.get_total_supervised_tokens(),
+            "checkpoint_schema_verified": True,
+            "checkpoint_path": None,
+            "checkpoint_sha256": None,
+            "generated_samples": {},
+            "metrics_history": []
+        }
+
+    # -------------------------------------------------------------------------
+    # DEFENSE-IN-DEPTH: Production Training Authorization Barrier
+    # Absolutely forbids AdamW optimizer instantiation, GradScaler allocation,
+    # or gradient tracking unless AUTHORIZED_BY_PREM is True.
+    # -------------------------------------------------------------------------
+    assert_production_training_authorized()
+
+    # Optimizer (Production Pilot Runs Only — AUTHORIZED_BY_PREM must be True)
     learning_rate = t_cfg["learning_rate"]
     min_lr = t_cfg.get("min_lr", learning_rate / 10.0)
     optimizer = torch.optim.AdamW(
@@ -512,7 +783,7 @@ def train_moon_chat(
     print("=" * 70)
     print("   MOON AI -- PRE-TRAINING RUNTIME VERIFICATION & SAFEGUARD AUDIT")
     print("   Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)")
-    print(f"   Execution Mode: {'ENGINEERING SMOKE TEST' if is_smoke_test else 'PRODUCTION PILOT RUN'}")
+    print("   Execution Mode: PRODUCTION PILOT RUN")
     print("=" * 70)
     print("[Config & Policy B Option 1]")
     print(f"  • Config File:          {safe_relpath(abs_config_path, PROJECT_ROOT)}")
@@ -535,9 +806,9 @@ def train_moon_chat(
     train_rel = safe_relpath(train_manifest, PROJECT_ROOT)
     val_rel = safe_relpath(val_manifest, PROJECT_ROOT)
     test_rel = safe_relpath(test_manifest, PROJECT_ROOT)
-    train_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(train_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
-    val_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(val_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
-    test_status_tag = "VERIFIED" if not is_smoke_test and os.path.basename(test_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
+    train_status_tag = "VERIFIED" if os.path.basename(train_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
+    val_status_tag = "VERIFIED" if os.path.basename(val_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
+    test_status_tag = "VERIFIED" if os.path.basename(test_manifest) in CANONICAL_MANIFEST_LF_HASHES else "AUDITED"
     print(f"  • Train Manifest:       {train_rel} ({unique_records} records)")
     print(f"    - Canonical LF SHA:   {train_lf_sha[:32] if train_lf_sha else 'N/A'}... [{train_status_tag}]")
     print(f"    - Raw Disk SHA:       {train_raw_sha[:32] if train_raw_sha else 'N/A'}...")
@@ -616,7 +887,7 @@ def train_moon_chat(
 
         iter_num += 1
 
-        if not is_smoke_test and (iter_num % eval_interval == 0 or iter_num == max_iters):
+        if iter_num % eval_interval == 0 or iter_num == max_iters:
             model.eval()
             val_loss = 0.0
             val_steps = 0
@@ -699,7 +970,7 @@ def train_moon_chat(
                     raise
                 print(f"  ⭐ Saved new best validation checkpoint: {best_ckpt_path} (Loss: {best_val_loss:.4f})")
             model.train()
-        elif iter_num % 10 == 0 or iter_num == max_iters or is_smoke_test:
+        elif iter_num % 10 == 0 or iter_num == max_iters:
             dt = time.time() - t0
             t0 = time.time()
             print(f"Iter {iter_num:4d}/{max_iters} | Loss: {accum_loss:.4f} | LR: {lr:.6f} | Time: {dt*1000:.1f}ms")
@@ -719,8 +990,6 @@ def train_moon_chat(
                 _, loss = model(x, y)
             val_loss += loss.item()
             val_steps += 1
-            if is_smoke_test and val_steps >= 2:
-                break
     if val_steps == 0:
         raise RuntimeError("Validation evaluation produced 0 steps! Cannot compute validation metrics.")
     mean_val_loss = val_loss / val_steps
@@ -760,11 +1029,11 @@ def train_moon_chat(
             checkpoint_dir = os.path.join(PROJECT_ROOT, checkpoint_dir)
         os.makedirs(checkpoint_dir, exist_ok=True)
 
-        ckpt_filename = "smoke_test_ckpt.pt" if is_smoke_test else cfg["paths"]["checkpoint_name"]
+        ckpt_filename = cfg["paths"]["checkpoint_name"]
         checkpoint_path = os.path.join(checkpoint_dir, ckpt_filename)
 
     checkpoint_payload = {
-        "status": "ENGINEERING_SMOKE_TEST_ONLY" if is_smoke_test else "PILOT_TRAINED",
+        "status": "PILOT_TRAINED",
         "is_production_trained": False,
         "promotable": False,
         "is_production_eligible": False,
@@ -802,17 +1071,13 @@ def train_moon_chat(
             "promotable": False,
             "is_production_eligible": False,
             "is_test_fixture": False,
-            "status": "ENGINEERING_SMOKE_TEST_ONLY" if is_smoke_test else "PILOT_TRAINED",
+            "status": "PILOT_TRAINED",
             "checkpoint_filename": ckpt_filename,
             "best_checkpoint_filename": best_ckpt_filename,
             "effective_config": cfg,
             "manifest_hashes": manifest_provenance_hashes,
             "hardware_identity": gpu_identity_info,
-            "notes": (
-                "Engineering smoke test checkpoint only. Unpromotable to production."
-                if is_smoke_test
-                else "Pilot trained checkpoint from pure Gaussian scratch. Unpromoted pilot requiring independent evaluation before production consideration."
-            )
+            "notes": "Pilot trained checkpoint from pure Gaussian scratch. Unpromoted pilot requiring independent evaluation before production consideration."
         },
         "iter_num": iter_num,
         "final_val_loss": mean_val_loss,
@@ -838,7 +1103,7 @@ def train_moon_chat(
     ckpt_size_mb = os.path.getsize(checkpoint_path) / (1024 * 1024)
 
     print("\n" + "=" * 65)
-    print(f"Checkpoint saved: {'[SMOKE TEST UNPROMOTABLE]' if is_smoke_test else '[PRODUCTION PILOT]'}")
+    print("Checkpoint saved: [PRODUCTION PILOT]")
     try:
         display_path = os.path.relpath(checkpoint_path, PROJECT_ROOT)
     except ValueError:
@@ -867,7 +1132,7 @@ def train_moon_chat(
         }, f, indent=2)
 
     return {
-        "status": "COMPLETED_SMOKE_TEST" if is_smoke_test else "COMPLETED_PRODUCTION_PILOT",
+        "status": "COMPLETED_PRODUCTION_PILOT",
         "checkpoint_path": checkpoint_path,
         "checkpoint_sha256": ckpt_sha256,
         "parameters": total_params,
@@ -880,7 +1145,7 @@ def train_moon_chat(
         "unique_records": unique_records,
         "chunks_generated": len(train_dataset),
         "supervised_tokens": train_dataset.get_total_supervised_tokens(),
-        "is_smoke_test": is_smoke_test,
+        "is_smoke_test": False,
         "effective_dataset_passes": dataset_passes,
         "generated_samples": generated_samples,
         "metrics_history": metrics_history
@@ -888,6 +1153,27 @@ def train_moon_chat(
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.dry_run and args.smoke_test:
+        print("=" * 65)
+        print("❌ INVALID ARGUMENTS: MUTUALLY EXCLUSIVE MODES")
+        print("=" * 65)
+        print("Cannot specify both --dry-run and --smoke-test.")
+        print("Pass --dry-run for preflight validation or --smoke-test for mechanical validation.")
+        print("=" * 65)
+        raise ValueError("Mutually exclusive arguments: cannot specify both --dry-run and --smoke-test.")
+
+    if not args.smoke_test and not args.dry_run and not AUTHORIZED_BY_PREM:
+        print("=" * 65)
+        print("🔒 MOON AI TRAINING EXECUTION HALTED CLOSED")
+        print("=" * 65)
+        print("Production training is locked: AUTHORIZED_BY_PREM = False.")
+        print("Direct execution without owner authorization is strictly prohibited.")
+        print("Pass --dry-run for preflight validation or --smoke-test to execute engineering smoke testing.")
+        print("=" * 65)
+        raise PermissionError(
+            "Production training locked: AUTHORIZED_BY_PREM is False. "
+            "Requires explicit authorization from Prem Gaikwad (India 🇮🇳)."
+        )
     train_moon_chat(
         config_path=args.config,
         max_iters_override=args.max_iters,

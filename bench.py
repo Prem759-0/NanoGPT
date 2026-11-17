@@ -7,6 +7,18 @@ import numpy as np
 import time
 import torch
 from model import GPTConfig, GPT
+from core.policy import AUTHORIZED_BY_PREM, validate_production_policy, POLICY_STRICT_SOVEREIGN_RANDOM_INIT
+
+# Safeguard: Validate sovereign production policy
+validate_production_policy(POLICY_STRICT_SOVEREIGN_RANDOM_INIT)
+
+# Safeguard: Fail-closed benchmark training lock (Phase 2.6.2.8)
+if not AUTHORIZED_BY_PREM:
+    raise PermissionError(
+        "🔒 BENCHMARK TRAINING BLOCKED: AUTHORIZED_BY_PREM is False. "
+        "Benchmarking execution performs gradient updates and model parameter modifications, "
+        "which require explicit authorization from Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)."
+    )
 
 # -----------------------------------------------------------------------------
 batch_size = 12

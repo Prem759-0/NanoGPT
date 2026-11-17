@@ -256,10 +256,24 @@ def run_empirical_t4_validation(
     allow_overwrite_verified: bool = False,
     report_dir: Optional[str] = None
 ) -> Dict[str, Any]:
+    from core.policy import (
+        AUTHORIZED_BY_PREM,
+        validate_production_policy,
+        POLICY_STRICT_SOVEREIGN_RANDOM_INIT
+    )
+    validate_production_policy(POLICY_STRICT_SOVEREIGN_RANDOM_INIT)
+    if not AUTHORIZED_BY_PREM:
+        raise PermissionError(
+            "🔒 EMPIRICAL T4 VALIDATION BLOCKED: AUTHORIZED_BY_PREM is False. "
+            "Empirical benchmark execution performs backward passes, optimizer parameter updates, "
+            "and checkpoint writes, which require explicit authorization from Prem Gaikwad "
+            "(Chief ML Systems Architect, India 🇮🇳)."
+        )
+
     print("=" * 70)
     print("   MOON AI — EMPIRICAL T4 GPU HARDWARE BENCHMARK & VALIDATION")
     print("   Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)")
-    print("   Ownership Policy: TEACHER_STUDENT_RANDOM_INIT (Policy B)")
+    print("   Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY (Policy B Option 1 Sovereign)")
     print("=" * 70)
 
     # 1. CUDA Availability Check

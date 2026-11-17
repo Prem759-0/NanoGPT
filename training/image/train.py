@@ -88,6 +88,16 @@ def train(args):
     print("   Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)")
     print("=" * 70)
 
+    from core.policy import (
+        AUTHORIZED_BY_PREM,
+        validate_production_policy,
+        POLICY_STRICT_SOVEREIGN_RANDOM_INIT,
+        assert_production_training_authorized,
+    )
+
+    # Centralized Fail-Closed Owner Authorization Barrier
+    assert_production_training_authorized("IMAGE")
+
     training_mode = TRAINING_MODE_DEVELOPMENT if args.allow_synthetic else TRAINING_MODE_PRODUCTION
     if args.allow_synthetic:
         norm_out = args.output_dir.replace("\\", "/").rstrip("/")

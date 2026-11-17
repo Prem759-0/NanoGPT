@@ -149,9 +149,18 @@ async def list_models():
 @app.post("/api/switch-model")
 def switch_model(request: SwitchModelRequest):
     """
-    Switches active model between Qwen-2.5-Coder-7B and local scratch checkpoint.
+    Switches active model between available production engines.
+    Blocks switching to unpromoted test fixtures in production.
     """
-    success = model_service.switch_model(request.model_name)
+    available_models = {m["id"]: m for m in model_service.get_available_models()}
+    target_meta = available_models.get(request.model_name)
+    if target_meta and (target_meta.get("available") is False or target_meta.get("is_test_fixture") is True):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Cannot switch to '{request.model_name}': model is an uncertified test fixture and cannot be deployed for production inference."
+        )
+
+    success = model_service.switch_model(request.model_name, allow_fixture=False)
     if not success:
         raise HTTPException(
             status_code=400,
@@ -170,6 +179,12 @@ def chat(request: ChatRequest, req: Request):
     Generates text using the locally trained nanoGPT/Qwen model with multi-user isolated context.
     Runs synchronously in Starlette's threadpool so CPU inference never blocks the asyncio loop.
     """
+    if getattr(model_service, "is_test_fixture", False):
+        raise HTTPException(
+            status_code=403,
+            detail="Production inference blocked: Active model is an unpromoted CI test fixture."
+        )
+
     user_id = request.user_id or req.headers.get("x-user-id") or "guest"
     session_id = request.session_id or db.create_session(
         title=request.message[:28] + ("..." if len(request.message) > 28 else ""),
@@ -295,7 +310,6 @@ def chat(request: ChatRequest, req: Request):
     sci_reply = resolve_scientific_or_biological_query(clean_msg)
     if sci_reply:
         db.add_message(session_id, "assistant", sci_reply, meta={"knowledge": "scientific_biology"})
-        learning_service.record_chat_turn(clean_msg, sci_reply, source="knowledge_engine")
         return ChatResponse(
             reply=sci_reply,
             model_name="Moon AI Science & Knowledge Engine",
@@ -534,7 +548,6 @@ def chat(request: ChatRequest, req: Request):
             f"✨ I will remember and apply this across all our chat sessions, even if you refresh or start a new conversation."
         )
         db.add_message(session_id, "assistant", reply, meta={"feature": "memory_learned", "fact": fact})
-        learning_service.record_chat_turn(clean_msg, reply, source="memory_intent")
         return ChatResponse(
             reply=reply,
             model_name="NanoGPT Autonomous Memory Engine",
@@ -553,7 +566,6 @@ def chat(request: ChatRequest, req: Request):
     if any(re.search(p, msg_low) for p in greeting_patterns):
         reply = "Hello! I am **Moon AI**, running fully sovereign and locally on your machine. What project, code, or question are we tackling today?"
         db.add_message(session_id, "assistant", reply, meta={"intent": "greeting"})
-        learning_service.record_chat_turn(clean_msg, reply, source="greeting")
         return ChatResponse(
             reply=reply,
             model_name="Moon AI Reflex Engine",
@@ -646,7 +658,6 @@ def chat(request: ChatRequest, req: Request):
     fast_reply = _fast_knowledge_reply(clean_msg)
     if fast_reply:
         db.add_message(session_id, "assistant", fast_reply, meta={"knowledge": "fast_path"})
-        learning_service.record_chat_turn(clean_msg, fast_reply, source="fast_knowledge")
         return ChatResponse(
             reply=fast_reply,
             model_name="Moon AI Knowledge Engine (Instant)",
@@ -656,13 +667,20 @@ def chat(request: ChatRequest, req: Request):
             session_id=session_id
         )
 
+    if getattr(model_service, "is_test_fixture", False):
+        raise HTTPException(
+            status_code=403,
+            detail="Production inference blocked: Active model is an unpromoted CI test fixture."
+        )
+
     try:
         result = model_service.generate(
             prompt=request.message,
             max_new_tokens=request.max_new_tokens,
             temperature=request.temperature,
             history=history,
-            mode=request.mode or "chat"
+            mode=request.mode or "chat",
+            allow_fixture=False
         )
         result["reply"] = filter_or_rectify_model_reply(clean_msg, result["reply"])
         # Save assistant reply to database
@@ -670,8 +688,6 @@ def chat(request: ChatRequest, req: Request):
             "tokens": result.get("tokens_generated", 0),
             "device": result.get("device", "cpu")
         })
-        # Continuous Self-Training Dataset Logging
-        learning_service.record_chat_turn(request.message, result["reply"], source="chat")
         result["session_id"] = session_id
         return ChatResponse(**result)
     except ModelNotTrainedException:
@@ -792,9 +808,14 @@ async def get_learning_stats_endpoint():
 
 @app.post("/api/self-train")
 async def self_train_endpoint(request: SelfTrainRequest):
-    """Compiles collected chat pairs and integrates them into the training dataset."""
-    res = learning_service.run_self_train_step(iterations=request.iterations or 50)
-    return res
+    """
+    Self-training is permanently disabled under Moon AI learning governance policy.
+    Returns HTTP 403 Forbidden (SEC-04).
+    """
+    raise HTTPException(
+        status_code=403,
+        detail="Self-training is permanently disabled under Moon AI learning governance policy: live model updates and unconsented training data integration are prohibited."
+    )
 
 # --- Sovereign Document Intelligence & Multimodal Dispatch Routes ---
 @app.post("/api/document/generate", response_model=DocumentGenResponse)

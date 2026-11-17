@@ -66,12 +66,11 @@ def main():
     print(f"Evaluator:  {args.eval_model}")
     print(f"Auto-Train: {args.train}\n")
 
-    # Step 1: Update & Validate Dataset Splits
+    # Step 1: Update & Validate Dataset Splits (excluding unconsented historical data SEC-04)
     sources = [
         os.path.join(PROJECT_ROOT, "moon_ai_master_dataset.json"),
         os.path.join(PROJECT_ROOT, "dataset.json"),
-        os.path.join(PROJECT_ROOT, "chatgpt_dataset.json"),
-        os.path.join(PROJECT_ROOT, "data", "user_learned_data.jsonl")
+        os.path.join(PROJECT_ROOT, "chatgpt_dataset.json")
     ]
     existing_sources = [s for s in sources if os.path.isfile(s)]
     splits_dir = os.path.join(PROJECT_ROOT, "data", "splits")
@@ -106,29 +105,10 @@ def main():
 
     run_step("3. Regression Test Suite", run_regression_tests)
 
-    # Step 4: Optional Fine-Tuning
+    # Step 4: Fine-Tuning Run (Permanently Disabled - SEC-04 / SEC-05)
     if args.train:
-        import torch
-        if torch.cuda.is_available():
-            from scripts.train_assistant import train as run_train
-            train_args = argparse.Namespace(
-                base_model="unsloth/Llama-3.2-1B-Instruct",
-                train_path=os.path.join(splits_dir, "train.json"),
-                val_path=os.path.join(splits_dir, "val.json"),
-                max_steps=100,
-                batch_size=2,
-                grad_accum=4,
-                learning_rate=2e-4,
-                lora_r=16,
-                max_seq_length=1024,
-                load_in_4bit=True,
-                output_dir=os.path.join(PROJECT_ROOT, "lora_output"),
-                export_gguf=False,
-                seed=args.seed
-            )
-            run_step("4. Fine-Tuning Run", run_train, train_args)
-        else:
-            print("ℹ️ Skipping training step: CUDA GPU not detected on local machine. (Use Colab GPU for training)")
+        print("🔒 [TRAINING BLOCKED] Autonomous/daily fine-tuning is disabled under Moon AI sovereign policy.")
+        print("   Production model training requires AUTHORIZED_BY_PREM = True and random-init architecture.")
 
     # Step 5: Benchmark Evaluation
     eval_summary = run_step(

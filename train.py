@@ -28,6 +28,18 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 
 from model import GPTConfig, GPT
+from core.policy import AUTHORIZED_BY_PREM, validate_production_policy, POLICY_STRICT_SOVEREIGN_RANDOM_INIT
+
+# Safeguard: Validate sovereign production policy
+validate_production_policy(POLICY_STRICT_SOVEREIGN_RANDOM_INIT)
+
+# Safeguard: Fail-closed production training lock (Phase 2.6.2.2 Task 4)
+if not AUTHORIZED_BY_PREM:
+    raise PermissionError(
+        "🔒 TRAINING EXECUTION BLOCKED: AUTHORIZED_BY_PREM is False. "
+        "Production training, checkpoint generation, and model weight modification require "
+        "explicit authorization from Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)."
+    )
 
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
@@ -157,9 +169,18 @@ if init_from == 'scratch':
     model = GPT(gptconf)
 elif init_from == 'resume':
     print(f"Resuming training from {out_dir}")
-    # resume training from a checkpoint.
+    # resume training from a checkpoint with strict provenance checks
     ckpt_path = os.path.join(out_dir, 'ckpt.pt')
-    checkpoint = torch.load(ckpt_path, map_location=device)
+    checkpoint = torch.load(ckpt_path, map_location=device, weights_only=True)
+    ckpt_cfg = checkpoint.get('config', {}) or checkpoint.get('metadata', {})
+    ckpt_pol = ckpt_cfg.get('ownership_policy') or checkpoint.get('ownership_policy')
+    if not ckpt_pol or ckpt_pol != 'STRICT_SOVEREIGN_RANDOM_INIT_ONLY':
+        raise ValueError(
+            f"Strict Sovereign Policy Violation: checkpoint ownership_policy '{ckpt_pol}' is not approved "
+            "(must be STRICT_SOVEREIGN_RANDOM_INIT_ONLY)."
+        )
+    if ckpt_cfg.get('teacher_checkpoint_weights_transferred') is not False:
+        raise ValueError("Policy B violation: teacher_checkpoint_weights_transferred must be False.")
     checkpoint_model_args = checkpoint['model_args']
     # force these config attributes to be equal otherwise we can't even resume training
     # the rest of the attributes (e.g. dropout) can stay as desired from command line
@@ -179,13 +200,11 @@ elif init_from == 'resume':
     iter_num = checkpoint['iter_num']
     best_val_loss = checkpoint['best_val_loss']
 elif init_from.startswith('gpt2'):
-    print(f"Initializing from OpenAI GPT-2 weights: {init_from}")
-    # initialize from OpenAI GPT-2 weights
-    override_args = dict(dropout=dropout)
-    model = GPT.from_pretrained(init_from, override_args)
-    # read off the created config params, so we can store them into checkpoint correctly
-    for k in ['n_layer', 'n_head', 'n_embd', 'block_size', 'bias', 'vocab_size']:
-        model_args[k] = getattr(model.config, k)
+    raise RuntimeError(
+        f"Production training violation: initializing from pretrained third-party weights ('{init_from}') "
+        "is strictly prohibited under STRICT_SOVEREIGN_RANDOM_INIT_ONLY. Moon AI models must be trained "
+        "strictly from random Gaussian scratch initialization."
+    )
 # crop down the model block size if desired, using model surgery
 if block_size < model.config.block_size:
     model.crop_block_size(block_size)
