@@ -205,27 +205,39 @@ class TestPhase274AdversarialTrainingRoutes(unittest.TestCase):
     # Category E: Subprocess Orchestrators & Daily Pipeline
     # ------------------------------------------------------------------
 
-    @patch("subprocess.run")
-    def test_13_daily_pipeline_skips_training_subprocess(self, mock_subproc):
+    def test_13_daily_pipeline_skips_training_subprocess(self):
         """scripts/daily_pipeline.py: main() must skip training subprocess when unauthorized."""
         import scripts.daily_pipeline as dp
-        mock_subproc.side_effect = RuntimeError("ADVERSARIAL VIOLATION: subprocess launched in daily pipeline!")
 
-        with patch.object(sys, "argv", ["daily_pipeline.py"]), \
-             patch("scripts.daily_pipeline.prepare_splits", return_value={"train": 0, "val": 0, "test": 0}), \
-             patch("scripts.daily_pipeline.audit_file", return_value={"status": "PASSED"}), \
-             patch("scripts.daily_pipeline.run_evaluation", return_value={}), \
-             patch("scripts.daily_pipeline.evaluate_and_promote", return_value={}), \
-             patch("scripts.daily_pipeline.generate_daily_report", return_value=None):
-            try:
-                dp.main()
-            except Exception:
-                pass
-            # Verify no training command was issued
+        def fake_subprocess_run(cmd, *args, **kwargs):
+            cmd_str = " ".join(str(c) for c in cmd)
+            if "train.py" in cmd_str or "colab_train.py" in cmd_str or "train_moon_chat" in cmd_str:
+                raise RuntimeError(f"ADVERSARIAL VIOLATION: Training subprocess launched: {cmd_str}")
+            mock_res = MagicMock()
+            mock_res.returncode = 0
+            mock_res.stdout = "Ran 10 tests in 0.05s\nOK\n"
+            mock_res.stderr = ""
+            return mock_res
+
+        with patch.object(sys, "argv", ["daily_pipeline.py", "--train"]), \
+             patch("subprocess.run", side_effect=fake_subprocess_run) as mock_subproc, \
+             patch("scripts.daily_pipeline.prepare_splits", return_value={"train": 10, "val": 2, "test": 2}), \
+             patch("scripts.daily_pipeline.audit_file", return_value={"syntax_error_records": 0}), \
+             patch("scripts.daily_pipeline.run_evaluation", return_value={"score": 85.0}), \
+             patch("scripts.daily_pipeline.evaluate_and_promote", return_value={"promoted": False}), \
+             patch("scripts.daily_pipeline.generate_daily_report", return_value=None), \
+             patch("os.listdir", return_value=["eval_candidate_20261118.json"]):
+            # Must run cleanly without throwing unexpected exceptions or swallowing errors
+            dp.main()
+
+            # Verify non-training regression test subprocess was legitimately invoked
+            self.assertGreaterEqual(mock_subproc.call_count, 1)
             for call_args in mock_subproc.call_args_list:
                 args = call_args[0][0]
                 self.assertNotIn("train.py", args)
                 self.assertNotIn("colab_train.py", args)
+                # Verify legitimate invocation was only the regression test suite
+                self.assertIn("tests/test_model_inference.py", args)
 
     # ------------------------------------------------------------------
     # Category F: Web Endpoints & Lifecycle Safety

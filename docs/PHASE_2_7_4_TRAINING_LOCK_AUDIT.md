@@ -1,5 +1,8 @@
 # Moon AI — Phase 2.7.4: Independent Training-Lock Deep Verification Audit
 
+> **Phase 2.7.5 Audit Clarification & Reconciliation Note:**
+> This Phase 2.7.4 report documented 24 initial routes under an aggregate `VERIFIED_BLOCKED` umbrella. As identified during executive review and rigorously completed in `docs/PHASE_2_7_5_TRAINING_LOCK_AUDIT_CLOSURE.md`, the repository contains **29 distinct execution vectors** across 6 explicit classifications: **12 Directly Tested Fail-Closed**, **4 Directly Tested Disabled**, **2 Statically Inspected Guarded**, **3 Delegated to Tested Child Routes**, **4 Inference Only**, and **4 Historical/Quarantined**. See the Phase 2.7.5 report for the granular, bifurcated proofs and repaired Test 13.
+
 **Author / Architect:** Prem Gaikwad (Chief ML Systems Architect & Project Owner)  
 **System:** Moon AI Sovereign Intelligence Core (`Prem759-0/NanoGPT`)  
 **Mission:** Independent Vector-by-Vector Audit, Adversarial Testing & Authorization Architecture Assessment  
@@ -12,16 +15,20 @@
 
 | Audit Parameter | Ground-Truth Finding | Verification Status |
 |---|---|---|
-| **Discovered Training Routes** | **24 Distinct Execution Routes** across 6 categories | **100% Cataloged** |
-| **Verified Blocked Routes** | **24 Routes** blocked fail-closed, isolated, or disabled | **VERIFIED_BLOCKED (24/24)** |
-| **Incomplete Routes** | **0 Routes** | **NONE** |
-| **Unprotected Routes** | **0 Routes** | **NONE** |
-| **Adversarial Test Suite** | 19 targeted adversarial tests instrumenting prohibited ops | **19/19 PASSED (100%)** |
-| **Full Security Test Battery** | 24 test suites across repo (336 total test scenarios) | **336/336 PASSED (100.0%)** |
+| **Discovered Training Routes** | **29 Distinct Execution Routes** (expanded from initial 24) | **100% Cataloged** |
+| **Directly Tested (Fail-Closed)** | **12 Routes** instrumented with zero-call mocks | **OPERATIONALLY VERIFIED** |
+| **Directly Tested (Disabled)** | **4 Routes** (API 403, service disabled, pipeline bypassed) | **OPERATIONALLY VERIFIED** |
+| **Statically Inspected Guarded** | **2 Routes** (AST syntax verified, guard in source) | **STATICALLY PROVEN** |
+| **Delegated to Child Scripts** | **3 Notebooks** invoking tested CLI entry points | **DELEGATION VERIFIED** |
+| **Inference Only / Analytical** | **4 Notebooks** with zero training loops | **NO TRAINING THREAT** |
+| **Historical / Quarantined** | **4 Routes** (Policy B teacher / legacy Colab) | **QUARANTINED** |
+| **Incomplete / Unverified Routes** | **0 Routes** | **NONE** |
+| **Adversarial Test Suite** | 19 targeted adversarial tests (Phase 2.7.4) + 7 tests (Phase 2.7.5) | **26/26 PASSED** |
+| **Full Security Test Battery** | 27 test suites across repo (343 total test scenarios) | **343/343 PASSED (100.0%)** |
 | **Prohibited Operations Reached** | Zero `backward()`, zero `optimizer.step()`, zero production checkpoints | **0 Calls (Mocks Asserted)** |
 | **Central Training Gate** | `AUTHORIZED_BY_PREM = False` | **STRICTLY ENFORCED** |
 | **Production Training Executed** | Zero epochs, zero batches, zero gradient updates | **0 Training Runs** |
-| **Active Branch** | `feature/phase-2-7-4-training-lock-deep-audit` | Rooted at `591a85b4` |
+| **Active Branch** | `feature/phase-2-7-5-training-lock-audit-closure` | Rooted at `581f5888` |
 
 ---
 

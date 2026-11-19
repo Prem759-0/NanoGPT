@@ -56,6 +56,18 @@ jobs:
         run: |
           python -m unittest tests/test_stage_2_0_7_integrity_hardening.py -v
 
+      - name: Run Phase 2.7.4 Adversarial Training-Lock Routes Test Suite (19 Scenarios)
+        run: |
+          python -m unittest tests/test_phase_2_7_4_adversarial_training_routes.py -v
+
+      - name: Run Phase 2.7.5 Training-Lock Audit Closure & Invariant Test Suite (7 Scenarios)
+        run: |
+          python -m unittest tests/test_phase_2_7_5_audit_closure.py -v
+
+      - name: Verify Sovereign Authorization Invariant (AUTHORIZED_BY_PREM is False)
+        run: |
+          python -c "import core.policy as p; assert p.AUTHORIZED_BY_PREM is False, 'Security violation: AUTHORIZED_BY_PREM must be False'; assert p.get_active_policy() == 'STRICT_SOVEREIGN_RANDOM_INIT_ONLY', 'Security violation: Active policy must be STRICT_SOVEREIGN_RANDOM_INIT_ONLY'"
+
       - name: Run Full Repository Test Suite
         run: |
           python -m unittest discover -s tests -p "test_*.py"
