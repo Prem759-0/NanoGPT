@@ -104,6 +104,11 @@ In `test_05_repository_wide_no_unauthorized_flag_mutations`:
 - Removed all `except Exception: pass` constructs.
 - Any unparseable `.py` or `.ipynb` file immediately invokes `self.fail()`, surfacing real audit failures rather than swallowing errors.
 
+### 4.4 CI Environment Dependency Repair (`pyyaml`)
+- `pyyaml` is imported by 10 repository modules (`scripts/preflight_pilot_training.py`, `tests/test_phase_2_6_2_5_sovereign_policy_hardening.py`, `training/chat/readiness_gate.py`, etc.).
+- It was previously missing from `requirements.txt` and the `pip install` step in `.github/workflows/ci.yml`, causing `ModuleNotFoundError: No module named 'yaml'` on Ubuntu runners during `unittest discover`.
+- Added `pyyaml>=6.0.0` to `requirements.txt` and explicit installation in `.github/workflows/ci.yml`.
+
 ---
 
 ## 5. Test Suite Reconciliation & Discovery Counts
