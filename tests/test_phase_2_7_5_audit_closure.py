@@ -199,47 +199,57 @@ class TestPhase275AuditClosure(unittest.TestCase):
                 if f.endswith(".py"):
                     try:
                         with open(fpath, "r", encoding="utf-8") as fp:
-                            tree = ast.parse(fp.read(), filename=fpath)
-                        for node in ast.walk(tree):
-                            if isinstance(node, (ast.Assign, ast.AnnAssign)):
-                                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-                                for tgt in targets:
-                                    if isinstance(tgt, ast.Name) and tgt.id == "AUTHORIZED_BY_PREM":
-                                        if isinstance(node.value, ast.Constant) and node.value.value is True:
-                                            violations.append((rel_path, node.lineno, "AUTHORIZED_BY_PREM = True"))
-                                    if isinstance(tgt, ast.Attribute) and tgt.attr == "AUTHORIZED_BY_PREM":
-                                        if isinstance(node.value, ast.Constant) and node.value.value is True:
-                                            violations.append((rel_path, node.lineno, "attr.AUTHORIZED_BY_PREM = True"))
-                    except Exception:
-                        pass
+                            content = fp.read()
+                        tree = ast.parse(content, filename=fpath)
+                    except Exception as e:
+                        self.fail(f"Audit failure: Unable to read or parse Python source {rel_path}: {e}")
+
+                    for node in ast.walk(tree):
+                        if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                            for tgt in targets:
+                                if isinstance(tgt, ast.Name) and tgt.id == "AUTHORIZED_BY_PREM":
+                                    if isinstance(node.value, ast.Constant) and node.value.value is True:
+                                        violations.append((rel_path, node.lineno, "AUTHORIZED_BY_PREM = True"))
+                                if isinstance(tgt, ast.Attribute) and tgt.attr == "AUTHORIZED_BY_PREM":
+                                    if isinstance(node.value, ast.Constant) and node.value.value is True:
+                                        violations.append((rel_path, node.lineno, "attr.AUTHORIZED_BY_PREM = True"))
 
                 elif f.endswith(".ipynb"):
                     try:
                         with open(fpath, "r", encoding="utf-8") as fp:
                             nb = json.load(fp)
-                        for idx, cell in enumerate(nb.get("cells", [])):
-                            if cell.get("cell_type") == "code":
-                                src = "".join(cell.get("source", []))
-                                py_lines = []
-                                for line in src.splitlines():
-                                    s = line.strip()
-                                    if s.startswith(("!", "%")):
-                                        indent = line[:len(line) - len(line.lstrip())]
-                                        py_lines.append(indent + "pass")
-                                    else:
-                                        py_lines.append(line)
-                                clean_code = "\n".join(py_lines)
-                                if clean_code.strip():
-                                    tree = ast.parse(clean_code)
-                                    for node in ast.walk(tree):
-                                        if isinstance(node, (ast.Assign, ast.AnnAssign)):
-                                            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-                                            for tgt in targets:
-                                                if isinstance(tgt, ast.Name) and tgt.id == "AUTHORIZED_BY_PREM":
-                                                    if isinstance(node.value, ast.Constant) and node.value.value is True:
-                                                        violations.append((f"{rel_path}[cell_{idx}]", node.lineno, "AUTHORIZED_BY_PREM = True"))
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        self.fail(f"Audit failure: Unable to parse Jupyter notebook JSON {rel_path}: {e}")
+
+                    for idx, cell in enumerate(nb.get("cells", [])):
+                        if cell.get("cell_type") == "code":
+                            src = "".join(cell.get("source", []))
+                            py_lines = []
+                            for line in src.splitlines():
+                                s = line.strip()
+                                if s.startswith(("!", "%")):
+                                    indent = line[:len(line) - len(line.lstrip())]
+                                    py_lines.append(indent + "pass")
+                                else:
+                                    py_lines.append(line)
+                            clean_code = "\n".join(py_lines)
+                            if clean_code.strip():
+                                try:
+                                    tree = ast.parse(clean_code, filename=f"{rel_path}[cell_{idx}]")
+                                except Exception as e:
+                                    self.fail(f"Audit failure: Unable to parse code cell AST in {rel_path}[cell_{idx}]: {e}")
+
+                                for node in ast.walk(tree):
+                                    if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                                        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                                        for tgt in targets:
+                                            if isinstance(tgt, ast.Name) and tgt.id == "AUTHORIZED_BY_PREM":
+                                                if isinstance(node.value, ast.Constant) and node.value.value is True:
+                                                    violations.append((f"{rel_path}[cell_{idx}]", node.lineno, "AUTHORIZED_BY_PREM = True"))
+                                            if isinstance(tgt, ast.Attribute) and tgt.attr == "AUTHORIZED_BY_PREM":
+                                                if isinstance(node.value, ast.Constant) and node.value.value is True:
+                                                    violations.append((f"{rel_path}[cell_{idx}]", node.lineno, "attr.AUTHORIZED_BY_PREM = True"))
 
         self.assertEqual(
             len(violations),

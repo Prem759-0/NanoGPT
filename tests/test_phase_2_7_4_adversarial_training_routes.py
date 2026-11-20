@@ -253,13 +253,34 @@ class TestPhase274AdversarialTrainingRoutes(unittest.TestCase):
         self.assertEqual(res.status_code, 403)
         self.assertIn("Self-training is permanently disabled", res.json().get("detail", ""))
 
-    def test_15_learning_service_step_returns_disabled(self):
-        """webapp/learning_service.py: run_self_train_step() returns disabled: True."""
+    @patch("webapp.database.db.list_training_pairs")
+    @patch("torch.optim.AdamW")
+    @patch("torch.save")
+    @patch("subprocess.run")
+    def test_15_learning_service_step_returns_disabled(self, mock_subproc, mock_save, mock_adamw, mock_db_list):
+        """
+        webapp/learning_service.py: run_self_train_step() returns disabled: True.
+        Adversarial proof: Proves zero calls to db.list_training_pairs, zero AdamW,
+        zero torch.save, zero subprocess invocations, and zero dataset writes.
+        """
         from webapp.learning_service import learning_service
+        mock_db_list.side_effect = RuntimeError("ADVERSARIAL VIOLATION: db.list_training_pairs was called!")
+        mock_adamw.side_effect = RuntimeError("ADVERSARIAL VIOLATION: AdamW was called!")
+        mock_save.side_effect = RuntimeError("ADVERSARIAL VIOLATION: torch.save was called!")
+        mock_subproc.side_effect = RuntimeError("ADVERSARIAL VIOLATION: subprocess was called!")
+
         res = learning_service.run_self_train_step(iterations=10)
         self.assertFalse(res.get("success"))
         self.assertTrue(res.get("disabled"))
+        self.assertEqual(res.get("reason"), "OWNER_AUTHORIZATION_REQUIRED")
         self.assertIn("permanently disabled", res.get("message", ""))
+        self.assertEqual(res.get("training_pairs_count"), 0)
+
+        # Prohibited operation zero-call assertions
+        mock_db_list.assert_not_called()
+        mock_adamw.assert_not_called()
+        mock_save.assert_not_called()
+        mock_subproc.assert_not_called()
 
     def test_16_controlled_learning_lifecycle_forbids_live_updates(self):
         """core/learning_lifecycle/lifecycle.py: allow_live_weight_updates=True raises ValueError."""
@@ -289,6 +310,16 @@ class TestPhase274AdversarialTrainingRoutes(unittest.TestCase):
         with self.assertRaises(PermissionError) as ctx:
             assert_production_training_authorized()
         self.assertIn("TRAINING EXECUTION BLOCKED: AUTHORIZED_BY_PREM is False", str(ctx.exception))
+
+    def test_20_learning_service_record_chat_turn_never_appends_to_corpus(self):
+        """webapp/learning_service.py: record_chat_turn() must return False and never log to training files."""
+        from webapp.learning_service import learning_service
+        result = learning_service.record_chat_turn(
+            instruction="Test user instruction",
+            response="Test assistant response",
+            source="chat"
+        )
+        self.assertFalse(result, "record_chat_turn must return False under Phase 2.6.2.2 containment")
 
 
 if __name__ == "__main__":

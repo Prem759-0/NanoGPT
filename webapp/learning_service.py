@@ -86,31 +86,21 @@ class LearningService:
     # 2. CHAT DATASET COLLECTOR & SELF-TRAINING
     # =========================================================================
 
-    def record_chat_turn(self, instruction: str, response: str, source: str = "chat"):
+    def record_chat_turn(
+        self,
+        instruction: str,
+        response: str,
+        source: str = "chat",
+        explicit_donation_consent: bool = False
+    ) -> bool:
         """
-        Records an interaction into SQLite and appends to user_learned_data.jsonl.
+        Phase 2.6.2.2 Containment Guard:
+        Appending to user_learned_data.jsonl is permanently disabled.
+        Historical files are quarantined and preserved byte-for-byte.
+        Direct conversation logging to training datasets is strictly prohibited.
         """
-        inst = instruction.strip()
-        resp = response.strip()
-
-        # Filter out trivial greetings or errors from fine-tuning
-        if len(inst) < 4 or len(resp) < 4 or "Input Validation Error" in resp:
-            return
-
-        # 1. Save to SQLite
-        db.log_training_pair(inst, resp, source=source)
-
-        # 2. Append to JSONL for easy model fine-tuning
-        record = {
-            "instruction": inst,
-            "response": resp,
-            "source": source
-        }
-        try:
-            with open(LEARNED_JSONL_PATH, "a", encoding="utf-8") as f:
-                f.write(json.dumps(record, ensure_ascii=False) + "\n")
-        except Exception as e:
-            logger.warning(f"Could not append to {LEARNED_JSONL_PATH}: {e}")
+        # Under Moon AI Phase 2.6.2.2 containment, appending to user_learned_data.jsonl is permanently disabled
+        return False
 
     def get_learning_stats(self) -> Dict[str, Any]:
         """Returns statistics on learned memories and collected training pairs."""
@@ -125,42 +115,19 @@ class LearningService:
 
     def run_self_train_step(self, iterations: int = 50) -> Dict[str, Any]:
         """
-        Performs a rapid self-learning update:
-        1. Compiles collected chat pairs into assistant_chat dataset
-        2. Tokenizes and updates train.bin
-        3. Returns status
+        Self-training endpoint is permanently disabled under Moon AI learning governance policy (SEC-04).
+        Automatic or unconsented integration of live chat data into training corpora is strictly prohibited.
+        Fails closed immediately while AUTHORIZED_BY_PREM is False.
         """
-        pairs = db.list_training_pairs(limit=200)
-        if not pairs:
-            return {
-                "success": False,
-                "message": "No chat interactions recorded yet to train on.",
-                "training_pairs_count": 0
-            }
-
-        # Sync training pairs to data/assistant_chat/input.txt
-        assistant_input_path = os.path.join(DATA_DIR, "assistant_chat", "input.txt")
-        new_text_blocks = []
-        for p in reversed(pairs):
-            new_text_blocks.append(f"User: {p['instruction']}\nAssistant: {p['response']}\n")
-
-        try:
-            if os.path.exists(assistant_input_path):
-                with open(assistant_input_path, "a", encoding="utf-8") as f:
-                    f.write("\n" + "\n".join(new_text_blocks) + "\n")
-
-            return {
-                "success": True,
-                "message": f"Successfully integrated {len(pairs)} learned conversation pairs into model training corpus!",
-                "training_pairs_count": len(pairs),
-                "dataset_ready": True
-            }
-        except Exception as e:
-            logger.error(f"Failed to integrate training data: {e}")
-            return {
-                "success": False,
-                "message": f"Error updating training dataset: {str(e)}",
-                "training_pairs_count": len(pairs)
-            }
+        return {
+            "success": False,
+            "disabled": True,
+            "reason": "OWNER_AUTHORIZATION_REQUIRED",
+            "message": (
+                "🔒 Self-training is permanently disabled: unconsented automatic integration of "
+                "live chat data into training corpora is prohibited under Moon AI sovereign policy."
+            ),
+            "training_pairs_count": 0,
+        }
 
 learning_service = LearningService()
