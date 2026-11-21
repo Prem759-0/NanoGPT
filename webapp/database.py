@@ -169,6 +169,20 @@ class Database:
                     self._mem_conn.row_factory = sqlite3.Row
                     self._mem_conn.execute("PRAGMA foreign_keys = ON;")
                 return self._mem_conn
+
+        db_dir = os.path.dirname(os.path.abspath(self.db_path))
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
+
+        if not os.path.exists(self.db_path):
+            for suffix in ["-wal", "-shm"]:
+                dangling = self.db_path + suffix
+                if os.path.exists(dangling):
+                    try:
+                        os.remove(dangling)
+                    except OSError:
+                        pass
+
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode = WAL;")
