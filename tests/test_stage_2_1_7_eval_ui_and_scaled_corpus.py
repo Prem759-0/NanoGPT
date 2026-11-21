@@ -106,7 +106,7 @@ class TestStage217EvalUiAndScaledCorpus(unittest.TestCase):
     def test_04_model_service_pilot_loading_and_get_info(self):
         """Certifies switching to moon-chat-pilot-v0 loads the model and reports Policy B metadata without false training claims."""
         ms = ModelService(base_dir=PROJECT_ROOT)
-        success = ms.switch_model("moon-chat-pilot-v0")
+        success = ms.switch_model("moon-chat-pilot-v0", allow_fixture=True)
         self.assertTrue(success, f"Failed to switch to moon-chat-pilot-v0: {ms.error_message}")
         self.assertEqual(ms.active_model_name, "moon-chat-pilot-v0")
 
@@ -132,9 +132,9 @@ class TestStage217EvalUiAndScaledCorpus(unittest.TestCase):
     def test_05_model_service_pilot_generation(self):
         """Certifies interactive generation using moon-chat-pilot-v0 via ModelService."""
         ms = ModelService(base_dir=PROJECT_ROOT)
-        ms.switch_model("moon-chat-pilot-v0")
+        ms.switch_model("moon-chat-pilot-v0", allow_fixture=True)
 
-        res = ms.generate("Hi", max_new_tokens=20, temperature=0.7)
+        res = ms.generate("Hi", max_new_tokens=20, temperature=0.7, allow_fixture=True)
         self.assertIsInstance(res, dict)
         self.assertIn("reply", res)
         self.assertGreater(len(res["reply"]), 0)

@@ -90,6 +90,11 @@ def prepare_splits(
         if not os.path.isfile(fpath):
             continue
 
+        # SEC-04: Quarantine unconsented historical chat logs
+        if os.path.basename(fpath) == "user_learned_data.jsonl":
+            print(f"⚠️ [DATA QUARANTINE] Excluding unconsented historical file: {fpath}")
+            continue
+
         raw_items = []
         if fpath.endswith(".jsonl"):
             with open(fpath, "r", encoding="utf-8") as f:
@@ -249,8 +254,7 @@ def main():
     default_sources = [
         os.path.join(PROJECT_ROOT, "moon_ai_master_dataset.json"),
         os.path.join(PROJECT_ROOT, "dataset.json"),
-        os.path.join(PROJECT_ROOT, "chatgpt_dataset.json"),
-        os.path.join(PROJECT_ROOT, "data", "user_learned_data.jsonl")
+        os.path.join(PROJECT_ROOT, "chatgpt_dataset.json")
     ]
     sources = [s for s in default_sources if os.path.isfile(s)]
 

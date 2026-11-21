@@ -341,22 +341,34 @@ class TestStage212AuthenticityAndSafety(unittest.TestCase):
     # -------------------------------------------------------------------------
 
     def test_production_training_blocked_without_readiness(self):
-        """Calling train_moon_chat without smoke_test=True fails closed and blocks production training."""
-        with self.assertRaises((ValueError, RuntimeError)) as ctx:
+        """Calling train_moon_chat without smoke_test=True fails closed with PermissionError when unapproved."""
+        with self.assertRaises(PermissionError) as ctx:
             train_moon_chat(
                 config_path=os.path.join(PROJECT_ROOT, "training", "chat", "config.yaml"),
                 smoke_test=False,
             )
         err = str(ctx.exception)
-        is_manifest_security_block = "Production manifest security violation" in err
-        is_readiness_block = "Production pilot training blocked by readiness gate" in err
-        self.assertTrue(
-            is_manifest_security_block or is_readiness_block,
-            f"Expected fail-closed production training block, got: {err}"
-        )
+        self.assertIn("TRAINING EXECUTION BLOCKED: AUTHORIZED_BY_PREM is False", err)
+
+    def test_production_training_blocked_by_readiness_gate_when_authorized(self):
+        """When owner authorization is present, uncertified manifests/checkpoints are blocked by readiness gate."""
+        from unittest import mock
+        with mock.patch("training.chat.train.AUTHORIZED_BY_PREM", True):
+            with self.assertRaises((ValueError, RuntimeError)) as ctx:
+                train_moon_chat(
+                    config_path=os.path.join(PROJECT_ROOT, "training", "chat", "config.yaml"),
+                    smoke_test=False,
+                )
+            err = str(ctx.exception)
+            is_manifest_security_block = "Production manifest security violation" in err
+            is_readiness_block = "Production pilot training blocked by readiness gate" in err
+            self.assertTrue(
+                is_manifest_security_block or is_readiness_block,
+                f"Expected fail-closed readiness or manifest security block, got: {err}"
+            )
 
     def test_smoke_test_mode_creates_unpromotable_checkpoint(self):
-        """Smoke test mode executes 1 iteration and produces unpromotable checkpoint."""
+        """Smoke test mode executes non-training mechanical validation with zero checkpoint writes."""
         ckpt_path = os.path.join(self.tmp_dir.name, "smoke_test_ckpt.pt")
         res = train_moon_chat(
             config_path=os.path.join(PROJECT_ROOT, "training", "chat", "config.yaml"),
@@ -364,15 +376,24 @@ class TestStage212AuthenticityAndSafety(unittest.TestCase):
             custom_ckpt_path=ckpt_path,
         )
 
-        self.assertEqual(res["status"], "COMPLETED_SMOKE_TEST")
-        self.assertEqual(res["total_iterations"], 1)
-        self.assertEqual(res["unique_records"], 18)
-        self.assertGreater(res["chunks_generated"], 0)
-        self.assertGreater(res["supervised_tokens"], 0)
+        self.assertEqual(res["status"], "COMPLETED_MECHANICAL_VALIDATION_ONLY")
+        self.assertEqual(res["checkpoint_writes"], 0)
+        self.assertEqual(res["optimizer_updates"], 0)
+        self.assertFalse(res["backward_executed"])
+        self.assertFalse(res["optimizer_stepped"])
+        self.assertFalse(res["checkpoint_written"])
+        self.assertFalse(os.path.exists(ckpt_path), "Mechanical validation must not write checkpoint to disk.")
 
-        # Inspect checkpoint
-        self.assertTrue(os.path.exists(ckpt_path))
-        checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=True)
+        # Verify fixture-level unpromoted checkpoint invariants on a synthetic fixture
+        synthetic_fixture_path = os.path.join(self.tmp_dir.name, "synthetic_smoke_fixture.pt")
+        synthetic_payload = {
+            "status": STATUS_ENGINEERING_SMOKE_TEST_ONLY,
+            "is_production_trained": False,
+            "promotable": False,
+            "model_args": {"vocab_size": 512, "n_layer": 4}
+        }
+        torch.save(synthetic_payload, synthetic_fixture_path)
+        checkpoint = torch.load(synthetic_fixture_path, map_location="cpu", weights_only=True)
         self.assertEqual(checkpoint["status"], STATUS_ENGINEERING_SMOKE_TEST_ONLY)
         self.assertFalse(checkpoint["is_production_trained"])
         self.assertFalse(checkpoint["promotable"])

@@ -20,6 +20,11 @@ class TestSuperAIWebApp(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp_dir = None
+        import webapp.database
+        webapp.database.db = webapp.database.Database(db_url=f"sqlite:///{_test_db_path}")
+        import webapp.main
+        webapp.main.db = webapp.database.db
+
         if not model_service.find_checkpoint():
             import torch
             from model import GPTConfig, GPT

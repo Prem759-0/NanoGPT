@@ -99,6 +99,20 @@ def verify_checkpoint_provenance(checkpoint_path: str) -> bool:
             f"Provenance validation failed! Expected 'moon_ai_random_init', found '{provenance}'. "
             "Third-party pretrained checkpoints are strictly prohibited under sovereign ownership policy."
         )
+    if data.get("is_test_fixture") is True or data.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY", "DATA_INSUFFICIENT"):
+        raise ValueError("Checkpoint is an unpromotable CI test fixture or smoke test.")
+    cfg = data.get("config", {}) or data.get("metadata", {})
+    if not isinstance(cfg, dict):
+        cfg = {}
+    pol = data.get("ownership_policy") or cfg.get("ownership_policy") or cfg.get("policy")
+    if not pol or pol != "STRICT_SOVEREIGN_RANDOM_INIT_ONLY":
+        raise ValueError(f"Sovereign ownership policy violation: {pol} (must be STRICT_SOVEREIGN_RANDOM_INIT_ONLY)")
+
+    teacher_transfer = data.get("teacher_checkpoint_weights_transferred")
+    if teacher_transfer is None:
+        teacher_transfer = cfg.get("teacher_checkpoint_weights_transferred")
+    if teacher_transfer is not False:
+        raise ValueError("Policy B violation: teacher_checkpoint_weights_transferred must be explicitly False")
     return True
 
 def update_registry(save: bool = True) -> Dict[str, Any]:

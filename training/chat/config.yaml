@@ -1,11 +1,10 @@
 # Moon AI — Moon Chat v0 Training Configuration
 # Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
-# Ownership Policy: TEACHER_STUDENT_RANDOM_INIT (Legacy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY)
+# Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY (Strict Sovereign Production)
 # Hardware Target: Google Colab NVIDIA T4 (15.3 GB VRAM)
 
 model_track: "moon-chat-v0"
-ownership_policy: "TEACHER_STUDENT_RANDOM_INIT"
-legacy_ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
+ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
 
 # Teacher Distillation Architecture (Student starts strictly from random Gaussian scratch)
 # Policy B Option 1: Zero teacher influence (no teacher weights, no teacher demonstrations, zero external APIs)

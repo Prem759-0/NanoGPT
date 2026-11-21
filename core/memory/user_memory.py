@@ -1,7 +1,7 @@
 """
 Moon AI — Persistent User-Approved Memory Engine
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
-Ownership Policy: TEACHER_STUDENT_RANDOM_INIT
+Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
 
 Provides user-consented, persistent context memory across sessions.
 Critical Architecture Separation:
@@ -65,7 +65,11 @@ class UserMemoryManager:
         """Lists all stored memory keys and values for a user."""
         if not self.has_consent(user_id):
             return {}
-        return {k: v["value"] for k, v in self._store.get(user_id, {k: v}).items()}
+        user_mem = self._store.get(user_id, {})
+        return {
+            k: (v["value"] if isinstance(v, dict) and "value" in v else v)
+            for k, v in user_mem.items()
+        }
 
     def delete_memory(self, user_id: str, key: str) -> bool:
         """Deletes a specific memory item."""

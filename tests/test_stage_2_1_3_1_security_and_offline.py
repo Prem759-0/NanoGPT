@@ -276,13 +276,20 @@ class TestStage2131SecurityAndOffline(unittest.TestCase):
     # 10. User Memory Training Isolation & Ban on Live Updates
     def test_user_memory_training_isolation_and_live_update_ban(self):
         """User memory entries must have eligible_for_training=False; live weight updates must be banned."""
-        # 1. User memory isolation
+        # 1. User memory isolation & list_memories verification
         mem = UserMemoryManager()
+        # Verify listing empty memory returns empty dict
+        self.assertEqual(mem.list_memories("usr_42"), {})
+
         mem.set_user_memory_consent("usr_42", True)
         ok, msg = mem.store_memory("usr_42", "favorite_topic", "astrophysics")
         self.assertTrue(ok)
         stored_item = mem._store["usr_42"]["favorite_topic"]
         self.assertFalse(stored_item.get("eligible_for_training", True))
+
+        # Verify list_memories does not raise NameError and returns values cleanly
+        listed = mem.list_memories("usr_42")
+        self.assertEqual(listed, {"favorite_topic": "astrophysics"})
 
         # 2. Live conversational weight updates ban
         with self.assertRaises(ValueError) as ctx:

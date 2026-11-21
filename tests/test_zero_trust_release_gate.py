@@ -712,7 +712,8 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
             rep_path,
             registry_path=reg_path,
             evaluators_path=self.custom_evaluators_path,
-            verifiers_path=self.custom_keystore_path
+            verifiers_path=self.custom_keystore_path,
+            base_dir=self.base_dir
         )
         self.assertFalse(promoted, "Promotion must be rejected when checkpoint_path is missing")
 
@@ -831,7 +832,7 @@ class TestZeroTrustReleaseGate(unittest.TestCase):
         with open(rep_path, "w", encoding="utf-8") as f:
             json.dump(rep_data, f)
 
-        promoted = evaluate_and_promote(rep_path, registry_path=reg_path)
+        promoted = evaluate_and_promote(rep_path, registry_path=reg_path, base_dir=self.base_dir)
         self.assertFalse(promoted, "Promotion must strictly reject candidate built from development synthetic checkpoint")
 
 if __name__ == "__main__":

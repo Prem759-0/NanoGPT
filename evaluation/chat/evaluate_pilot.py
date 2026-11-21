@@ -146,11 +146,12 @@ def run_pilot_evaluation(
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=True)
     ckpt_meta = ckpt.get("config", {}) or ckpt.get("metadata", {})
 
-    # Policy B verification
+    # Sovereign policy verification
+    ckpt_policy = ckpt_meta.get("ownership_policy") or ckpt_meta.get("policy") or "UNKNOWN_PROVENANCE_INSUFFICIENT"
     if ckpt_meta.get("teacher_checkpoint_weights_transferred") is not False:
-        raise ValueError("Policy B violation: teacher_checkpoint_weights_transferred must be False.")
+        raise ValueError("Sovereign policy violation: teacher_checkpoint_weights_transferred must be False.")
     if ckpt_meta.get("initialization") != "random_gaussian_scratch":
-        raise ValueError("Policy B violation: model must be initialized from random_gaussian_scratch.")
+        raise ValueError("Sovereign policy violation: model must be initialized from random_gaussian_scratch.")
 
     # Initialize Tokenizer and Model
     tok_path = os.path.join(PROJECT_ROOT, "models", "chat", "tokenizer.json")
@@ -166,7 +167,7 @@ def run_pilot_evaluation(
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Loaded student model: {total_params:,} parameters ({total_params/1e6:.2f}M)")
     print(f"Student Init:         {ckpt_meta.get('initialization', 'random_gaussian_scratch')}")
-    print(f"Policy:               {ckpt_meta.get('ownership_policy', 'TEACHER_STUDENT_RANDOM_INIT')}")
+    print(f"Policy:               {ckpt_policy}")
     print(f"Checkpoint SHA-256:   {ckpt_sha256}\n")
 
     # 1. Evaluate Loss & Perplexity on Test Split
@@ -279,7 +280,8 @@ def run_pilot_evaluation(
         "is_production_eligible": True,
         "promotable": True,
         "is_smoke_test": False,
-        "status": "PILOT_TRAINED"
+        "status": "PILOT_TRAINED",
+        "ownership_policy": ckpt_policy
     }
 
     promoted, reason, promo_meta = PromotionGate.evaluate_promotion(
@@ -305,7 +307,7 @@ def run_pilot_evaluation(
     report_payload = {
         "report_generated_at": timestamp,
         "architect": "Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)",
-        "ownership_policy": "TEACHER_STUDENT_RANDOM_INIT",
+        "ownership_policy": ckpt_policy,
         "model_name": "moon-chat-pilot-v0",
         "checkpoint_path": checkpoint_path,
         "checkpoint_sha256": ckpt_sha256,
@@ -341,14 +343,14 @@ def run_pilot_evaluation(
 **Date:** {timestamp}  
 **Chief ML Systems Architect:** Prem Gaikwad (India 🇮🇳)  
 **Evaluated Model:** `{model_stem}`  
-**Ownership Policy:** `TEACHER_STUDENT_RANDOM_INIT` (Policy B)  
+**Ownership Policy:** `{ckpt_policy}`  
 **Checkpoint Path:** `{checkpoint_path}`  
 **Checkpoint SHA-256:** `{ckpt_sha256}`  
 
 ---
 
 ## 1. Executive Summary & Policy Attestation
-- **Random Scratch Initialization:** Verified pure Gaussian scratch initialization (zero pretrained or teacher weights transferred).
+- **Strict Sovereign Random Scratch:** Verified pure Gaussian scratch initialization under sovereign policy (zero pretrained or teacher weights transferred).
 - **Offline Integrity:** Zero external API keys or cloud AI inference endpoints used.
 - **Corpus Scale:** Evaluated across the blind test split (`{os.path.basename(test_manifest_path)}`) and the 12-category blind independent benchmark.
 

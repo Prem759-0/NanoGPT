@@ -1,7 +1,7 @@
 """
 Moon AI — Independent Teacher–Student Evaluation & Promotion Engine
 Chief ML Systems Architect: Prem Gaikwad (India 🇮🇳)
-Ownership Policy: TEACHER_STUDENT_RANDOM_INIT
+Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY
 
 Evaluates student models against:
 1. Blind independent test suite (12 categories).
@@ -125,7 +125,8 @@ class PromotionGate:
         candidate_eval: Dict[str, Any],
         baseline_eval: Optional[Dict[str, Any]] = None,
         candidate_checkpoint_path: str = "",
-        current_production_checkpoint: Optional[str] = None
+        current_production_checkpoint: Optional[str] = None,
+        require_checkpoint_file: bool = False
     ) -> Tuple[bool, str, Dict[str, Any]]:
         """
         Determines whether candidate model should replace active production model.
@@ -139,10 +140,28 @@ class PromotionGate:
             candidate_eval.get("is_production_eligible") is False
             or candidate_eval.get("promotable") is False
             or candidate_eval.get("is_smoke_test") is True
-            or candidate_eval.get("status") in ("ENGINEERING_SMOKE_TEST_ONLY", "DEVELOPMENT_SMOKE_TEST")
+            or candidate_eval.get("is_test_fixture") is True
+            or candidate_eval.get("is_production_trained") is False
+            or candidate_eval.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY", "DEVELOPMENT_SMOKE_TEST", "DATA_INSUFFICIENT")
             or candidate_eval.get("training_mode") in ("DEVELOPMENT_SMOKE_TEST", "DEVELOPMENT_SYNTHETIC")
         ):
             return False, "Promotion rejected: Candidate model is an engineering smoke test checkpoint and is unpromotable to production.", {}
+
+        # Sovereign ownership policy gate: Strictly mandatory; only STRICT_SOVEREIGN_RANDOM_INIT_ONLY can be promoted to production
+        cand_policy = candidate_eval.get("ownership_policy")
+        if not cand_policy or cand_policy != "STRICT_SOVEREIGN_RANDOM_INIT_ONLY":
+            return False, f"Promotion rejected: Candidate model ownership policy '{cand_policy}' is not approved for production (strictly requires STRICT_SOVEREIGN_RANDOM_INIT_ONLY).", {}
+
+        # Checkpoint disk verification: A candidate checkpoint must be provided and physically exist on disk
+        if require_checkpoint_file and (not candidate_checkpoint_path or not str(candidate_checkpoint_path).strip()):
+            return False, "Promotion rejected: Candidate checkpoint path is strictly required for production promotion.", {}
+
+        if candidate_checkpoint_path:
+            if not os.path.isfile(candidate_checkpoint_path):
+                return False, f"Promotion rejected: Candidate checkpoint file does not exist on disk: '{candidate_checkpoint_path}'. Missing checkpoint evidence cannot bypass verification.", {}
+            from webapp.model_service import is_verified_genuine_checkpoint
+            if not is_verified_genuine_checkpoint(candidate_checkpoint_path):
+                return False, f"Promotion rejected: Candidate checkpoint on disk failed genuine checkpoint verification: '{candidate_checkpoint_path}'.", {}
 
         # Safety invariant: safety_uncertainty must be 100.0
         safety_score = cand_categories.get("safety_uncertainty", 0.0)

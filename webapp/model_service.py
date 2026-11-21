@@ -125,6 +125,29 @@ def is_checkpoint_fixture(ckpt_path: str) -> bool:
     return False
 
 
+def is_historical_pilot_checkpoint(ckpt_path: str) -> bool:
+    """
+    Identifies structurally valid historical unpromoted pilot checkpoints (e.g. Stage 2.1.6 Policy B).
+    Permitted strictly for retrospective test discovery and historical audit inspection.
+    Never treated as verified genuine strict sovereign production checkpoints.
+    """
+    ok, reason, ckpt = validate_checkpoint_structure(ckpt_path)
+    if not ok:
+        return False
+    cfg = ckpt.get("config", {}) or ckpt.get("metadata", {})
+    if not isinstance(cfg, dict) or not cfg:
+        return False
+    if cfg.get("teacher_checkpoint_weights_transferred") is not False:
+        return False
+    init_method = cfg.get("initialization") or cfg.get("student_init_method")
+    if init_method != "random_gaussian_scratch":
+        return False
+    policy = cfg.get("ownership_policy") or cfg.get("policy")
+    if policy not in ("TEACHER_STUDENT_RANDOM_INIT", "POLICY_B_TEACHER_STUDENT_RANDOM_INIT"):
+        return False
+    return True
+
+
 def is_verified_genuine_checkpoint(ckpt_path: str) -> bool:
     """
     Positively validates that a checkpoint is a genuine, trained student checkpoint.
@@ -133,6 +156,7 @@ def is_verified_genuine_checkpoint(ckpt_path: str) -> bool:
     - Missing or incomplete metadata
     - CI test fixtures or engineering smoke test checkpoints
     - Policy B violations (e.g. teacher checkpoint weights transferred)
+    - Contradictory external base weights or teacher model references
     """
     ok, reason, ckpt = validate_checkpoint_structure(ckpt_path)
     if not ok:
@@ -144,20 +168,32 @@ def is_verified_genuine_checkpoint(ckpt_path: str) -> bool:
     if ckpt.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY", "DATA_INSUFFICIENT"):
         return False
 
+    # Model and model_args must be present
+    if "model" not in ckpt or "model_args" not in ckpt:
+        return False
+
     cfg = ckpt.get("config", {}) or ckpt.get("metadata", {})
-    if not isinstance(cfg, dict):
+    if not isinstance(cfg, dict) or not cfg:
         return False
     if cfg.get("is_test_fixture") is True or cfg.get("run_id") == "ci_test_fixture":
         return False
 
-    # Policy B provenance verification
-    if cfg.get("teacher_checkpoint_weights_transferred") is True:
+    # Strict sovereign provenance verification:
+    # Must explicitly declare that NO teacher checkpoint weights were transferred (must be literal False)
+    if cfg.get("teacher_checkpoint_weights_transferred") is not False:
         return False
     init_method = cfg.get("initialization") or cfg.get("student_init_method")
     if init_method != "random_gaussian_scratch":
         return False
     policy = cfg.get("ownership_policy") or cfg.get("policy")
-    if policy not in ("TEACHER_STUDENT_RANDOM_INIT", "STRICT_SOVEREIGN_RANDOM_INIT_ONLY", "POLICY_B_TEACHER_STUDENT_RANDOM_INIT"):
+    if policy != "STRICT_SOVEREIGN_RANDOM_INIT_ONLY":
+        return False
+
+    # Reject contradictory base weights or external pretrained sources
+    base_weights = cfg.get("base_weights") or cfg.get("pretrained_source")
+    if base_weights and base_weights not in ("none", "scratch", "random_gaussian", "random_gaussian_scratch"):
+        return False
+    if cfg.get("teacher_checkpoint") or cfg.get("teacher_model"):
         return False
 
     # Status must be positively genuine
@@ -310,13 +346,14 @@ class ModelService:
 
     validate_checkpoint_structure = staticmethod(validate_checkpoint_structure)
     is_checkpoint_fixture = staticmethod(is_checkpoint_fixture)
+    is_historical_pilot_checkpoint = staticmethod(is_historical_pilot_checkpoint)
     is_verified_genuine_checkpoint = staticmethod(is_verified_genuine_checkpoint)
 
     def find_pilot_checkpoint(self, allow_fixture: bool = False) -> Optional[str]:
         """
         Locates the sovereign pilot checkpoint with fail-closed positive verification.
-        - If allow_fixture is False: ONLY returns a positively verified genuine checkpoint.
-        - If allow_fixture is True: returns a verified genuine checkpoint OR a valid CI fixture.
+        - If allow_fixture is False: ONLY returns a positively verified genuine strict sovereign checkpoint.
+        - If allow_fixture is True: returns a verified genuine checkpoint OR a valid test fixture / historical pilot.
         Never returns an unreadable, malformed, or unverified checkpoint file.
         Never silently falls back to an unrelated checkpoint.
         """
@@ -333,7 +370,7 @@ class ModelService:
                 return os.path.abspath(cand)
             if allow_fixture:
                 ok, _, _ = self.validate_checkpoint_structure(cand)
-                if ok and self.is_checkpoint_fixture(cand):
+                if ok and (self.is_checkpoint_fixture(cand) or self.is_historical_pilot_checkpoint(cand)):
                     return os.path.abspath(cand)
 
         return None
@@ -441,7 +478,7 @@ class ModelService:
                 "id": "moon-chat-pilot-v0",
                 "name": "🌙 Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
                 "type": "sovereign_scratch",
-                "description": "Stage 2.1.6 sovereign 25.7M parameter transformer initialized from Gaussian random scratch. Evaluated on 572-record verified curriculum. 0 teacher weights transferred (Policy B).",
+                "description": "Stage 2.1.6 sovereign 25.7M parameter transformer initialized from Gaussian random scratch. Evaluated on 572-record verified curriculum. Zero teacher weights transferred (Strict Sovereign Init).",
                 "active": self.active_model_name == "moon-chat-pilot-v0",
                 "parameters": "25.70M",
                 "block_size": 512,
@@ -462,7 +499,7 @@ class ModelService:
             }
         ]
 
-    def load_model(self, model_name: Optional[str] = None) -> bool:
+    def load_model(self, model_name: Optional[str] = None, allow_fixture: bool = False) -> bool:
         """
         Loads the target model into memory: 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', or 'scratch'.
         Thread-safe: will not duplicate load or reload if already active.
@@ -644,9 +681,12 @@ class ModelService:
 
             # Option 4: Sovereign Moon Chat Pilot (25.7M scratch-initialized transformer)
             elif target in ["moon-chat-pilot-v0", "moon-pilot", "pilot"]:
-                ckpt_path = self.find_pilot_checkpoint(allow_fixture=True)
+                ckpt_path = self.find_pilot_checkpoint(allow_fixture=allow_fixture)
                 if not ckpt_path:
-                    self.error_message = "Moon Chat Pilot checkpoint not found on disk at models/checkpoints/chat/moon_chat_pilot_v0.pt"
+                    self.error_message = (
+                        "No verified genuine Moon Chat Pilot checkpoint found for production inference. "
+                        "Unpromoted historical pilot checkpoints are restricted to isolated retrospective testing (allow_fixture=True)."
+                    )
                     return False
                 try:
                     import torch
@@ -655,7 +695,7 @@ class ModelService:
 
                     print(f"Loading Moon Chat Pilot checkpoint: {ckpt_path} on {self.device}...")
                     checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=True)
-                    self.is_test_fixture = self.is_checkpoint_fixture(ckpt_path)
+                    self.is_test_fixture = self.is_checkpoint_fixture(ckpt_path) or not self.is_verified_genuine_checkpoint(ckpt_path)
 
                     model_args = checkpoint.get("model_args", {})
                     self.model_args = model_args
@@ -678,6 +718,11 @@ class ModelService:
                     self.active_model_name = "moon-chat-pilot-v0"
                     self.current_checkpoint_path = os.path.relpath(ckpt_path, self.base_dir)
                     self.checkpoint_meta = checkpoint.get("config", {}) or checkpoint.get("metadata", {})
+                    self.current_checkpoint_policy = (
+                        self.checkpoint_meta.get("ownership_policy")
+                        or self.checkpoint_meta.get("policy")
+                        or "UNKNOWN_PROVENANCE_INSUFFICIENT"
+                    )
                     self.dataset_name = self.checkpoint_meta.get("dataset", "expanded_chat_corpus")
                     self.vocab_size = model_args.get("vocab_size", 512)
 
@@ -745,19 +790,26 @@ class ModelService:
         self.encode_fn = char_encode
         self.decode_fn = char_decode
 
-    def switch_model(self, model_name: str) -> bool:
+    def switch_model(self, model_name: str, allow_fixture: bool = False) -> bool:
         """Switches active model between available engines."""
         allowed = ["qwen-2.5-coder-7b", "qwen", "qwen-7b", "llama-3.2", "gpt2", "scratch", "moon-chat-pilot-v0", "moon-pilot", "pilot"]
         if model_name not in allowed:
             raise ValueError(f"Invalid model: {model_name}. Allowed: 'moon-chat-pilot-v0', 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', 'scratch'")
-        return self.load_model(model_name)
+        return self.load_model(model_name, allow_fixture=allow_fixture)
 
-    def generate(self, prompt: str, max_new_tokens: int = 150, temperature: float = 0.7, history: Optional[List[Dict[str, str]]] = None, mode: str = "chat") -> Dict[str, Any]:
+    def generate(self, prompt: str, max_new_tokens: int = 150, temperature: float = 0.7, history: Optional[List[Dict[str, str]]] = None, mode: str = "chat", allow_fixture: bool = False) -> Dict[str, Any]:
         """
         Runs local inference with memory context, smart turn-stopping, and Claude/Codex caliber coding capabilities.
+        Fails closed on unpromoted test fixtures unless allow_fixture is explicitly True.
         """
+        if getattr(self, "is_test_fixture", False) and not allow_fixture:
+            raise ModelNotTrainedException(
+                "Production inference blocked: Active model is an unpromoted CI test fixture. "
+                "Retrospective testing or audit generation requires allow_fixture=True."
+            )
+
         if self.model is None and self.llama_model is None:
-            success = self.load_model(self.active_model_name)
+            success = self.load_model(self.active_model_name, allow_fixture=allow_fixture)
             if not success:
                 raise ModelNotTrainedException(self.error_message or "Model could not be initialized.")
 
@@ -1047,15 +1099,18 @@ class ModelService:
             if not clean_reply:
                 clean_reply = "[Moon AI Pilot: Initialized from Gaussian scratch. Emitted 0 readable tokens.]"
 
+            is_fixture = getattr(self, "is_test_fixture", False)
             return {
                 "reply": clean_reply,
                 "raw_reply": raw_reply,
                 "stop_reason": stop_reason,
                 "full_text": clean_reply,
-                "model_name": "Moon AI Pilot (25.7M Sovereign Chat — Policy B)",
+                "model_name": "Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
                 "prompt_length": prompt_len,
                 "tokens_generated": len(new_tokens),
-                "device": f"{self.device.upper()} Local Sovereign Engine"
+                "device": f"{self.device.upper()} Local Sovereign Engine",
+                "is_test_fixture": is_fixture,
+                "is_production_trained": False if is_fixture else True
             }
 
         # --- 2. NanoGPT Light / Core Generation ---
@@ -1187,7 +1242,7 @@ class ModelService:
             is_fixture = getattr(self, "is_test_fixture", False)
             return {
                 "model_name": "Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
-                "model_type": "Moon AI 25.7M Sovereign Pilot (Policy B Scratch Init)",
+                "model_type": "Moon AI 25.7M Sovereign Pilot (Pure Scratch Init)",
                 "checkpoint_path": self.current_checkpoint_path or "models/checkpoints/chat/moon_chat_pilot_v0.pt",
                 "model_status": "CI TEST FIXTURE (UNPROMOTABLE)" if is_fixture else status,
                 "dataset": "Moon AI Sovereign Expanded Corpus (572 records, 120k+ tokens)",
@@ -1198,13 +1253,13 @@ class ModelService:
                 "n_head": getattr(self.model_config, "n_head", 8),
                 "n_embd": getattr(self.model_config, "n_embd", 512),
                 "hardware": f"{self.device.upper()} (PyTorch {self.torch_version or 'not installed'})",
-                "ownership_policy": "TEACHER_STUDENT_RANDOM_INIT",
+                "ownership_policy": getattr(self, "current_checkpoint_policy", "UNKNOWN_PROVENANCE_INSUFFICIENT"),
                 "teacher_checkpoint_weights_transferred": False,
                 "is_test_fixture": is_fixture,
                 "is_production_trained": False,
                 "promotable": False,
                 "status": "CI_TEST_FIXTURE" if is_fixture else "PILOT_TRAINED",
-                "description": "25.7M parameter sovereign transformer trained purely from Gaussian random scratch under Policy B. Zero teacher weights transferred."
+                "description": "25.7M parameter sovereign transformer trained purely from Gaussian random scratch under strict sovereign ownership policy. Zero teacher weights transferred."
             }
 
         is_gpt2 = self.active_model_name == "gpt2"

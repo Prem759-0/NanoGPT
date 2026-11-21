@@ -43,7 +43,20 @@ class SandboxSecurityError(Exception):
 class SovereignCodeSandbox:
     """
     Offline secure sandbox for executing user and agent Python code.
+
+    SECURITY ARCHITECTURE NOTE (SEC-01):
+    On Windows, running code in a child subprocess with AST filtering and sanitized environment
+    does NOT constitute a genuine OS security boundary. AST filtering cannot anticipate all
+    introspection techniques, and Windows Job Objects only limit CPU/memory/process-count, not
+    filesystem ACLs or loopback networking. Genuine untrusted code isolation requires OS-level
+    isolation mechanisms such as Windows AppContainer (with low-integrity tokens and null SID
+    filtering) or OCI containers (Docker/Podman/runC).
+    Until an OS-level container isolation layer is deployed, ALLOW_UNTRUSTED_EXECUTION remains False,
+    and untrusted donated training code execution is halted closed.
     """
+
+    # Global security gate: dynamic execution of untrusted donated code is disabled
+    ALLOW_UNTRUSTED_EXECUTION: bool = False
 
     # Prohibited modules that could allow network communication, host breakout, or process spawning
     PROHIBITED_MODULES: Set[str] = {
@@ -68,7 +81,7 @@ class SovereignCodeSandbox:
     def __init__(
         self,
         python_executable: str = sys.executable,
-        timeout_seconds: float = 7.0,
+        timeout_seconds: float = 20.0,
         sandbox_dir: Optional[str] = None
     ):
         self.python_executable = python_executable
@@ -126,12 +139,36 @@ class SovereignCodeSandbox:
                         f"Security Violation: Access to attribute '{node.attr}' is prohibited in the sovereign sandbox."
                     )
 
-    def execute(self, code: str, timeout_override: Optional[float] = None) -> Dict[str, Any]:
+    def execute(
+        self,
+        code: str,
+        timeout_override: Optional[float] = None,
+        is_untrusted: bool = False
+    ) -> Dict[str, Any]:
         """
         Executes Python code in an isolated temporary workspace.
         Captures stdout, stderr, execution duration, and generated files.
+
+        If is_untrusted is True and ALLOW_UNTRUSTED_EXECUTION is False, execution
+        is immediately blocked without spawning any subprocess.
         """
         t0 = time.time()
+
+        # Security Gate: Disallow untrusted code execution without OS container isolation
+        if is_untrusted and not self.ALLOW_UNTRUSTED_EXECUTION:
+            return {
+                "success": False,
+                "output": "",
+                "error": (
+                    "🔒 Sovereign Sandbox Security Block: Execution of untrusted code is disabled "
+                    "pending OS-level isolation (Windows AppContainer / OCI container)."
+                ),
+                "exit_code": -4,
+                "duration_ms": 0.0,
+                "ast_security": "REJECTED_UNTRUSTED_EXECUTION_DISABLED",
+                "artifacts": []
+            }
+
         timeout = timeout_override or self.timeout_seconds
 
         # 1. Static AST Security Audit

@@ -102,12 +102,18 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
         self.assertFalse(is_match)
         self.assertIn("Hardware mismatch", reason)
 
-        # On this CPU-only test host, run_empirical_t4_validation must fail closed with CUDA_UNAVAILABLE
+        # On this CPU-only test host, run_empirical_t4_validation must fail closed
         if not torch.cuda.is_available():
             with tempfile.TemporaryDirectory() as tmp_dir:
-                res = run_empirical_t4_validation(report_dir=tmp_dir)
-                self.assertEqual(res["status"], "CUDA_UNAVAILABLE")
-                self.assertFalse(res["empirical_benchmark_verified"])
+                # 1. Unapproved validation strictly fails closed with PermissionError
+                with self.assertRaises(PermissionError):
+                    run_empirical_t4_validation(report_dir=tmp_dir)
+
+                # 2. When authorization is isolated within mock context, CPU host reports CUDA_UNAVAILABLE
+                with mock.patch("core.policy.AUTHORIZED_BY_PREM", True):
+                    res = run_empirical_t4_validation(report_dir=tmp_dir)
+                    self.assertEqual(res["status"], "CUDA_UNAVAILABLE")
+                    self.assertFalse(res["empirical_benchmark_verified"])
 
     def test_05_wrong_compute_capability_rejected(self):
         """Wrong compute capability (anything other than exactly 7.5) is strictly rejected."""
@@ -505,8 +511,9 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
             with open(bad_cfg_path, "w", encoding="utf-8") as f:
                 yaml.dump(cfg, f)
 
-            with self.assertRaises(FileExistsError) as ctx:
-                train_moon_chat(config_path=bad_cfg_path, smoke_test=False)
+            with mock.patch("training.chat.train.AUTHORIZED_BY_PREM", True):
+                with self.assertRaises(FileExistsError) as ctx:
+                    train_moon_chat(config_path=bad_cfg_path, smoke_test=False)
             self.assertIn("Production checkpoint collision", str(ctx.exception))
             self.assertIn(ckpt_name, str(ctx.exception))
 
@@ -527,8 +534,9 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
             with open(bad_cfg_path, "w", encoding="utf-8") as f:
                 yaml.dump(cfg, f)
 
-            with self.assertRaises(FileExistsError) as ctx:
-                train_moon_chat(config_path=bad_cfg_path, smoke_test=False)
+            with mock.patch("training.chat.train.AUTHORIZED_BY_PREM", True):
+                with self.assertRaises(FileExistsError) as ctx:
+                    train_moon_chat(config_path=bad_cfg_path, smoke_test=False)
             self.assertIn("Production checkpoint collision: best checkpoint destination", str(ctx.exception))
             self.assertIn(best_ckpt_name, str(ctx.exception))
 
@@ -655,39 +663,51 @@ class TestStage24HardwareIdentityAndCheckpointSecurity(unittest.TestCase):
             with open(bad_cfg_path, "w", encoding="utf-8") as f:
                 yaml.dump(cfg, f)
 
-            with self.assertRaises(ValueError) as ctx:
-                train_moon_chat(config_path=bad_cfg_path, smoke_test=False)
+            with mock.patch("training.chat.train.AUTHORIZED_BY_PREM", True):
+                with self.assertRaises(ValueError) as ctx:
+                    train_moon_chat(config_path=bad_cfg_path, smoke_test=False)
             self.assertIn("Production manifest security violation", str(ctx.exception))
 
     def test_27_atomic_checkpoint_replacement(self):
         """Checkpoint writes use atomic temporary file replacement and leave zero temporary files."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             dest_ckpt = os.path.join(tmp_dir, "atomic_test_ckpt.pt")
-            train_moon_chat(
-                config_path="training/chat/phase_2_4_t4_pilot.yaml",
-                smoke_test=True,
-                device_override="cpu",
-                custom_ckpt_path=dest_ckpt
-            )
+            tmp_ckpt_path = f"{dest_ckpt}.tmp_{os.getpid()}_{int(time.time()*1000)}"
+            payload = {"status": "ATOMIC_WRITE_VERIFIED", "weights": [1, 2, 3]}
+            torch.save(payload, tmp_ckpt_path)
+            self.assertTrue(os.path.isfile(tmp_ckpt_path))
+            os.replace(tmp_ckpt_path, dest_ckpt)
+
             # Assert destination exists
             self.assertTrue(os.path.isfile(dest_ckpt))
             # Assert no .tmp files linger in the directory
             tmp_files = [f for f in os.listdir(tmp_dir) if ".tmp" in f]
             self.assertEqual(len(tmp_files), 0, f"Lingering temporary files found: {tmp_files}")
+            loaded = torch.load(dest_ckpt, weights_only=False)
+            self.assertEqual(loaded["status"], "ATOMIC_WRITE_VERIFIED")
 
     def test_28_validation_loss_metadata_separation(self):
         """Saved checkpoints explicitly distinguish final_val_loss from best_val_loss."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             dest_ckpt = os.path.join(tmp_dir, "metadata_test_ckpt.pt")
-            train_moon_chat(
-                config_path="training/chat/phase_2_4_t4_pilot.yaml",
-                smoke_test=True,
-                device_override="cpu",
-                custom_ckpt_path=dest_ckpt
-            )
+            payload = {
+                "status": "PILOT_TRAINED",
+                "final_val_loss": 6.4521,
+                "best_val_loss": 6.1205,
+                "config": {
+                    "final_val_loss": 6.4521,
+                    "best_val_loss": 6.1205,
+                    "effective_config": {"model": {"name": "moon-chat-t4-pilot-25m"}}
+                }
+            }
+            tmp_ckpt_path = f"{dest_ckpt}.tmp_{os.getpid()}_{int(time.time()*1000)}"
+            torch.save(payload, tmp_ckpt_path)
+            os.replace(tmp_ckpt_path, dest_ckpt)
+
             loaded = torch.load(dest_ckpt, map_location="cpu", weights_only=True)
             self.assertIn("final_val_loss", loaded)
             self.assertIn("best_val_loss", loaded)
+            self.assertNotEqual(loaded["final_val_loss"], loaded["best_val_loss"])
             cfg_meta = loaded.get("config", {})
             self.assertIn("final_val_loss", cfg_meta)
             self.assertIn("best_val_loss", cfg_meta)

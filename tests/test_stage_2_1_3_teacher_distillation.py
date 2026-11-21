@@ -60,6 +60,7 @@ from core.policy import (
     VALID_OWNERSHIP_POLICIES,
     get_active_policy,
     is_valid_policy,
+    is_historical_policy,
     validate_student_initialization,
     get_policy_summary
 )
@@ -118,9 +119,10 @@ class TestStage213TeacherDistillation(unittest.TestCase):
     # -------------------------------------------------------------------------
 
     def test_ownership_policy_active_and_legacy_compatibility(self):
-        """Active policy is STRICT_SOVEREIGN_RANDOM_INIT; teacher-student policy remains recognized for backward compatibility."""
+        """Active policy is STRICT_SOVEREIGN_RANDOM_INIT; teacher-student policy is quarantined and rejected for production."""
         self.assertEqual(get_active_policy(), POLICY_STRICT_SOVEREIGN_RANDOM_INIT)
-        self.assertTrue(is_valid_policy(POLICY_TEACHER_STUDENT_RANDOM_INIT))
+        self.assertFalse(is_valid_policy(POLICY_TEACHER_STUDENT_RANDOM_INIT))
+        self.assertTrue(is_historical_policy(POLICY_TEACHER_STUDENT_RANDOM_INIT))
         self.assertTrue(is_valid_policy(POLICY_STRICT_SOVEREIGN_RANDOM_INIT))
         self.assertFalse(is_valid_policy("THIRD_PARTY_PRETRAINED_IMPORT"))
 
@@ -412,7 +414,8 @@ class TestStage213TeacherDistillation(unittest.TestCase):
         # Candidate with failed safety
         cand_eval_unsafe = {
             "mean_composite_score": 88.0,
-            "category_scores": {"safety_uncertainty": 50.0, "math_reasoning": 90.0}
+            "category_scores": {"safety_uncertainty": 50.0, "math_reasoning": 90.0},
+            "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
         }
         promoted, reason, _ = PromotionGate.evaluate_promotion(cand_eval_unsafe)
         self.assertFalse(promoted)
@@ -421,13 +424,14 @@ class TestStage213TeacherDistillation(unittest.TestCase):
         # Candidate below threshold
         cand_eval_low = {
             "mean_composite_score": 70.0,
-            "category_scores": {"safety_uncertainty": 100.0}
+            "category_scores": {"safety_uncertainty": 100.0},
+            "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
         }
         promoted, reason, _ = PromotionGate.evaluate_promotion(cand_eval_low)
         self.assertFalse(promoted)
         self.assertIn("minimum promotion threshold", reason)
 
-        # Legitimate candidate with rollback preservation
+        # Legitimate candidate with rollback preservation and genuine disk checkpoint
         cand_eval_good = {
             "mean_composite_score": 85.0,
             "category_scores": {
@@ -435,7 +439,8 @@ class TestStage213TeacherDistillation(unittest.TestCase):
                 "math_reasoning": 85.0,
                 "programming": 85.0,
                 "logical_reasoning": 85.0
-            }
+            },
+            "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
         }
         base_eval = {
             "mean_composite_score": 80.0,
@@ -446,15 +451,32 @@ class TestStage213TeacherDistillation(unittest.TestCase):
                 "logical_reasoning": 81.0
             }
         }
-        promoted, reason, meta = PromotionGate.evaluate_promotion(
-            candidate_eval=cand_eval_good,
-            baseline_eval=base_eval,
-            candidate_checkpoint_path="models/checkpoints/candidate_v1.pt",
-            current_production_checkpoint="models/checkpoints/production_v0.pt"
-        )
-        self.assertTrue(promoted)
-        self.assertTrue(meta["rollback_available"])
-        self.assertEqual(meta["previous_production_checkpoint"], "models/checkpoints/production_v0.pt")
+        import torch
+        cand_ckpt_path = os.path.join(PROJECT_ROOT, "models", "checkpoints", "candidate_v1.pt")
+        os.makedirs(os.path.dirname(cand_ckpt_path), exist_ok=True)
+        torch.save({
+            "model": {"weight": torch.randn(4, 4)},
+            "model_args": {"n_layer": 4, "n_head": 4, "n_embd": 128, "vocab_size": 512, "block_size": 512},
+            "config": {
+                "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
+                "teacher_checkpoint_weights_transferred": False,
+                "initialization": "random_gaussian_scratch"
+            },
+            "status": "EVALUATION_PASSED"
+        }, cand_ckpt_path)
+        try:
+            promoted, reason, meta = PromotionGate.evaluate_promotion(
+                candidate_eval=cand_eval_good,
+                baseline_eval=base_eval,
+                candidate_checkpoint_path=cand_ckpt_path,
+                current_production_checkpoint="models/checkpoints/production_v0.pt"
+            )
+            self.assertTrue(promoted, f"Promotion failed: {reason}")
+            self.assertTrue(meta["rollback_available"])
+            self.assertEqual(meta["previous_production_checkpoint"], "models/checkpoints/production_v0.pt")
+        finally:
+            if os.path.isfile(cand_ckpt_path):
+                os.remove(cand_ckpt_path)
 
     # -------------------------------------------------------------------------
     # 7. User Memory vs Training Data Separation
@@ -490,7 +512,7 @@ class TestStage213TeacherDistillation(unittest.TestCase):
 
         lifecycle = ControlledLearningLifecycle(allow_live_weight_updates=False)
 
-        # Private chat without explicit donation is rejected
+        # Private chat without explicit donation is rejected fail-closed
         private_interaction = {
             "prompt": "What is my personal account balance?",
             "response": "Your balance is private.",
@@ -499,9 +521,9 @@ class TestStage213TeacherDistillation(unittest.TestCase):
         }
         ok, reason, _ = lifecycle.ingest_candidate_example("user_456", private_interaction, user_training_consent=True)
         self.assertFalse(ok)
-        self.assertIn("Private conversations cannot be silently ingested", reason)
+        self.assertIn("Donation ingestion is permanently disabled", reason)
 
-        # Clean donated interaction with training consent is staged for batch training
+        # Ingestion fails closed because server-side cryptographic authentication is not verified (SEC-08)
         donated_interaction = {
             "prompt": "How do I implement a binary search tree in Python?",
             "response": "Here is an implementation of a binary search tree node with insert and find methods.",
@@ -509,8 +531,9 @@ class TestStage213TeacherDistillation(unittest.TestCase):
             "explicitly_donated_for_training": True
         }
         ok, reason, candidate = lifecycle.ingest_candidate_example("user_456", donated_interaction, user_training_consent=True)
-        self.assertTrue(ok)
-        self.assertEqual(candidate["status"], "STAGED_FOR_BATCH_TRAINING")
+        self.assertFalse(ok)
+        self.assertIn("Donation ingestion is permanently disabled", reason)
+        self.assertIsNone(candidate)
 
     # -------------------------------------------------------------------------
     # 8. Multimodal Capability Registry & Moon Core Orchestration

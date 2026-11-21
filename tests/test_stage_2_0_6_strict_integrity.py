@@ -466,7 +466,8 @@ class TestStage206StrictIntegrity(unittest.TestCase):
             candidate_report_path=report_path,
             evaluators_path=self.evaluators_path,
             verifiers_path=self.verifiers_path,
-            registry_path=os.path.join(self.base_dir, "test_reg.json")
+            registry_path=os.path.join(self.base_dir, "test_reg.json"),
+            base_dir=self.base_dir
         )
         self.assertFalse(res)
 
@@ -506,7 +507,8 @@ class TestStage206StrictIntegrity(unittest.TestCase):
             candidate_report_path=report_path,
             evaluators_path=self.evaluators_path,
             verifiers_path=self.verifiers_path,
-            registry_path=os.path.join(self.base_dir, "test_reg.json")
+            registry_path=os.path.join(self.base_dir, "test_reg.json"),
+            base_dir=self.base_dir
         )
         self.assertFalse(res)
 

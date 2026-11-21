@@ -280,22 +280,58 @@ class TestStage211ReadinessRepair(unittest.TestCase):
 
     def test_windows_cross_drive_path_handling_regression(self):
         """
-        Regression test for Windows cross-drive tempfile paths.
+        Regression test for Windows cross-drive tempfile paths and platform-aware safe_relpath.
         Ensures safe_relpath normalizes paths without ValueError across different drive mounts,
-        while maintaining fail-closed boundary enforcement.
+        while maintaining fail-closed boundary enforcement on both Windows and POSIX platforms.
         """
+        from unittest import mock
         from training.chat.train import safe_relpath
-        # 1. Cross-drive path formatting succeeds without exception
-        cross_drive_path = "C:\\Users\\Temp\\dataset.jsonl" if PROJECT_ROOT.startswith("D:") else "D:\\Temp\\dataset.jsonl"
-        norm = safe_relpath(cross_drive_path, start=PROJECT_ROOT)
-        self.assertTrue(os.path.isabs(norm))
-        self.assertEqual(norm, os.path.normpath(cross_drive_path))
 
-        # 2. Within-repo relative path is preserved
+        if os.name == "nt":
+            # 1. Explicit cross-drive test across two distinct Windows drive letters
+            # When start is on C:, a D: path must return absolute normalized path without raising ValueError
+            d_path = "D:\\MoonData\\dataset.jsonl"
+            norm_d = safe_relpath(d_path, start="C:\\Users\\Workspace\\MoonAI")
+            self.assertTrue(os.path.isabs(norm_d))
+            self.assertEqual(os.path.normpath(norm_d), os.path.normpath(d_path))
+
+            # When start is on D:, a C: path must return absolute normalized path without raising ValueError
+            c_path = "C:\\Temp\\dataset.jsonl"
+            norm_c = safe_relpath(c_path, start="D:\\Downloads\\MoonAI")
+            self.assertTrue(os.path.isabs(norm_c))
+            self.assertEqual(os.path.normpath(norm_c), os.path.normpath(c_path))
+
+            # 2. Case-insensitive drive comparison with live PROJECT_ROOT
+            project_drive = os.path.splitdrive(os.path.abspath(PROJECT_ROOT))[0].upper()
+            alternate_drive = "C:" if project_drive != "C:" else "D:"
+            live_cross_path = f"{alternate_drive}\\Temp\\live_test_dataset.jsonl"
+            live_norm = safe_relpath(live_cross_path, start=PROJECT_ROOT)
+            self.assertTrue(os.path.isabs(live_norm))
+            self.assertEqual(os.path.normpath(live_norm), os.path.normpath(live_cross_path))
+        else:
+            # POSIX platform: simulate cross-drive ValueError to verify fallback handling
+            with mock.patch("os.path.relpath", side_effect=ValueError("path is on mount 'D:', start on mount 'C:'")):
+                simulated_path = "/tmp/MoonData/dataset.jsonl"
+                res = safe_relpath(simulated_path, start="/home/runner/work/MoonAI")
+                self.assertTrue(os.path.isabs(res))
+                self.assertEqual(os.path.normpath(res), os.path.normpath(simulated_path))
+
+            # POSIX absolute path behavior
+            posix_abs = "/tmp/live_dataset.jsonl"
+            norm_posix = safe_relpath(posix_abs, start="/home/runner/work/NanoGPT/NanoGPT")
+            self.assertTrue(len(norm_posix) > 0)
+
+        # 3. Cross-platform: Within-repo relative path is preserved
         local_rel = os.path.join("datasets", "manifests", "scaled_chat_train.jsonl")
         local_full = os.path.join(PROJECT_ROOT, local_rel)
         computed_rel = safe_relpath(local_full, start=PROJECT_ROOT)
         self.assertEqual(os.path.normpath(computed_rel), os.path.normpath(local_rel))
+
+        # 4. Cross-platform: Temporary directory path handling
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_dataset = os.path.join(tmp_dir, "temp_dataset.jsonl")
+            norm_tmp = safe_relpath(tmp_dataset, start=PROJECT_ROOT)
+            self.assertTrue(len(norm_tmp) > 0)
 
     # 6. Architecture Consistency Verification
     def test_architecture_consistency(self):

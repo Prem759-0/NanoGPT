@@ -209,6 +209,12 @@ def evaluate_and_promote(
     if cand.get("status") in ("ENGINEERING_SMOKE_TEST_ONLY", "DATA_INSUFFICIENT", "CI_TEST_FIXTURE", "PILOT_TRAINED", "PILOT_TRAINED_BEST"):
         rejection_reasons.append(f"Candidate model status is '{cand.get('status')}'. Raw unpromoted pilot checkpoints cannot be promoted without verified EVALUATION_PASSED status.")
 
+    cand_policy = cand.get("ownership_policy") or cand.get("policy")
+    if cand_policy and cand_policy != "STRICT_SOVEREIGN_RANDOM_INIT_ONLY":
+        rejection_reasons.append(
+            f"Candidate model ownership policy '{cand_policy}' is not approved for production (strictly requires 'STRICT_SOVEREIGN_RANDOM_INIT_ONLY')."
+        )
+
     has_dataset_manifest = "dataset_manifest_sha256" in cand or "dataset_manifest_path" in cand
     has_test_results = "test_results_summary_sha256" in cand or "test_results" in cand or "test_results_path" in cand
 
@@ -307,6 +313,15 @@ def evaluate_and_promote(
             if not valid_ckpt:
                 rejection_reasons.append(f"Underlying checkpoint failed production provenance verification: {'; '.join(ckpt_errs)}")
             else:
+                ckpt_policy = ckpt_meta.get("ownership_policy") or ckpt_meta.get("policy")
+                if not ckpt_policy or ckpt_policy != "STRICT_SOVEREIGN_RANDOM_INIT_ONLY":
+                    rejection_reasons.append(
+                        f"Underlying checkpoint ownership policy '{ckpt_policy}' is not approved for production (strictly requires 'STRICT_SOVEREIGN_RANDOM_INIT_ONLY')."
+                    )
+                if ckpt_meta.get("teacher_checkpoint_weights_transferred") is not False:
+                    rejection_reasons.append("Underlying checkpoint teacher_checkpoint_weights_transferred must be explicitly False (Policy B violation).")
+                if ckpt_meta.get("is_test_fixture") is True:
+                    rejection_reasons.append("Underlying checkpoint is marked as a test fixture. Cannot be promoted.")
                 ckpt_model_name = ckpt_meta.get("model_name")
                 if ckpt_model_name and cand_name and ckpt_model_name != cand_name:
                     rejection_reasons.append(

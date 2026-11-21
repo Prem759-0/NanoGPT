@@ -89,13 +89,51 @@ class TestStage24CheckpointIsolationAndIntegrity(unittest.TestCase):
             temp_ckpt = os.path.join(tmp_dir, "test_effective_meta.pt")
             pilot_yaml_path = os.path.join(PROJECT_ROOT, "training", "chat", "phase_2_4_t4_pilot.yaml")
 
-            # Run 1-step smoke test with custom checkpoint path
+            # 1. Run 1-step non-training mechanical validation: verifies zero checkpoint writes
             res = train_moon_chat(
                 config_path=pilot_yaml_path,
                 max_iters_override=1,
                 smoke_test=True,
                 custom_ckpt_path=temp_ckpt
             )
+            self.assertEqual(res["status"], "COMPLETED_MECHANICAL_VALIDATION_ONLY")
+            self.assertEqual(res["checkpoint_writes"], 0)
+            self.assertFalse(os.path.isfile(temp_ckpt), "Mechanical validation must not write checkpoint files to disk.")
+
+            # 2. Test metadata formatting and unpromoted invariants independently using synthetic fixture
+            synthetic_fixture_payload = {
+                "status": "ENGINEERING_SMOKE_TEST_ONLY",
+                "is_production_trained": False,
+                "promotable": False,
+                "is_production_eligible": False,
+                "is_test_fixture": False,
+                "model": {},
+                "model_args": {"n_layer": 8, "n_head": 8, "n_embd": 512, "vocab_size": 512, "block_size": 512},
+                "config": {
+                    "status": "ENGINEERING_SMOKE_TEST_ONLY",
+                    "is_production_trained": False,
+                    "promotable": False,
+                    "is_production_eligible": False,
+                    "effective_config": {
+                        "model": {"name": "moon-chat-t4-pilot-25m"}
+                    },
+                    "manifest_hashes": {
+                        "train_manifest": {
+                            "path": "datasets/manifests/scaled_chat_train.jsonl",
+                            "sha256": "94c3fbfe4eecfc892994c6537ce90b797db2ca8b4793f7c469f7fe70014022b7"
+                        },
+                        "val_manifest": {
+                            "path": "datasets/manifests/scaled_chat_val.jsonl",
+                            "sha256": "18f3a38a7c29367c3bcaef1df4d41fa44ec1e1d033a39e99a77ef736ae9db39d"
+                        },
+                        "test_manifest": {
+                            "path": "datasets/manifests/scaled_chat_test.jsonl",
+                            "sha256": "81bbdf98b82ff63cfc31405a1e204c32e01df2272e2aa7707e44a49fe0f121a8"
+                        }
+                    }
+                }
+            }
+            torch.save(synthetic_fixture_payload, temp_ckpt)
             self.assertTrue(os.path.isfile(temp_ckpt))
 
             ckpt = torch.load(temp_ckpt, map_location="cpu", weights_only=True)
@@ -254,7 +292,7 @@ class TestStage24CheckpointIsolationAndIntegrity(unittest.TestCase):
                 "model": {"transformer.wte.weight": torch.randn(512, 512)},
                 "model_args": {"n_layer": 8, "n_head": 8, "n_embd": 512, "vocab_size": 512, "block_size": 512},
                 "config": {
-                    "ownership_policy": "TEACHER_STUDENT_RANDOM_INIT",
+                    "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
                     "initialization": "random_gaussian_scratch",
                     "student_init_method": "random_gaussian_scratch",
                     "teacher_checkpoint_weights_transferred": False
@@ -263,6 +301,25 @@ class TestStage24CheckpointIsolationAndIntegrity(unittest.TestCase):
             self.assertTrue(validate_checkpoint_structure(genuine_file))
             self.assertTrue(is_verified_genuine_checkpoint(genuine_file))
             self.assertFalse(is_checkpoint_fixture(genuine_file))
+
+            # 7. Quarantined historical policy checkpoint rejected by genuine check
+            legacy_file = os.path.join(tmp_dir, "legacy_teacher_pilot.pt")
+            torch.save({
+                "status": "PILOT_TRAINED",
+                "is_production_trained": False,
+                "promotable": False,
+                "is_test_fixture": False,
+                "model": {"transformer.wte.weight": torch.randn(512, 512)},
+                "model_args": {"n_layer": 8, "n_head": 8, "n_embd": 512, "vocab_size": 512, "block_size": 512},
+                "config": {
+                    "ownership_policy": "TEACHER_STUDENT_RANDOM_INIT",
+                    "initialization": "random_gaussian_scratch",
+                    "student_init_method": "random_gaussian_scratch",
+                    "teacher_checkpoint_weights_transferred": False
+                }
+            }, legacy_file)
+            self.assertTrue(validate_checkpoint_structure(legacy_file))
+            self.assertFalse(is_verified_genuine_checkpoint(legacy_file))
 
     def test_08_t4_benchmark_tempfile_isolation_and_sentinel_protection(self):
         """verify_checkpoint_roundtrip_isolated safely roundtrips without touching existing checkpoint files."""

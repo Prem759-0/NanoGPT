@@ -196,12 +196,11 @@ def main():
     if args.file:
         target_files.append(args.file)
     else:
-        # Default standard dataset files
+        # Default standard dataset files (user_learned_data.jsonl excluded under Phase 2.6.2.2 SEC-04)
         candidates = [
             os.path.join(PROJECT_ROOT, "moon_ai_master_dataset.json"),
             os.path.join(PROJECT_ROOT, "dataset.json"),
-            os.path.join(PROJECT_ROOT, "chatgpt_dataset.json"),
-            os.path.join(PROJECT_ROOT, "data", "user_learned_data.jsonl")
+            os.path.join(PROJECT_ROOT, "chatgpt_dataset.json")
         ]
         target_files = [c for c in candidates if os.path.isfile(c)]
 

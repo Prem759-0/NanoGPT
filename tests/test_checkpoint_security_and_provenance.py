@@ -167,7 +167,7 @@ class TestCheckpointSecurityAndProvenance(unittest.TestCase):
         with open(dev_report_path, "w", encoding="utf-8") as f:
             json.dump(report_data, f)
 
-        promoted = evaluate_and_promote(dev_report_path)
+        promoted = evaluate_and_promote(dev_report_path, base_dir=self.base_dir)
         self.assertFalse(promoted, "Promotion should be rejected for development synthetic candidate")
 
     def test_missing_checkpoint_training_mode_rejected(self):

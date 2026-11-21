@@ -89,6 +89,7 @@ class Database:
                 "Supported schemes are 'postgresql://', 'postgres://', or 'sqlite://'."
             )
         self._pg_conn = None
+        self._mem_conn = None
         import threading
         self._lock = threading.Lock()
         
@@ -146,7 +147,8 @@ class Database:
                     conn.rollback()
                     raise
                 finally:
-                    conn.close()
+                    if self.db_path != ":memory:":
+                        conn.close()
         else:
             conn = self._get_sqlite_connection()
             try:
@@ -156,9 +158,17 @@ class Database:
                 conn.rollback()
                 raise
             finally:
-                conn.close()
+                if self.db_path != ":memory:":
+                    conn.close()
 
     def _get_sqlite_connection(self) -> sqlite3.Connection:
+        if self.db_path == ":memory:":
+            with self._lock:
+                if self._mem_conn is None:
+                    self._mem_conn = sqlite3.connect(":memory:", check_same_thread=False)
+                    self._mem_conn.row_factory = sqlite3.Row
+                    self._mem_conn.execute("PRAGMA foreign_keys = ON;")
+                return self._mem_conn
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode = WAL;")

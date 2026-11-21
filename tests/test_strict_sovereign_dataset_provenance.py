@@ -214,18 +214,39 @@ class TestStrictSovereignDatasetProvenance(unittest.TestCase):
         qwen_manifest = os.path.join(PROJECT_ROOT, "datasets", "manifests", "teacher_pilot_demonstrations.jsonl")
         mock_manifest = os.path.join(PROJECT_ROOT, "datasets", "manifests", "quarantined_teacher_data.jsonl")
 
-        self.assertTrue(os.path.exists(qwen_manifest))
-        self.assertTrue(os.path.exists(mock_manifest))
+        # If files exist on disk in development, verify them directly;
+        # In clean CI checkouts where raw teacher data is quarantined and untracked,
+        # verify with synthetic quarantined fixtures.
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            if not os.path.exists(qwen_manifest):
+                qwen_manifest = os.path.join(tmp_dir, "teacher_pilot_fixture.jsonl")
+                with open(qwen_manifest, "w", encoding="utf-8") as f:
+                    f.write(json.dumps({
+                        "id": "qwen_01",
+                        "validation_status": "QUARANTINED",
+                        "teacher_provider": "local",
+                        "teacher_model_id": "Qwen2.5-7B-Instruct-GGUF",
+                        "messages": [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}]
+                    }) + "\n")
 
-        # 1. Qwen manifest must fail closed
-        with self.assertRaises(ValueError) as ctx1:
-            SovereignChatDataset(qwen_manifest, self.tokenizer, block_size=64)
-        self.assertIn("QUARANTINED", str(ctx1.exception))
+            if not os.path.exists(mock_manifest):
+                mock_manifest = os.path.join(tmp_dir, "quarantined_fixture.jsonl")
+                with open(mock_manifest, "w", encoding="utf-8") as f:
+                    f.write(json.dumps({
+                        "id": "mock_01",
+                        "split": "quarantine",
+                        "messages": [{"role": "user", "content": "test"}, {"role": "assistant", "content": "test"}]
+                    }) + "\n")
 
-        # 2. Mock quarantined manifest must fail closed
-        with self.assertRaises(ValueError) as ctx2:
-            SovereignChatDataset(mock_manifest, self.tokenizer, block_size=64)
-        self.assertIn("QUARANTINED", str(ctx2.exception))
+            # 1. Qwen manifest must fail closed
+            with self.assertRaises(ValueError) as ctx1:
+                SovereignChatDataset(qwen_manifest, self.tokenizer, block_size=64)
+            self.assertIn("QUARANTINED", str(ctx1.exception))
+
+            # 2. Mock quarantined manifest must fail closed
+            with self.assertRaises(ValueError) as ctx2:
+                SovereignChatDataset(mock_manifest, self.tokenizer, block_size=64)
+            self.assertIn("QUARANTINED", str(ctx2.exception))
 
     # 8. Central ownership policy engine consistency
     def test_central_ownership_policy_strictly_sovereign(self):

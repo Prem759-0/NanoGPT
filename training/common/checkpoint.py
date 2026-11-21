@@ -401,11 +401,17 @@ def save_checkpoint(
 
     now_iso = datetime.now(timezone.utc).isoformat()
 
+    if config_dict is not None and isinstance(config_dict, dict):
+        config_dict.setdefault("ownership_policy", "STRICT_SOVEREIGN_RANDOM_INIT_ONLY")
+        config_dict.setdefault("teacher_checkpoint_weights_transferred", False)
+
     payload = {
         # Provenance and identity
         "provenance": PROVENANCE_TAG,
         "architect": ARCHITECT_TAG,
         "model_name": model_name,
+        "ownership_policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
+        "teacher_checkpoint_weights_transferred": False,
         "architecture_version": architecture_version,
         "software_version": software_version,
         "git_commit": git_commit or get_git_commit(),
@@ -517,6 +523,21 @@ def verify_checkpoint_provenance(
                 "CHECKPOINT SECURITY ERROR: Checkpoint has 0 production_eligible_sample_count. Rejected from production."
             )
 
+        cfg_meta = ckpt.get("config", {}) or ckpt.get("metadata", {})
+        if not isinstance(cfg_meta, dict):
+            cfg_meta = {}
+        pol_check = ckpt.get("ownership_policy") or cfg_meta.get("ownership_policy") or cfg_meta.get("policy")
+        if not pol_check or pol_check != "STRICT_SOVEREIGN_RANDOM_INIT_ONLY":
+            errors.append(
+                f"STRICT OWNERSHIP VIOLATION: Checkpoint policy '{pol_check}' is not approved for production "
+                "(strictly requires 'STRICT_SOVEREIGN_RANDOM_INIT_ONLY')."
+            )
+        transfer_check = ckpt.get("teacher_checkpoint_weights_transferred")
+        if transfer_check is None:
+            transfer_check = cfg_meta.get("teacher_checkpoint_weights_transferred")
+        if transfer_check is not False:
+            errors.append("STRICT OWNERSHIP VIOLATION: teacher_checkpoint_weights_transferred must be explicitly False.")
+
         if recompute_manifests:
             m_path = ckpt.get("manifest_path")
             m_hash = ckpt.get("manifest_hash", "")
@@ -578,6 +599,15 @@ def verify_checkpoint_provenance(
                         f"but checkpoint recorded production_eligible_sample_count={prod_sample_count}."
                     )
 
+    cfg_meta = ckpt.get("config", {}) or ckpt.get("metadata", {})
+    if not isinstance(cfg_meta, dict):
+        cfg_meta = {}
+    ownership_policy = cfg_meta.get("ownership_policy") or cfg_meta.get("policy") or ckpt.get("ownership_policy")
+    teacher_weights_transferred = cfg_meta.get("teacher_checkpoint_weights_transferred")
+    if teacher_weights_transferred is None:
+        teacher_weights_transferred = ckpt.get("teacher_checkpoint_weights_transferred")
+    is_fixture = ckpt.get("is_test_fixture", False) or cfg_meta.get("is_test_fixture", False)
+
     meta = {
         "model_name": ckpt.get("model_name", "unknown"),
         "architecture_version": ckpt.get("architecture_version", "unknown"),
@@ -585,6 +615,9 @@ def verify_checkpoint_provenance(
         "git_commit": ckpt.get("git_commit", "unknown"),
         "training_mode": ckpt_training_mode,
         "is_production_eligible": is_prod_eligible,
+        "is_test_fixture": is_fixture,
+        "ownership_policy": ownership_policy,
+        "teacher_checkpoint_weights_transferred": teacher_weights_transferred,
         "manifest_path": ckpt.get("manifest_path", ""),
         "manifest_hash": ckpt.get("manifest_hash", "none"),
         "val_manifest_path": ckpt.get("val_manifest_path", ""),
