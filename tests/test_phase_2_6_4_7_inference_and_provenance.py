@@ -45,12 +45,14 @@ from training.common.checkpoint import (
     TRAINING_MODE_PRODUCTION,
     TRAINING_MODE_DEVELOPMENT
 )
+from tests.checkpoint_fixture_utils import ensure_pilot_checkpoint_fixture
 
 
 class TestPhase2647InferenceAndProvenance(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        ensure_pilot_checkpoint_fixture()
         import webapp.database
         try:
             webapp.database.db._init_db()

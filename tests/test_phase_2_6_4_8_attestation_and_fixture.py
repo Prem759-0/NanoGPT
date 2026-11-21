@@ -46,12 +46,14 @@ from datasets.security.attestation_engine import (
     verify_attestation as verify_dataset_attestation
 )
 import core.policy as core_policy
+from tests.checkpoint_fixture_utils import ensure_pilot_checkpoint_fixture
 
 
 class TestPhase2648AttestationAndFixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        ensure_pilot_checkpoint_fixture()
         import webapp.database
         try:
             webapp.database.db._init_db()
