@@ -1,9 +1,10 @@
 # Moon AI — Controlled Learning & Memory Lifecycle
-### Strict Separation of User Memory, Feedback Data, Training Data & Model Parameters
+### Strict Separation of User Memory, Feedback Data, Candidate Data & Model Parameters
 
-**Architect:** Prem Gaikwad (India 🇮🇳)  
-**Ownership Policy:** `TEACHER_STUDENT_RANDOM_INIT`  
-**Date:** November 2026
+**Chief ML Systems Architect:** Prem Gaikwad (India 🇮🇳)  
+**Ownership Policy:** `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`  
+**Donation Governance Policy:** `moon-learning-donation-v1`  
+**Updated:** Phase 2.6 (November 2026)
 
 ---
 
@@ -16,6 +17,7 @@ To guarantee user privacy, model stability, and regulatory compliance, Moon AI e
 |                                 USER MEMORY                                     |
 |  Private, user-consented key-value context for live session personalization.   |
 |  NEVER automatically fed into model training manifests or neural weights.       |
+|  eligible_for_training = False invariant permanently enforced.                  |
 +---------------------------------------------------------------------------------+
                                        |
                                        x  [PROHIBITED TO MERGE]
@@ -24,22 +26,24 @@ To guarantee user privacy, model stability, and regulatory compliance, Moon AI e
 |                                FEEDBACK DATA                                    |
 |  Explicit user corrections, ratings (thumbs up/down), and reported issues.      |
 |  Stored in feedback logs for human inspection and offline triage.              |
+|  Subjective ratings NEVER override objective code or math verifiers.            |
 +---------------------------------------------------------------------------------+
                                        |
-                   [CONSENT + PRIVACY FILTERING + AUDIT]
+                   [AFFIRMATIVE DONATION + SOVEREIGN FILTERING + OBJECTIVE VERIFICATION]
                                        v
 +---------------------------------------------------------------------------------+
-|                                TRAINING DATA                                    |
-|  Vetted, PII-scrubbed, injection-filtered examples in verified JSONL manifests. |
-|  Explicitly eligible for scheduled batch model training.                        |
+|                                CANDIDATE STORE (WAL)                            |
+|  Vetted, PII-scrubbed, injection-screened, objectively verified candidates in   |
+|  durable Write-Ahead Log (data/learning/candidates_wal.jsonl). Quarantined.     |
 +---------------------------------------------------------------------------------+
                                        |
-                           [OFFLINE SCHEDULED RUNS ONLY]
+               [OFFLINE SCHEDULED RUNS ONLY — REQUIRES AUTHORIZED_BY_PREM = True]
                                        v
 +---------------------------------------------------------------------------------+
 |                               MODEL PARAMETERS                                  |
-|  Actual floating-point neural network weights (e.g. PyTorch state_dict).        |
+|  100% scratch Gaussian-initialized proprietary neural network weights.          |
 |  UPDATED ONLY IN CONTROLLED OFFLINE RUNS — NEVER DURING LIVE CHATS.             |
+|  Zero teacher distillation; zero third-party weights.                           |
 +---------------------------------------------------------------------------------+
 ```
 
@@ -49,22 +53,23 @@ To guarantee user privacy, model stability, and regulatory compliance, Moon AI e
 
 Every candidate data sample follows this strict progression:
 
-1. **Interaction**: Live chat between user and Moon AI.
-2. **Consent & Eligibility**: User must have explicitly opted in to contribute data. Private conversations are never ingested without affirmative donation.
-3. **Privacy & Secret Filtering**: Automatic regex scrubbing for emails, phone numbers, SSNs, credit cards, and API keys.
-4. **Prompt Injection Filtering**: Detects adversarial jailbreaks ("ignore previous instructions", "DAN mode").
-5. **Quality & Formatting Check**: Validates substantive length, non-repetition, and coherence.
-6. **Staging Approval**: Placed into candidate training staging.
-7. **Scheduled Batch Training**: Controlled offline training run on approved manifests (zero live weight updates).
-8. **Candidate Checkpoint**: New checkpoint saved in isolated candidate directory.
-9. **Independent Evaluation Gate**: 12-category blind benchmark suite tests for accuracy and non-regression.
-10. **Promotion or Rollback**: Only promoted to production if all safety and performance criteria are met. The previous production checkpoint is preserved for instant rollback.
+1. **Interaction**: Live chat between authenticated user and Moon AI.
+2. **Explicit Donation Consent**: Separate from chat or memory consent. Private sessions and personal memories are permanently forbidden from donation.
+3. **Sovereign Privacy & Secret Filtering**: Native regex and pattern scrubbing for emails, phone numbers, SSNs, credit cards, private keys, and API keys (`core.security.filtering`).
+4. **Prompt Injection Screening**: Screens for adversarial jailbreaks ("ignore previous instructions", "DAN mode").
+5. **Objective Verification**: Code must pass AST syntax parsing and execution in isolated `SovereignCodeSandbox`. Math must evaluate deterministically. Unverifiable natural language requires human triage.
+6. **Deduplication & Durable WAL Staging**: Records appended to SHA-256 integrity-verified `candidates_wal.jsonl` in state `OBJECTIVE_VERIFICATION` or `PENDING_HUMAN_REVIEW`.
+7. **Scheduled Offline Batch Training**: Strictly offline batch training on approved manifests; permanently gated by `AUTHORIZED_BY_PREM = True`.
+8. **Candidate Checkpoint Formulation**: Saved in isolated candidate directory.
+9. **Independent Evaluation Gate**: 12-category blind benchmark suite tests for accuracy and non-regression with Ed25519 attestation signatures.
+10. **Promotion or Rollback**: Only promoted to production if all safety and non-regression criteria pass. The previous production checkpoint is preserved for instant rollback.
 
 ---
 
 ## 3. USER SOVEREIGNTY RIGHTS
 
 - **Explicit Opt-In**: Persistent memory and training data contribution are disabled by default.
-- **Granular Deletion**: Users can view, delete specific memories, or purge all data at any time (`purge_all_user_memories()`).
+- **Affirmative Donation**: Users must affirmatively acknowledge donation of specific non-private interactions.
+- **Granular Deletion & Revocation**: Users can view, delete specific memories, purge all data at any time (`purge_all_user_memories()`), or revoke donation consent before offline candidate release.
 - **Data Portability**: Users can export their stored memories in JSON format at any time.
 

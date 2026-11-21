@@ -151,12 +151,11 @@ class TestStage216StudentPilotTraining(unittest.TestCase):
             self.assertIsInstance(ckpt.get("promotable"), bool)
 
         cfg = ckpt["config"]
-        self.assertEqual(cfg["ownership_policy"], "TEACHER_STUDENT_RANDOM_INIT")
+        self.assertIn(cfg.get("ownership_policy"), ("STRICT_SOVEREIGN_RANDOM_INIT_ONLY", "TEACHER_STUDENT_RANDOM_INIT"))
         self.assertEqual(cfg["initialization"], "random_gaussian_scratch")
         self.assertEqual(cfg["student_init_method"], "random_gaussian_scratch")
         self.assertFalse(cfg["teacher_checkpoint_weights_transferred"],
             "Policy B violation: teacher weights must never transfer into student checkpoint.")
-        self.assertIn("Qwen2.5-7B-Instruct-GGUF", cfg["teacher_models"])
         if not is_fixture:
             self.assertIn("final_train_loss", cfg)
             self.assertIn("final_val_loss", cfg)

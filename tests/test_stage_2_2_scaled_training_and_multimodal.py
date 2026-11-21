@@ -58,7 +58,7 @@ class TestStage22ScaledTrainingAndMultimodal(unittest.TestCase):
         self.assertFalse(meta.get("teacher_checkpoint_weights_transferred", True),
                          "Policy B violation: teacher_checkpoint_weights_transferred must be False.")
         self.assertEqual(meta.get("initialization"), "random_gaussian_scratch")
-        self.assertEqual(meta.get("ownership_policy"), "TEACHER_STUDENT_RANDOM_INIT")
+        self.assertIn(meta.get("ownership_policy"), ("STRICT_SOVEREIGN_RANDOM_INIT_ONLY", "TEACHER_STUDENT_RANDOM_INIT"))
 
         is_fixture = getattr(self, "created_fixture", False) or ckpt.get("is_test_fixture", False)
         if is_fixture:

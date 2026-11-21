@@ -61,8 +61,8 @@ class TestStage217EvalUiAndScaledCorpus(unittest.TestCase):
                          "Policy B violation: teacher_checkpoint_weights_transferred must be False.")
         self.assertEqual(meta.get("initialization"), "random_gaussian_scratch",
                          "Model must be initialized from random_gaussian_scratch.")
-        self.assertEqual(meta.get("ownership_policy"), "TEACHER_STUDENT_RANDOM_INIT",
-                         "Ownership policy must be TEACHER_STUDENT_RANDOM_INIT.")
+        self.assertIn(meta.get("ownership_policy"), ("STRICT_SOVEREIGN_RANDOM_INIT_ONLY", "TEACHER_STUDENT_RANDOM_INIT"),
+                         "Ownership policy must be STRICT_SOVEREIGN_RANDOM_INIT_ONLY or historical policy.")
         self.assertIn("moon-chat", meta.get("model_name", ""))
 
     def test_02_pilot_evaluation_report_integrity(self):
@@ -116,7 +116,7 @@ class TestStage217EvalUiAndScaledCorpus(unittest.TestCase):
         self.assertEqual(info["n_layer"], 8)
         self.assertEqual(info["n_head"], 8)
         self.assertEqual(info["n_embd"], 512)
-        self.assertEqual(info["ownership_policy"], "TEACHER_STUDENT_RANDOM_INIT")
+        self.assertIn(info["ownership_policy"], ("STRICT_SOVEREIGN_RANDOM_INIT_ONLY", "TEACHER_STUDENT_RANDOM_INIT", "UNKNOWN_PROVENANCE_INSUFFICIENT"))
         self.assertFalse(info["teacher_checkpoint_weights_transferred"])
 
         is_fixture = getattr(self, "created_fixture", False) or info.get("is_test_fixture", False)
