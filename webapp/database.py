@@ -71,17 +71,17 @@ class Database:
             self.db_url = resolved_url
             self.is_postgres = False
             raw_path = resolved_url[len("sqlite://"):]
-            if raw_path.startswith("//"):
+            raw_clean = raw_path.lstrip("/")
+            if raw_clean == ":memory:":
+                self.db_path = ":memory:"
+            elif raw_path.startswith("//"):
                 self.db_path = os.path.abspath("/" + raw_path.lstrip("/"))
             elif raw_path.startswith("/") and len(raw_path) > 2 and raw_path[2] == ":":
                 self.db_path = os.path.abspath(raw_path.lstrip("/"))
             elif os.name != "nt" and raw_path.startswith("/"):
                 self.db_path = os.path.abspath("/" + raw_path.lstrip("/"))
             else:
-                raw_clean = raw_path.lstrip("/")
-                if raw_clean == ":memory:":
-                    self.db_path = ":memory:"
-                elif raw_clean:
+                if raw_clean:
                     self.db_path = os.path.abspath(raw_clean)
         else:
             raise ValueError(
