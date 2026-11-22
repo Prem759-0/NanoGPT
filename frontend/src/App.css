@@ -24,6 +24,43 @@
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.grok-sidebar.closed {
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  border-right: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.sidebar-toggle-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: var(--bg-hover);
+  color: #ffffff;
+  border-color: var(--border-subtle);
+}
+
+.sidebar-toggle-btn.open-btn {
+  margin-right: 8px;
+  border-color: var(--border-subtle);
+  background-color: var(--bg-secondary);
+}
+
 .sidebar-header {
   padding: 16px 18px;
   border-bottom: 1px solid var(--border-subtle);

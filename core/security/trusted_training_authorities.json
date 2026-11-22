@@ -1,0 +1,8 @@
+{
+  "schema_version": "2.0",
+  "authority": "Moon AI Sovereign Training Governance",
+  "updated_at": "2026-11-22T00:00:00Z",
+  "policy": "ASYMMETRIC_ED25519_ONLY",
+  "notes": "Cryptographic trust root for sovereign training provenance attestations. Private signing keys are held strictly by authorized independent training audit authorities outside this repository. If no genuine authority is configured, model promotion and production classification remain fail-closed.",
+  "trusted_authorities": {}
+}

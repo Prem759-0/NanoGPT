@@ -36,7 +36,9 @@ import {
   Key,
   FileText,
   FileSpreadsheet,
-  Presentation
+  Presentation,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import './App.css';
 
@@ -223,6 +225,20 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const activeUserId = clerkUser ? clerkUser.id : (localStorage.getItem('nanogpt_user_id') || 'guest_user');
 
   // State
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('moon_sidebar_open');
+      if (saved !== null) return saved === 'true';
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('moon_sidebar_open', sidebarOpen ? 'true' : 'false');
+    }
+  }, [sidebarOpen]);
+
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(localStorage.getItem('nanogpt_session_id') || null);
   const [messages, setMessages] = useState([]);
@@ -1418,7 +1434,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   return (
     <div className="app-container">
       {/* Grok Left Sidebar */}
-      <aside className="grok-sidebar">
+      <aside className={`grok-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <a href="#" className="grok-brand">
             <div className="grok-slash-icon">🌙</div>
@@ -1427,6 +1443,14 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
               <div className="grok-brand-sub">PREM GAIKWAD EDITION</div>
             </div>
           </a>
+          <button
+            className="sidebar-toggle-btn"
+            onClick={() => setSidebarOpen(false)}
+            title="Collapse Sidebar"
+            aria-label="Collapse Sidebar"
+          >
+            <PanelLeftClose size={18} />
+          </button>
         </div>
 
         {/* New Chat Button */}
@@ -1502,6 +1526,16 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
         {/* Topbar */}
         <header className="grok-topbar">
           <div className="topbar-left">
+            {!sidebarOpen && (
+              <button
+                className="sidebar-toggle-btn open-btn"
+                onClick={() => setSidebarOpen(true)}
+                title="Open Sidebar"
+                aria-label="Open Sidebar"
+              >
+                <PanelLeftOpen size={18} />
+              </button>
+            )}
             <div className="grok-model-pill">
               <Sparkles size={14} color="#38bdf8" />
               <span>{activeModel.includes('pilot') ? '🌙 Moon Chat — Model Not Ready' : activeModel.includes('web') ? '🌐 Moon Web — Retrieval Available' : '⚙️ Utility Engine — Deterministic'}</span>

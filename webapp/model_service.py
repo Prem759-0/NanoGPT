@@ -148,10 +148,15 @@ def is_historical_pilot_checkpoint(ckpt_path: str) -> bool:
     return True
 
 
-def classify_checkpoint(ckpt_path: str) -> str:
+def classify_checkpoint(
+    ckpt_path: str,
+    trusted_authorities_path: Optional[str] = None,
+    allow_unattested_for_test: bool = False,
+) -> str:
     """
-    Categorizes a checkpoint file into one of the mutually exclusive provenance tiers:
+    Categorizes a checkpoint file into one of the 15 mutually exclusive provenance tiers:
     - STRUCTURALLY_INVALID: Nonexistent, empty, malformed, non-dict, non-tensor, or unreadable.
+    - STRUCTURALLY_VALID_UNVERIFIED: Valid model structure and metadata, but lacks cryptographic verification.
     - TEST_FIXTURE: Explicitly generated as CI fixture or smoke test.
     - HISTORICAL_POLICY_B: Stage 2.1.6 pilot checkpoint with quarantined Policy B provenance.
     - UNAPPROVED_POLICY: Policy identifier does not match STRICT_SOVEREIGN_RANDOM_INIT_ONLY.
@@ -159,8 +164,12 @@ def classify_checkpoint(ckpt_path: str) -> str:
     - TEACHER_CONTAMINATION: Contains teacher weights, teacher model refs, or transferred weights.
     - UNTRAINED_RANDOM_INIT: Random Gaussian initialization lacking training progress (iter_num <= 0).
     - SYNTHETIC_MOCK: Generated synthetically with random weights without authentic training telemetry.
-    - GENUINE_TRAINED_SOVEREIGN: Verified scratch-trained model satisfying all strict provenance pillars.
-    - PROMOTED_PRODUCTION: Fully certified sovereign checkpoint promoted for production serving.
+    - ATTESTATION_MISSING: Checkpoint lacks an asymmetric cryptographic training attestation.
+    - ATTESTATION_INVALID: Attestation is malformed, missing required fields, or Ed25519 signature is invalid.
+    - ATTESTATION_CHECKPOINT_HASH_MISMATCH: Attestation binds a SHA-256 that does not match disk file bytes.
+    - ATTESTATION_UNTRUSTED_SIGNER: Attestation is signed by an unregistered or inactive authority key.
+    - GENUINE_TRAINED_SOVEREIGN: Verified scratch-trained model satisfying all strict provenance pillars & cryptographic Ed25519 signature.
+    - PROMOTED_PRODUCTION: Fully certified sovereign checkpoint promoted for production serving with cryptographic attestation.
     """
     ok, reason, ckpt = validate_checkpoint_structure(ckpt_path)
     if not ok:
@@ -231,16 +240,65 @@ def classify_checkpoint(ckpt_path: str) -> str:
     if val_loss is not None and isinstance(val_loss, (int, float)) and val_loss <= 0.0:
         return "UNTRAINED_RANDOM_INIT"
 
-    status = ckpt.get("status")
-    if status == "PROMOTED_PRODUCTION":
-        return "PROMOTED_PRODUCTION"
-    if status in ("PILOT_TRAINED", "PILOT_TRAINED_BEST", "PRODUCTION_TRAINED", "EVALUATION_PASSED"):
+    # Cryptographic Attestation Verification
+    from core.security.training_attestation import verify_training_attestation
+
+    attestation = (
+        ckpt.get("attestation")
+        or ckpt.get("training_attestation")
+        or cfg.get("attestation")
+        or cfg.get("training_attestation")
+    )
+
+    if not attestation:
+        sibling_att = ckpt_path + ".attestation.json"
+        alt_sibling_att = os.path.splitext(ckpt_path)[0] + ".attestation.json"
+        if os.path.isfile(sibling_att):
+            try:
+                import json
+                with open(sibling_att, "r", encoding="utf-8") as f:
+                    attestation = json.load(f)
+            except Exception:
+                return "ATTESTATION_INVALID"
+        elif os.path.isfile(alt_sibling_att):
+            try:
+                import json
+                with open(alt_sibling_att, "r", encoding="utf-8") as f:
+                    attestation = json.load(f)
+            except Exception:
+                return "ATTESTATION_INVALID"
+
+    if attestation is not None:
+        is_valid, tier, reason = verify_training_attestation(
+            attestation,
+            ckpt_path,
+            authorities_path=trusted_authorities_path,
+            allow_untrusted_for_test=allow_unattested_for_test,
+        )
+        if not is_valid:
+            return tier
+
+        status = ckpt.get("status") or cfg.get("status")
+        if status == "PROMOTED_PRODUCTION":
+            return "PROMOTED_PRODUCTION"
         return "GENUINE_TRAINED_SOVEREIGN"
 
-    return "GENUINE_TRAINED_SOVEREIGN"
+    if allow_unattested_for_test:
+        status = ckpt.get("status") or cfg.get("status")
+        if status == "PROMOTED_PRODUCTION":
+            return "PROMOTED_PRODUCTION"
+        if status in ("PILOT_TRAINED", "PILOT_TRAINED_BEST", "PRODUCTION_TRAINED", "EVALUATION_PASSED"):
+            return "GENUINE_TRAINED_SOVEREIGN"
+        return "GENUINE_TRAINED_SOVEREIGN"
+
+    return "ATTESTATION_MISSING"
 
 
-def is_verified_genuine_checkpoint(ckpt_path: str) -> bool:
+def is_verified_genuine_checkpoint(
+    ckpt_path: str,
+    trusted_authorities_path: Optional[str] = None,
+    allow_unattested_for_test: bool = False,
+) -> bool:
     """
     Positively validates that a checkpoint is a genuine, trained student checkpoint.
     Fails closed on:
@@ -250,9 +308,14 @@ def is_verified_genuine_checkpoint(ckpt_path: str) -> bool:
     - CI test fixtures or engineering smoke test checkpoints (TEST_FIXTURE)
     - Policy B violations or unapproved policies (HISTORICAL_POLICY_B, UNAPPROVED_POLICY)
     - Teacher contamination or external base weights (TEACHER_CONTAMINATION)
+    - Missing or untrusted cryptographic training attestations (ATTESTATION_MISSING, ATTESTATION_UNTRUSTED_SIGNER)
     Returns True ONLY if classification is GENUINE_TRAINED_SOVEREIGN or PROMOTED_PRODUCTION.
     """
-    tier = classify_checkpoint(ckpt_path)
+    tier = classify_checkpoint(
+        ckpt_path,
+        trusted_authorities_path=trusted_authorities_path,
+        allow_unattested_for_test=allow_unattested_for_test,
+    )
     return tier in ("GENUINE_TRAINED_SOVEREIGN", "PROMOTED_PRODUCTION")
 
 
@@ -262,12 +325,10 @@ class ModelNotTrainedException(Exception):
 
 class ModelService:
     """
-    Service responsible for inspecting, loading, and running inference with local AI models.
-    Supports:
-    1. 'llama-3.2': Fine-tuned 1.23B 4-bit GGUF model via llama-cpp-python (frontier quality, fast on CPU)
-    2. 'gpt2': OpenAI 124M open pretrained weights running via nanoGPT (fluent, coherent English)
-    3. 'scratch': Locally trained custom checkpoints (e.g., out-assistant/ckpt.pt)
-    Strictly local, 0 external paid APIs, 100% private.
+    Service responsible for inspecting, loading, and running inference with Moon AI sovereign models.
+    Production inference strictly requires an authentically trained, cryptographically verified
+    sovereign checkpoint initialized purely from scratch (STRICT_SOVEREIGN_RANDOM_INIT_ONLY).
+    External pretrained weights (LLaMA, GPT-2, Qwen) are strictly blocked from serving as Moon's brain.
     """
 
     ALLOWED_CHECKPOINT_DIRS = [
@@ -424,7 +485,7 @@ class ModelService:
 
         return None
 
-    def find_checkpoint(self, preferred_path: Optional[str] = None, allow_fixture: bool = True) -> Optional[str]:
+    def find_checkpoint(self, preferred_path: Optional[str] = None, allow_fixture: bool = False) -> Optional[str]:
         """
         Safely locates an explicit or default scratch assistant checkpoint.
         - If allow_fixture is False: ONLY returns a positively verified genuine strict sovereign checkpoint.
@@ -714,11 +775,17 @@ class ModelService:
                 if not self.torch_available:
                     self.error_message = "PyTorch is not installed in the current environment."
                     return False
-                eff_allow_fixture = allow_fixture or self.debug_mode
+                eff_allow_fixture = allow_fixture
                 ckpt_path = self.find_checkpoint(allow_fixture=eff_allow_fixture)
                 if not ckpt_path:
                     self.model = None
-                    self.error_message = "No local scratch assistant checkpoint found on disk. Expected out-assistant/ckpt.pt or NANOGPT_CHECKPOINT_PATH."
+                    if not eff_allow_fixture and self.find_checkpoint(allow_fixture=True) is not None:
+                        self.error_message = (
+                            "Production inference blocked: Scratch checkpoint failed positive strict sovereign verification. "
+                            "Unpromoted or unverified scratch checkpoints are restricted to isolated retrospective testing (allow_fixture=True)."
+                        )
+                    else:
+                        self.error_message = "No local scratch assistant checkpoint found on disk. Expected out-assistant/ckpt.pt or NANOGPT_CHECKPOINT_PATH."
                     return False
 
                 # Positive genuine verification gate for production inference
@@ -760,7 +827,10 @@ class ModelService:
                     self.model = model
                     self.llama_model = None
                     self.active_model_name = "scratch"
-                    self.current_checkpoint_path = os.path.relpath(ckpt_path, self.base_dir)
+                    try:
+                        self.current_checkpoint_path = os.path.relpath(ckpt_path, self.base_dir)
+                    except ValueError:
+                        self.current_checkpoint_path = os.path.abspath(ckpt_path)
                     self.checkpoint_meta = checkpoint.get("config", {})
                     if not self.checkpoint_meta:
                         self.checkpoint_meta = {
@@ -815,7 +885,10 @@ class ModelService:
                     self.model = model
                     self.llama_model = None
                     self.active_model_name = "moon-chat-pilot-v0"
-                    self.current_checkpoint_path = os.path.relpath(ckpt_path, self.base_dir)
+                    try:
+                        self.current_checkpoint_path = os.path.relpath(ckpt_path, self.base_dir)
+                    except ValueError:
+                        self.current_checkpoint_path = os.path.abspath(ckpt_path)
                     self.checkpoint_meta = checkpoint.get("config", {}) or checkpoint.get("metadata", {})
                     self.current_checkpoint_policy = (
                         self.checkpoint_meta.get("ownership_policy")
@@ -964,7 +1037,7 @@ class ModelService:
                 "I am **Moon AI**, an independent, sovereign artificial intelligence platform architected and developed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
                 "Moon AI is designed from first principles to operate 100% locally with strict sovereign model ownership (`STRICT_SOVEREIGN_RANDOM_INIT_ONLY`). "
                 "Moon AI does not rely on third-party cloud APIs, external generative servers, or unauthorized weights.\n\n"
-                "• 🌙 **Sovereign Model Architecture**: Custom transformer trained purely from scratch.\n"
+                "• 🌙 **Sovereign Model Architecture**: Custom transformer architected for sovereign random-init training from scratch.\n"
                 "• 🛡️ **Zero External Dependency**: Local offline execution and deterministic utility engines.\n"
                 "• 🎨 **Sovereign Multimodal**: Offline procedural visual and video generation.\n"
                 "• ⚡ **Local Code Interpreter**: Secure, sandboxed AST-verified Python execution.\n\n"
@@ -977,7 +1050,7 @@ class ModelService:
                 "full_text": creator_reply,
                 "model_name": "Moon AI Sovereign Core (Identity Declaration)",
                 "prompt_length": len(clean_prompt),
-                "tokens_generated": len(creator_reply.split()),
+                "tokens_generated": 0,
                 "device": "Local Sovereign Engine",
                 "engine_type": "system_reflex",
                 "model_id": "moon-chat-pilot-v0",

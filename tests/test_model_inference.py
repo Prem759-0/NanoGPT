@@ -90,7 +90,7 @@ class TestModelInference(unittest.TestCase):
 
     def test_01_deterministic_scratch_loading(self):
         """Verify scratch model loads correctly with valid vocab and metadata."""
-        loaded = self.service.load_model("scratch")
+        loaded = self.service.load_model("scratch", allow_fixture=True)
         self.assertTrue(loaded, f"Scratch model failed to load: {self.service.error_message}")
         self.assertEqual(self.service.active_model_name, "scratch")
         self.assertIsNotNone(self.service.model)
@@ -101,7 +101,7 @@ class TestModelInference(unittest.TestCase):
 
     def test_02_tokenizer_roundtrip(self):
         """Verify tokenizer encode and decode roundtrip."""
-        self.service.load_model("scratch")
+        self.service.load_model("scratch", allow_fixture=True)
         sample_text = "User: Hello\nAssistant: Hi!"
         token_ids = self.service.encode_fn(sample_text)
         self.assertIsInstance(token_ids, list)
@@ -130,19 +130,19 @@ class TestModelInference(unittest.TestCase):
 
     def test_05_context_window_truncation(self):
         """Verify prompt exceeding block_size is safely truncated without overflow."""
-        self.service.load_model("scratch")
+        self.service.load_model("scratch", allow_fixture=True)
         block_size = getattr(self.service.model_config, "block_size", 128)
         # Create prompt exceeding block_size
         long_prompt = "A" * (block_size + 50)
-        res = self.service.generate(prompt=long_prompt, max_new_tokens=10)
+        res = self.service.generate(prompt=long_prompt, max_new_tokens=10, allow_fixture=True)
         self.assertIn("reply", res)
         # Prompt length should have been capped to <= block_size - 1
         self.assertLess(res["prompt_length"], block_size)
 
     def test_06_empty_prompt_handling(self):
         """Verify empty prompt returns clean diagnostic message instead of crashing."""
-        self.service.load_model("scratch")
-        res = self.service.generate(prompt="   ")
+        self.service.load_model("scratch", allow_fixture=True)
+        res = self.service.generate(prompt="   ", allow_fixture=True)
         self.assertEqual(res["stop_reason"], "empty_prompt")
         self.assertEqual(res["tokens_generated"], 0)
         self.assertIn("Empty prompt", res["reply"])
@@ -152,7 +152,7 @@ class TestModelInference(unittest.TestCase):
         Execute the 10-prompt regression benchmark on scratch model.
         Records raw outputs, tokens generated, and stop reasons without masking.
         """
-        self.service.load_model("scratch")
+        self.service.load_model("scratch", allow_fixture=True)
         prompts = [
             ("1. Hi", "Hi", None),
             ("2. What is a dog?", "What is a dog?", None),
@@ -185,7 +185,7 @@ class TestModelInference(unittest.TestCase):
                 continue
 
             test_tokens = int(os.environ.get("TEST_MAX_NEW_TOKENS", "15"))
-            res = self.service.generate(prompt=p_text, max_new_tokens=test_tokens, temperature=0.7, history=hist)
+            res = self.service.generate(prompt=p_text, max_new_tokens=test_tokens, temperature=0.7, history=hist, allow_fixture=True)
             status = f"Tokens: {res['tokens_generated']} | Stop: {res['stop_reason']}"
             raw_preview = repr(res.get("raw_reply", "")[:60])
             print(f"[{label}] Prompt: {repr(p_text)}")

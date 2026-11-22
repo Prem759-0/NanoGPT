@@ -408,7 +408,7 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"media": "video", "url": vid_res["video_url"]})
         return ChatResponse(
             reply=reply,
-            model_name="Moon Video Sovereign Studio (moon-video-v0)",
+            model_name="Video Studio (Procedural MP4 Utility Engine)",
             prompt_length=len(clean_msg),
             tokens_generated=0,
             device="CPU Video Encoder",
@@ -608,14 +608,14 @@ def chat(request: ChatRequest, req: Request):
     ]
     if any(re.search(p, msg_low) for p in video_inquiry_patterns):
         reply = (
-            "🎬 **Moon Video Sovereign Spatio-Temporal Studio (moon-video-v0)**\n\n"
-            "Moon Video is built on a sovereign Spatiotemporal UNet3D architecture with 8-DoF camera motion conditioning.\n\n"
+            "🎬 **Moon Video Sovereign Procedural Studio (moon-video-v0)**\n\n"
+            "Moon Video provides local offline procedural video generation and animation without third-party APIs or external weights.\n\n"
             "### 1. ⚡ Local In-App Video Studio:\n"
-            "• **Motion Conditioning**: Pan, tilt, zoom, dolly, orbit, and crane camera trajectories.\n"
+            "• **Motion Trajectories**: Procedural pan, tilt, zoom, dolly, and motion synthesis.\n"
             "• **Format**: Real standard **H.264 MP4** or animated sequence encoded locally.\n"
             "• **Try It Now**: Type `/video a drone shot over mountains`\n\n"
             "### 2. 🚀 Sovereign Training Pipeline:\n"
-            "• To train the sovereign spatio-temporal model weights:\n"
+            "• To train future sovereign spatio-temporal model weights:\n"
             "  `python training/video/train.py --manifest datasets/video/manifest.jsonl --output_dir checkpoints/moon_video`\n"
             "• **Weight Provenance**: `moon_ai_random_init` (Zero third-party hosted APIs or pretrained weights).\n"
             "• **Chief Architect**: Prem Gaikwad (India 🇮🇳)"
@@ -623,7 +623,7 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"feature": "video_info"})
         return ChatResponse(
             reply=reply,
-            model_name="Moon Video Sovereign Studio (moon-video-v0)",
+            model_name="Video Studio (Procedural MP4 Utility Engine)",
             prompt_length=len(clean_msg),
             tokens_generated=0,
             device="CPU Local Engine",
@@ -812,7 +812,7 @@ async def delete_session(session_id: str):
 @app.post("/api/generate-image", response_model=ImageGenResponse)
 async def generate_image_endpoint(request: ImageGenRequest):
     """
-    Generates high-tech procedural neural artwork locally from user prompt.
+    Generates procedural vector/raster graphics locally from user prompt (deterministic procedural utility).
     """
     try:
         res = image_service.generate_image(request.prompt, style=request.style or "auto")
@@ -827,7 +827,7 @@ async def generate_image_endpoint(request: ImageGenRequest):
 @app.post("/api/generate-video", response_model=VideoGenResponse)
 async def generate_video_endpoint(request: VideoGenRequest):
     """
-    Generates dynamic spatio-temporal video clips (.mp4) locally (Kling / Runway caliber).
+    Generates dynamic procedural video clips (.mp4) locally using procedural rendering (deterministic procedural utility).
     """
     try:
         res = video_service.generate_video(

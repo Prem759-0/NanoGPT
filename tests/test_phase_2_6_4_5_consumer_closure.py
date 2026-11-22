@@ -208,7 +208,7 @@ class TestPhase2645ConsumerClosure(unittest.TestCase):
                 "teacher_checkpoint_weights_transferred": False
             }
         }, valid_strict)
-        self.assertTrue(is_verified_genuine_checkpoint(valid_strict))
+        self.assertTrue(is_verified_genuine_checkpoint(valid_strict, allow_unattested_for_test=True))
 
         # Forged strict policy with teacher weights transferred
         forged_transfer = os.path.join(self.temp_dir.name, "forged_transfer.pt")
