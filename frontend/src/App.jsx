@@ -1508,11 +1508,20 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
           <div className="grok-specs-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ fontWeight: 700, color: '#ffffff' }}>System Architecture</span>
-              <span className="grok-badge-green">
-                <span className="grok-badge-dot"></span>
-                <span>ONLINE</span>
-              </span>
+              {modelSpecs?.model_status === 'READY' ? (
+                <span className="grok-badge-green">
+                  <span className="grok-badge-dot"></span>
+                  <span>ONLINE</span>
+                </span>
+              ) : (
+                <span className="grok-badge-amber">
+                  <span className="grok-badge-dot-amber"></span>
+                  <span>NOT READY</span>
+                </span>
+              )}
             </div>
+            <div>Platform: Web & Utilities (Online)</div>
+            <div>Neural Core: {modelSpecs?.model_status === 'READY' ? 'READY' : 'MODEL_NOT_READY (Scratch Pending)'}</div>
             <div>Model: {modelSpecs?.model_name || modelSpecs?.model_type || 'Moon AI Sovereign Core (moon-chat-pilot-v0)'}</div>
             <div>Architecture: Scratch-Init Sovereign Transformer (25.7M)</div>
             <div>Storage: Neon PostgreSQL / SQLite</div>

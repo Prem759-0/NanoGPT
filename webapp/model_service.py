@@ -150,14 +150,16 @@ def is_historical_pilot_checkpoint(ckpt_path: str) -> bool:
 
 def classify_checkpoint(
     ckpt_path: str,
+    trust_provider: Optional[Any] = None,
     trusted_authorities_path: Optional[str] = None,
+    allow_test_fixture_classification: bool = False,
     allow_unattested_for_test: bool = False,
 ) -> str:
     """
-    Categorizes a checkpoint file into one of the 15 mutually exclusive provenance tiers:
+    Categorizes a checkpoint file into one of the mutually exclusive provenance tiers:
     - STRUCTURALLY_INVALID: Nonexistent, empty, malformed, non-dict, non-tensor, or unreadable.
-    - STRUCTURALLY_VALID_UNVERIFIED: Valid model structure and metadata, but lacks cryptographic verification.
     - TEST_FIXTURE: Explicitly generated as CI fixture or smoke test.
+    - TEST_FIXTURE_VALID_STRUCTURE: Valid model structure and metadata in test mode, but lacks cryptographic verification.
     - HISTORICAL_POLICY_B: Stage 2.1.6 pilot checkpoint with quarantined Policy B provenance.
     - UNAPPROVED_POLICY: Policy identifier does not match STRICT_SOVEREIGN_RANDOM_INIT_ONLY.
     - NON_SCRATCH_INITIALIZATION: Initialized from pretrained weights or non-scratch Gaussian method.
@@ -167,10 +169,21 @@ def classify_checkpoint(
     - ATTESTATION_MISSING: Checkpoint lacks an asymmetric cryptographic training attestation.
     - ATTESTATION_INVALID: Attestation is malformed, missing required fields, or Ed25519 signature is invalid.
     - ATTESTATION_CHECKPOINT_HASH_MISMATCH: Attestation binds a SHA-256 that does not match disk file bytes.
-    - ATTESTATION_UNTRUSTED_SIGNER: Attestation is signed by an unregistered or inactive authority key.
+    - ATTESTATION_UNTRUSTED_SIGNER: Attestation is signed by an unregistered authority key or trust root is missing.
+    - ATTESTATION_REVOKED_AUTHORITY: Authority has been revoked.
+    - ATTESTATION_EXPIRED_AUTHORITY: Authority registration has expired.
+    - ATTESTATION_EVIDENCE_INVALID: Training evidence manifest contains telemetry contradictions or invalid hashes.
     - GENUINE_TRAINED_SOVEREIGN: Verified scratch-trained model satisfying all strict provenance pillars & cryptographic Ed25519 signature.
     - PROMOTED_PRODUCTION: Fully certified sovereign checkpoint promoted for production serving with cryptographic attestation.
+
+    CRITICAL SECURITY INVARIANT:
+    allow_test_fixture_classification and allow_unattested_for_test CAN NEVER produce GENUINE_TRAINED_SOVEREIGN
+    or PROMOTED_PRODUCTION. They can only produce TEST_FIXTURE_VALID_STRUCTURE.
     """
+    if isinstance(trust_provider, str):
+        trusted_authorities_path = trust_provider
+        trust_provider = None
+
     ok, reason, ckpt = validate_checkpoint_structure(ckpt_path)
     if not ok:
         return "STRUCTURALLY_INVALID"
@@ -272,8 +285,8 @@ def classify_checkpoint(
         is_valid, tier, reason = verify_training_attestation(
             attestation,
             ckpt_path,
+            trust_provider=trust_provider,
             authorities_path=trusted_authorities_path,
-            allow_untrusted_for_test=allow_unattested_for_test,
         )
         if not is_valid:
             return tier
@@ -283,21 +296,18 @@ def classify_checkpoint(
             return "PROMOTED_PRODUCTION"
         return "GENUINE_TRAINED_SOVEREIGN"
 
-    if allow_unattested_for_test:
-        status = ckpt.get("status") or cfg.get("status")
-        if status == "PROMOTED_PRODUCTION":
-            return "PROMOTED_PRODUCTION"
-        if status in ("PILOT_TRAINED", "PILOT_TRAINED_BEST", "PRODUCTION_TRAINED", "EVALUATION_PASSED"):
-            return "GENUINE_TRAINED_SOVEREIGN"
-        return "GENUINE_TRAINED_SOVEREIGN"
+    # Test fixture fallback: NEVER returns GENUINE_TRAINED_SOVEREIGN or PROMOTED_PRODUCTION
+    if allow_test_fixture_classification or allow_unattested_for_test:
+        return "TEST_FIXTURE_VALID_STRUCTURE"
 
     return "ATTESTATION_MISSING"
 
 
 def is_verified_genuine_checkpoint(
     ckpt_path: str,
+    trust_provider: Optional[Any] = None,
     trusted_authorities_path: Optional[str] = None,
-    allow_unattested_for_test: bool = False,
+    **kwargs,
 ) -> bool:
     """
     Positively validates that a checkpoint is a genuine, trained student checkpoint.
@@ -306,15 +316,26 @@ def is_verified_genuine_checkpoint(
     - Synthetic mock checkpoints without verified training telemetry (SYNTHETIC_MOCK)
     - Untrained random initializations lacking iteration progress (UNTRAINED_RANDOM_INIT)
     - CI test fixtures or engineering smoke test checkpoints (TEST_FIXTURE)
+    - Valid structural fixtures lacking cryptographic proof (TEST_FIXTURE_VALID_STRUCTURE)
     - Policy B violations or unapproved policies (HISTORICAL_POLICY_B, UNAPPROVED_POLICY)
     - Teacher contamination or external base weights (TEACHER_CONTAMINATION)
     - Missing or untrusted cryptographic training attestations (ATTESTATION_MISSING, ATTESTATION_UNTRUSTED_SIGNER)
-    Returns True ONLY if classification is GENUINE_TRAINED_SOVEREIGN or PROMOTED_PRODUCTION.
+    - Revoked or expired authority attestations (ATTESTATION_REVOKED_AUTHORITY, ATTESTATION_EXPIRED_AUTHORITY)
+    - Contradictory evidence telemetry (ATTESTATION_EVIDENCE_INVALID)
+
+    SECURITY INVARIANT:
+    Accepts NO bypass flags. Returns True ONLY if classification is GENUINE_TRAINED_SOVEREIGN or PROMOTED_PRODUCTION.
     """
+    if isinstance(trust_provider, str):
+        trusted_authorities_path = trust_provider
+        trust_provider = None
+
     tier = classify_checkpoint(
         ckpt_path,
+        trust_provider=trust_provider,
         trusted_authorities_path=trusted_authorities_path,
-        allow_unattested_for_test=allow_unattested_for_test,
+        allow_test_fixture_classification=False,
+        allow_unattested_for_test=False,
     )
     return tier in ("GENUINE_TRAINED_SOVEREIGN", "PROMOTED_PRODUCTION")
 
@@ -978,7 +999,7 @@ class ModelService:
             return self._generate_internal(prompt=prompt, max_new_tokens=max_new_tokens, temperature=temperature, history=history, mode=mode, allow_fixture=allow_fixture)
 
     def _generate_internal(self, prompt: str, max_new_tokens: int = 150, temperature: float = 0.7, history: Optional[List[Dict[str, str]]] = None, mode: str = "chat", allow_fixture: bool = False) -> Dict[str, Any]:
-        eff_allow_fixture = allow_fixture or self.debug_mode
+        eff_allow_fixture = allow_fixture
         if getattr(self, "is_test_fixture", False) and not eff_allow_fixture:
             raise ModelNotTrainedException(
                 "Production inference blocked: Active model is an unpromoted CI test fixture. "
@@ -1415,7 +1436,7 @@ class ModelService:
                 "n_head": 28,
                 "n_embd": 3584,
                 "hardware": "CPU (4-Bit AVX2 C++ Quantized)",
-                "description": "Your sovereign 7.6B AI fine-tuned on GPU and deployed by Prem Gaikwad from India. 100% private on CPU."
+                "description": "Quarantined external base weights. Blocked from serving as Moon AI sovereign intelligence under STRICT_SOVEREIGN_RANDOM_INIT_ONLY policy."
             }
 
         if self.active_model_name == "llama-3.2":
@@ -1431,7 +1452,7 @@ class ModelService:
                 "n_head": 32,
                 "n_embd": 2048,
                 "hardware": "CPU (4-Bit AVX2 C++ Quantized)",
-                "description": "Frontier 1.23B parameter NanoGPT architecture created by Prem Gaikwad from India. Runs locally and offline on your laptop."
+                "description": "Quarantined external base weights. Blocked from serving as Moon AI sovereign intelligence under STRICT_SOVEREIGN_RANDOM_INIT_ONLY policy."
             }
 
         if self.active_model_name == "moon-chat-pilot-v0":
@@ -1455,8 +1476,8 @@ class ModelService:
                 "is_test_fixture": is_fixture,
                 "is_production_trained": False,
                 "promotable": False,
-                "status": "CI_TEST_FIXTURE" if is_fixture else "PILOT_TRAINED",
-                "description": "25.7M parameter sovereign transformer trained purely from Gaussian random scratch under strict sovereign ownership policy. Zero teacher weights transferred."
+                "status": "CI_TEST_FIXTURE" if is_fixture else ("MODEL_NOT_READY" if status == "MODEL_NOT_READY" else "PILOT_TRAINED"),
+                "description": "25.7M parameter sovereign transformer architecture initialized purely from scratch (STRICT_SOVEREIGN_RANDOM_INIT_ONLY). Currently in MODEL_NOT_READY state awaiting authorized training run and sovereign cryptographic attestation."
             }
 
         is_gpt2 = self.active_model_name == "gpt2"

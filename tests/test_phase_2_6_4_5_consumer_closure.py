@@ -44,6 +44,7 @@ from core.policy import (
 from webapp.model_service import (
     ModelService,
     validate_checkpoint_structure,
+    classify_checkpoint,
     is_verified_genuine_checkpoint,
     is_checkpoint_fixture,
     is_historical_pilot_checkpoint
@@ -208,7 +209,8 @@ class TestPhase2645ConsumerClosure(unittest.TestCase):
                 "teacher_checkpoint_weights_transferred": False
             }
         }, valid_strict)
-        self.assertTrue(is_verified_genuine_checkpoint(valid_strict, allow_unattested_for_test=True))
+        self.assertEqual(classify_checkpoint(valid_strict, allow_test_fixture_classification=True), "TEST_FIXTURE_VALID_STRUCTURE")
+        self.assertFalse(is_verified_genuine_checkpoint(valid_strict))
 
         # Forged strict policy with teacher weights transferred
         forged_transfer = os.path.join(self.temp_dir.name, "forged_transfer.pt")
