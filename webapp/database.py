@@ -144,26 +144,43 @@ class Database:
                     yield conn
                     conn.commit()
                 except Exception:
-                    conn.rollback()
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
                     raise
                 finally:
                     if self.db_path != ":memory:":
-                        conn.close()
+                        try:
+                            conn.close()
+                        except Exception:
+                            pass
         else:
             conn = self._get_sqlite_connection()
             try:
                 yield conn
                 conn.commit()
             except Exception:
-                conn.rollback()
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
                 raise
             finally:
                 if self.db_path != ":memory:":
-                    conn.close()
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
 
     def _get_sqlite_connection(self) -> sqlite3.Connection:
         if self.db_path == ":memory:":
             with self._lock:
+                if self._mem_conn is not None:
+                    try:
+                        self._mem_conn.execute("SELECT 1;")
+                    except Exception:
+                        self._mem_conn = None
                 if self._mem_conn is None:
                     self._mem_conn = sqlite3.connect(":memory:", check_same_thread=False)
                     self._mem_conn.row_factory = sqlite3.Row

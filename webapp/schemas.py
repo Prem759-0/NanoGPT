@@ -48,6 +48,42 @@ class ChatResponse(BaseModel):
     tokens_generated: int
     device: str
     session_id: str
+    engine_type: str = Field(
+        default="sovereign_neural",
+        description="Classification of answering engine: 'sovereign_neural', 'deterministic_utility', 'system_reflex', 'system_notice', 'web_retrieval'"
+    )
+    model_id: str = Field(
+        default="moon-chat-pilot-v0",
+        description="Identifier of the model or subsystem that produced the answer"
+    )
+    model_status: str = Field(
+        default="MODEL_NOT_READY",
+        description="Model status at inference time: 'READY', 'MODEL_NOT_READY', 'CI_TEST_FIXTURE', etc."
+    )
+    is_neural_generation: bool = Field(
+        default=False,
+        description="True ONLY if text was synthesized token-by-token by a verified eligible neural model"
+    )
+    is_deterministic_utility: bool = Field(
+        default=False,
+        description="True if output was produced by deterministic procedural code, templates, or reflexes"
+    )
+    is_web_retrieval: bool = Field(
+        default=False,
+        description="True if output was retrieved from live web search or document citations"
+    )
+    checkpoint_verified: bool = Field(
+        default=False,
+        description="True if output was generated from a positively verified genuine strict sovereign checkpoint"
+    )
+    provenance_status: str = Field(
+        default="UNVERIFIED_OR_ABSENT",
+        description="Strict sovereign provenance classification of model weights"
+    )
+    sources: List[str] = Field(
+        default_factory=list,
+        description="List of verified URL or document citation references (never fabricated)"
+    )
 
 class SessionItem(BaseModel):
     id: str
@@ -68,6 +104,14 @@ class HealthResponse(BaseModel):
     device: str
     torch_available: bool
     torch_version: Optional[str] = None
+    is_sovereign_ready: bool = Field(
+        default=False,
+        description="True if a genuine strict sovereign checkpoint is verified and ready for production"
+    )
+    sovereign_checkpoint_path: Optional[str] = Field(
+        default=None,
+        description="Path of the verified sovereign checkpoint on disk, if present"
+    )
 
 class ModelInfoResponse(BaseModel):
     model_type: str

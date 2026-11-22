@@ -123,6 +123,7 @@ async def health_check():
     """
     model_service.refresh_status()
     ckpt = model_service.find_checkpoint()
+    pilot_ckpt = model_service.find_pilot_checkpoint(allow_fixture=False)
     return HealthResponse(
         status="ok",
         model_status=model_service.get_status(),
@@ -130,7 +131,9 @@ async def health_check():
         model_loaded=model_service.model is not None,
         device=model_service.device,
         torch_available=model_service.torch_available,
-        torch_version=model_service.torch_version
+        torch_version=model_service.torch_version,
+        is_sovereign_ready=pilot_ckpt is not None,
+        sovereign_checkpoint_path=pilot_ckpt
     )
 
 @app.get("/api/model-info", response_model=ModelInfoResponse)
@@ -236,11 +239,20 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"media": "image", "url": img_res["image_url"]})
         return ChatResponse(
             reply=reply,
-            model_name="Image Studio (Diffusion & Neural Engine)",
+            model_name="Image Studio (Procedural Vector Engine)",
             prompt_length=len(clean_msg),
-            tokens_generated=35,
+            tokens_generated=0,
             device="CPU Local Visualizer",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="deterministic_utility",
+            model_id="moon-image-v0",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="PROCEDURAL_VISUAL_ENGINE",
+            sources=[]
         )
 
     if clean_msg.startswith("/video"):
@@ -256,11 +268,20 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"media": "video", "url": vid_res["video_url"]})
         return ChatResponse(
             reply=reply,
-            model_name="Video Studio (Spatio-Temporal MP4 Engine)",
+            model_name="Video Studio (Spatio-Temporal Procedural MP4)",
             prompt_length=len(clean_msg),
-            tokens_generated=40,
+            tokens_generated=0,
             device="CPU Video Encoder",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="deterministic_utility",
+            model_id="moon-video-v0",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="PROCEDURAL_VIDEO_ENGINE",
+            sources=[]
         )
 
     # 0. Creator / Identity Intent Check (e.g. "who made you", "who created you", "who is your developer", etc.)
@@ -282,27 +303,34 @@ def chat(request: ChatRequest, req: Request):
     )
 
     if is_creator_question:
-        active_name = getattr(model_service, "active_model_name", "")
-        is_qwen = "qwen" in active_name
         reply = (
-            "I am **Moon AI**, an advanced, sovereign artificial intelligence trained and deployed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
-            "Prem Gaikwad engineered Moon AI as a fully local, self-contained AI system designed to rival and surpass cloud-based models like ChatGPT and Claude—running 100% privately without paid third-party APIs. Under Prem Gaikwad's architecture, Moon AI provides:\n\n"
-            "• 🌙 **Moon AI Coder (Qwen-7B)**: Frontier 7.61B coding, reasoning, and system architecture model running locally on CPU.\n"
-            "• ⚡ **Moon AI Fast (1.2B)**: Rapid conversation, Python coding, and algorithm design.\n"
-            "• 🎨 **Moon AI Image Studio**: High-fidelity procedural and diffusion-grade visual art synthesis.\n"
+            "I am **Moon AI**, an independent sovereign artificial intelligence project designed and architected by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
+            "Prem Gaikwad engineered Moon AI as a fully local, self-contained AI system built from first principles without paid third-party APIs or cloud subscriptions. Under Prem Gaikwad's architecture:\n\n"
+            "• 🌙 **Sovereign Student Core**: Custom transformer trained purely from scratch (`STRICT_SOVEREIGN_RANDOM_INIT_ONLY`).\n"
+            "• 🛡️ **Absolute Weight Sovereignty**: Zero third-party pretrained weights transferred.\n"
+            "• 🎨 **Moon AI Image Studio**: Offline procedural visual synthesis.\n"
             "• 🎬 **Moon AI Video Studio**: Dynamic spatio-temporal video clip generation.\n"
-            "• 💾 **Neon Cloud Memory**: Scalable persistent chat history backed by Neon Serverless PostgreSQL.\n"
-            "• 🔒 **Clerk Authentication**: Seamless, production-ready user identity and session management.\n\n"
-            "How can I assist you with your project or code today?"
+            "• 💾 **Persistent Session Storage**: Local SQLite and optional Neon Cloud PostgreSQL.\n"
+            "• ⚡ **Sandboxed Code Execution**: Safe local Python execution with AST-level verification.\n\n"
+            "How can I assist you with your project today?"
         )
         db.add_message(session_id, "assistant", reply, meta={"identity": "creator_attribution"})
         return ChatResponse(
             reply=reply,
-            model_name="Moon AI (Created & Deployed by Prem Gaikwad)",
+            model_name="Moon AI Sovereign Core (Identity Declaration)",
             prompt_length=len(clean_msg),
-            tokens_generated=140,
-            device="CPU Local Engine",
-            session_id=session_id
+            tokens_generated=len(reply.split()),
+            device="Local Sovereign Core",
+            session_id=session_id,
+            engine_type="system_reflex",
+            model_id="moon-chat-pilot-v0",
+            model_status=model_service.get_status(),
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="SOVEREIGN_IDENTITY",
+            sources=[]
         )
 
     # 0.5 Scientific, Biological, & General Knowledge Check (eliminates false-positive refusals)
@@ -312,11 +340,20 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", sci_reply, meta={"knowledge": "scientific_biology"})
         return ChatResponse(
             reply=sci_reply,
-            model_name="Moon AI Science & Knowledge Engine",
+            model_name="Moon AI Science Knowledge Base (Deterministic)",
             prompt_length=len(clean_msg),
-            tokens_generated=len(sci_reply.split()),
+            tokens_generated=0,
             device="Local Knowledge Base",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="deterministic_utility",
+            model_id="moon-science-kb",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="DETERMINISTIC_KNOWLEDGE_BASE",
+            sources=[]
         )
 
     # Backend Autonomous Multi-Modal Tool Routing
@@ -361,9 +398,18 @@ def chat(request: ChatRequest, req: Request):
             reply=reply,
             model_name="Moon Video Sovereign Studio (moon-video-v0)",
             prompt_length=len(clean_msg),
-            tokens_generated=40,
+            tokens_generated=0,
             device="CPU Video Encoder",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="deterministic_utility",
+            model_id="moon-video-v0",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="PROCEDURAL_VIDEO_ENGINE",
+            sources=[]
         )
 
     # 3. Snake Game Intent & Multi-Turn Continuation Check
@@ -395,11 +441,20 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"feature": "snake_game_html"})
         return ChatResponse(
             reply=reply,
-            model_name="NanoGPT Coder Engine (Single-File Web App)",
+            model_name="Moon AI Procedural App Engine (Interactive HTML5 Canvas)",
             prompt_length=len(clean_msg),
-            tokens_generated=850,
+            tokens_generated=0,
             device="CPU Local Engine",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="deterministic_utility",
+            model_id="procedural-snake-canvas",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="PROCEDURAL_GAME_TEMPLATE",
+            sources=[]
         )
 
     # 4. Chess Game Intent Check (e.g. "chesse game", "chess game", "chess in html")
@@ -424,11 +479,20 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"feature": "chess_game_html"})
         return ChatResponse(
             reply=reply,
-            model_name="NanoGPT Coder Engine (Interactive Web App)",
+            model_name="Moon AI Procedural App Engine (Interactive Chess Canvas)",
             prompt_length=len(clean_msg),
-            tokens_generated=850,
+            tokens_generated=0,
             device="CPU Local Engine",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="deterministic_utility",
+            model_id="procedural-chess-canvas",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="PROCEDURAL_GAME_TEMPLATE",
+            sources=[]
         )
 
     # 4.5 Racing Car Game Intent Check (e.g. "game for racing car in html", "raceing car game", etc.)
@@ -463,11 +527,20 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"feature": "racing_car_game_html"})
         return ChatResponse(
             reply=reply,
-            model_name="NanoGPT Coder Engine (Cyber Racing Web App)",
+            model_name="Moon AI Procedural App Engine (Interactive Nitro Racing)",
             prompt_length=len(clean_msg),
-            tokens_generated=920,
+            tokens_generated=0,
             device="CPU Local Engine",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="deterministic_utility",
+            model_id="procedural-racing-canvas",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="PROCEDURAL_GAME_TEMPLATE",
+            sources=[]
         )
 
     # 5. Context Memory / "Why did you forget" intent check
@@ -497,11 +570,20 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"topic": "memory_explanation"})
         return ChatResponse(
             reply=reply,
-            model_name="NanoGPT-3.2 (Frontier Engine — By Prem Gaikwad)",
+            model_name="Moon AI System Notice (Session & Context Diagnostics)",
             prompt_length=len(clean_msg),
-            tokens_generated=220,
+            tokens_generated=0,
             device="CPU Local Engine",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="system_notice",
+            model_id="system-diagnostic",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="SYSTEM_DIAGNOSTIC",
+            sources=[]
         )
 
     # 5.5 Video Capability Inquiry Intent Check
@@ -531,9 +613,18 @@ def chat(request: ChatRequest, req: Request):
             reply=reply,
             model_name="Moon Video Sovereign Studio (moon-video-v0)",
             prompt_length=len(clean_msg),
-            tokens_generated=190,
+            tokens_generated=0,
             device="CPU Local Engine",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="system_notice",
+            model_id="moon-video-v0",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="SYSTEM_CAPABILITY_NOTICE",
+            sources=[]
         )
 
     # 6. Autonomous Long-Term Memory Learning Intent
@@ -550,11 +641,20 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"feature": "memory_learned", "fact": fact})
         return ChatResponse(
             reply=reply,
-            model_name="NanoGPT Autonomous Memory Engine",
+            model_name="Moon AI Autonomous Memory Engine (Deterministic SQLite)",
             prompt_length=len(clean_msg),
-            tokens_generated=48,
+            tokens_generated=0,
             device="Local SQLite Memory Bank",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="deterministic_utility",
+            model_id="sqlite-memory-engine",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="DETERMINISTIC_SQLITE_STORAGE",
+            sources=[]
         )
 
     # 7. Fast Instant Greeting & Conversational Kickoff Check (e.g. "hi", "hello", "hey", "good morning")
@@ -568,110 +668,66 @@ def chat(request: ChatRequest, req: Request):
         db.add_message(session_id, "assistant", reply, meta={"intent": "greeting"})
         return ChatResponse(
             reply=reply,
-            model_name="Moon AI Reflex Engine",
+            model_name="Moon AI Reflex Engine (Deterministic Greeting)",
             prompt_length=len(clean_msg),
-            tokens_generated=28,
+            tokens_generated=len(reply.split()),
             device="Local Instant Engine",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="system_reflex",
+            model_id="moon-reflex-engine",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="SYSTEM_REFLEX_GREETING",
+            sources=[]
         )
 
-    # 8. ⚡ FAST-PATH: General Knowledge Queries (Recipes, Capitals, Math, Simple Facts)
-    # These are answered instantly without calling the 7B LLM — saves 5-30 minutes on CPU
-    def _fast_knowledge_reply(msg: str) -> str | None:
-        m = msg.strip().lower()
-
-        # --- Pancake / Cooking Recipes ---
-        if re.search(r'\b(pancake|pincake|pancake recipe|how to make pancake)', m):
-            lang_hi = "hindi" in m or "hindi me" in m or "hindi mein" in m
-            if lang_hi:
-                return (
-                    "🥞 **Pancake Recipe (Hindi में)**\n\n"
-                    "**सामग्री:**\n"
-                    "• 1 कप मैदा (all-purpose flour)\n"
-                    "• 1 कप दूध\n"
-                    "• 1 अंडा\n"
-                    "• 2 चम्मच चीनी\n"
-                    "• 1 चम्मच बेकिंग पाउडर\n"
-                    "• 1 चुटकी नमक\n"
-                    "• 2 चम्मच मक्खन (butter)\n\n"
-                    "**विधि:**\n"
-                    "1. सभी सामग्री को एक बड़े बाउल में मिलाएं और चिकना घोल बनाएं।\n"
-                    "2. नॉन-स्टिक पैन को मध्यम आंच पर गर्म करें और हल्का मक्खन लगाएं।\n"
-                    "3. एक कड़छी घोल डालें और फैलाएं।\n"
-                    "4. जब बुलबुले आने लगें (लगभग 2 मिनट), पलट दें।\n"
-                    "5. 1 मिनट और पकाएं। गर्मागर्म शहद या जैम के साथ परोसें। 😊"
-                )
-            return (
-                "🥞 **Classic Pancake Recipe**\n\n"
-                "**Ingredients:**\n"
-                "• 1 cup all-purpose flour\n"
-                "• 1 cup milk\n"
-                "• 1 egg\n"
-                "• 2 tsp sugar\n"
-                "• 1 tsp baking powder\n"
-                "• Pinch of salt\n"
-                "• 2 tbsp butter\n\n"
-                "**Steps:**\n"
-                "1. Mix all ingredients into a smooth batter.\n"
-                "2. Heat a non-stick pan on medium heat and lightly grease it.\n"
-                "3. Pour a ladle of batter and spread it into a circle.\n"
-                "4. Cook until bubbles form (~2 min), then flip.\n"
-                "5. Cook 1 more minute. Serve warm with honey or syrup! 😊"
-            )
-
-        # --- Simple math ---
-        math_m = re.match(r'^(\d+(?:\.\d+)?)\s*([\+\-\*\/x×÷])\s*(\d+(?:\.\d+)?)[\s=?]*$', m)
-        if math_m:
-            a, op, b = float(math_m.group(1)), math_m.group(2), float(math_m.group(3))
-            try:
-                if op in ['+']:     result_v = a + b
-                elif op in ['-']:   result_v = a - b
-                elif op in ['*','x','×']: result_v = a * b
-                elif op in ['/','÷']:
-                    result_v = a / b if b != 0 else None
-                else: result_v = None
-                if result_v is not None:
-                    r = int(result_v) if result_v == int(result_v) else round(result_v, 4)
-                    return f"**{math_m.group(1)} {math_m.group(2)} {math_m.group(3)} = {r}**"
-            except Exception:
-                pass
-
-        # --- Capital city queries ---
-        cap_m = re.search(r'capital (?:of|city of|city)\s+([a-z\s]+)', m)
-        if cap_m:
-            capitals = {
-                "india": "New Delhi", "usa": "Washington D.C.", "united states": "Washington D.C.",
-                "uk": "London", "united kingdom": "London", "china": "Beijing",
-                "japan": "Tokyo", "france": "Paris", "germany": "Berlin",
-                "russia": "Moscow", "australia": "Canberra", "canada": "Ottawa",
-                "brazil": "Brasília", "pakistan": "Islamabad", "bangladesh": "Dhaka",
-                "italy": "Rome", "spain": "Madrid", "south korea": "Seoul",
-                "north korea": "Pyongyang", "nepal": "Kathmandu",
-            }
-            country = cap_m.group(1).strip()
-            cap = capitals.get(country)
-            if cap:
-                return f"The capital of **{country.title()}** is **{cap}**. 🌍"
-
-        return None
-
-    fast_reply = _fast_knowledge_reply(clean_msg)
-    if fast_reply:
-        db.add_message(session_id, "assistant", fast_reply, meta={"knowledge": "fast_path"})
-        return ChatResponse(
-            reply=fast_reply,
-            model_name="Moon AI Knowledge Engine (Instant)",
-            prompt_length=len(clean_msg),
-            tokens_generated=len(fast_reply.split()),
-            device="Local Knowledge Base",
-            session_id=session_id
-        )
+    # 8. Sovereign Neural Model Route & Model Readiness Verification
+    # Phase 2.7.6 Runtime Sovereignty Audit:
+    # 1. Hardcoded general-knowledge fast paths (_fast_knowledge_reply) are permanently removed from the chat route.
+    # 2. Test fixtures remain strictly blocked with HTTP 403.
+    # 3. If moon-chat-pilot-v0 is selected but no verified genuine strict sovereign checkpoint exists on disk,
+    #    an honest MODEL_NOT_READY notice is returned (zero fake neural answers or silent third-party fallback).
 
     if getattr(model_service, "is_test_fixture", False):
         raise HTTPException(
             status_code=403,
             detail="Production inference blocked: Active model is an unpromoted CI test fixture."
         )
+
+    if model_service.active_model_name == "moon-chat-pilot-v0":
+        has_genuine = model_service.find_pilot_checkpoint(allow_fixture=False) is not None
+        if not has_genuine:
+            notice_reply = (
+                "🌙 **Moon AI Sovereign Status: MODEL_NOT_READY**\n\n"
+                "The sovereign neural language model (`moon-chat-pilot-v0`) is currently in status **MODEL_NOT_READY**.\n\n"
+                "### 🛡️ Runtime Sovereignty & Integrity Audit:\n"
+                "• **Ownership Policy**: `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`\n"
+                "• **Verified Checkpoint**: None on disk (existing pilot checkpoint is an unpromoted historical Policy B fixture)\n"
+                "• **Third-Party Pretrained Weights**: Quarantined & blocked (Qwen, LLaMA, GPT-2 are prohibited from production inference)\n"
+                "• **Next Milestone**: Official preflight authorization (`core.policy.AUTHORIZED_BY_PREM = True`) and verified scratch training run.\n\n"
+                "*Moon AI strictly guarantees runtime truthfulness: no hardcoded answers or third-party pretrained weights are presented as sovereign neural generation.*"
+            )
+            db.add_message(session_id, "assistant", notice_reply, meta={"system": "model_not_ready"})
+            return ChatResponse(
+                reply=notice_reply,
+                model_name="Moon AI Sovereign Core (moon-chat-pilot-v0)",
+                prompt_length=len(clean_msg),
+                tokens_generated=0,
+                device="Local Sovereign Core",
+                session_id=session_id,
+                engine_type="system_notice",
+                model_id="moon-chat-pilot-v0",
+                model_status="MODEL_NOT_READY",
+                is_neural_generation=False,
+                is_deterministic_utility=False,
+                is_web_retrieval=False,
+                checkpoint_verified=False,
+                provenance_status="UNPROMOTED_HISTORICAL_OR_ABSENT",
+                sources=[]
+            )
 
     try:
         result = model_service.generate(
@@ -683,12 +739,20 @@ def chat(request: ChatRequest, req: Request):
             allow_fixture=False
         )
         result["reply"] = filter_or_rectify_model_reply(clean_msg, result["reply"])
-        # Save assistant reply to database
         db.add_message(session_id, "assistant", result["reply"], meta={
             "tokens": result.get("tokens_generated", 0),
             "device": result.get("device", "cpu")
         })
         result["session_id"] = session_id
+        result["engine_type"] = "sovereign_neural"
+        result["model_id"] = model_service.active_model_name
+        result["model_status"] = "READY"
+        result["is_neural_generation"] = True
+        result["is_deterministic_utility"] = False
+        result["is_web_retrieval"] = False
+        result["checkpoint_verified"] = True
+        result["provenance_status"] = "STRICT_SOVEREIGN_SCRATCH"
+        result["sources"] = []
         return ChatResponse(**result)
     except ModelNotTrainedException:
         raise

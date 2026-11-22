@@ -103,30 +103,33 @@ const apiFetch = (path, options = {}) => {
 const DEFAULT_MODELS = [
   {
     id: 'moon-chat-pilot-v0',
-    name: '🌙 Moon AI Pilot (25.7M Sovereign Scratch — Policy B)',
+    name: '🌙 Moon Chat — Model Not Ready',
     type: 'sovereign_scratch',
-    description: 'Stage 2.1.6 sovereign 25.7M parameter transformer initialized from Gaussian random scratch. 0 teacher weights transferred.',
-    active: false,
-    parameters: '25.70M',
-    available: true
-  },
-  {
-    id: 'moon-sovereign-v2',
-    name: '🌙 Moon AI Sovereign (All-in-One Engine — By Prem Gaikwad)',
-    type: 'cloud_frontier',
-    description: 'Autonomous reasoning, conversation, full-stack code, image synthesis, and video generation with zero API keys required.',
+    description: 'Stage 2.1.6 sovereign transformer (Gaussian random scratch). In MODEL_NOT_READY status pending authorized training run.',
     active: true,
-    parameters: '7.61B Sovereign',
-    available: true
+    parameters: '25.70M',
+    available: false,
+    status: 'MODEL_NOT_READY'
   },
   {
-    id: 'moon-zerogpu-qwen',
-    name: '⚡ Moon AI Neural (Hugging Face ZeroGPU Cloud)',
-    type: 'cloud_zerogpu',
-    description: 'ZeroGPU cloud inference fallback engine.',
+    id: 'moon-web',
+    name: '🌐 Moon Web — Retrieval Available',
+    type: 'web_retrieval',
+    description: 'Autonomous web research, source extraction, and document analysis with citations.',
     active: false,
-    parameters: '7.61B',
-    available: true
+    parameters: 'Retrieval Engine',
+    available: true,
+    status: 'READY'
+  },
+  {
+    id: 'utility-deterministic',
+    name: '⚙️ Utility Engine — Deterministic',
+    type: 'deterministic_utility',
+    description: 'Procedural utilities: interactive canvas games, document generators, math, and identity reflexes.',
+    active: false,
+    parameters: 'Deterministic',
+    available: true,
+    status: 'READY'
   }
 ];
 
@@ -227,7 +230,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationSeconds, setGenerationSeconds] = useState(0);
   const [availableModels, setAvailableModels] = useState(DEFAULT_MODELS);
-  const [activeModel, setActiveModel] = useState('moon-sovereign-v2');
+  const [activeModel, setActiveModel] = useState('moon-chat-pilot-v0');
   const [modelSpecs, setModelSpecs] = useState(null);
   const [customGpuUrl, setCustomGpuUrl] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('moon_custom_gpu_url') !== null ? localStorage.getItem('moon_custom_gpu_url') : DEFAULT_SOVEREIGN_GPU_URL));
   const [gpuStatus, setGpuStatus] = useState({
@@ -1501,7 +1504,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
           <div className="topbar-left">
             <div className="grok-model-pill">
               <Sparkles size={14} color="#38bdf8" />
-              <span>{activeModel.includes('pilot') ? '🌙 Moon Pilot (25.7M Scratch)' : activeModel.includes('qwen') ? '🌙 Moon AI Sovereign (7B)' : '⚡ Moon AI Fast (1.2B)'}</span>
+              <span>{activeModel.includes('pilot') ? '🌙 Moon Chat — Model Not Ready' : activeModel.includes('web') ? '🌐 Moon Web — Retrieval Available' : '⚙️ Utility Engine — Deterministic'}</span>
             </div>
 
             {/* Grok Fun Mode & Think Mode Toggles */}
@@ -1602,7 +1605,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                   <div className="grok-hero-logo">🌙</div>
                   <h1 className="grok-hero-title">What do you want to build with Moon AI?</h1>
                   <p className="grok-hero-desc">
-                    Sovereign AI engine created and deployed by <strong>Prem Gaikwad</strong>. Powered by <strong>Moon AI (Qwen-2.5-Coder-7B)</strong> 100% privately on your machine with Clerk authentication, Neon Cloud PostgreSQL, and zero cloud token fees.
+                    Sovereign AI platform engineered by <strong>Prem Gaikwad</strong> (India 🇮🇳). Operating 100% locally with strict sovereign random initialization (<code>STRICT_SOVEREIGN_RANDOM_INIT_ONLY</code>), zero cloud token fees, and honest runtime provenance.
                   </p>
 
                   <div className="grok-hero-cards">

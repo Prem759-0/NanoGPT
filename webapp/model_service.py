@@ -242,14 +242,11 @@ class ModelService:
         self.error_message: Optional[str] = None
         import threading
         self._load_lock = threading.Lock()
+        self._infer_lock = threading.Lock()
         
-        # Check available GGUF models on disk; prioritize 7B Qwen Coder!
-        if self.find_qwen_gguf():
-            self.active_model_name = "qwen-2.5-coder-7b"
-        elif self.find_llama_gguf():
-            self.active_model_name = "llama-3.2"
-        else:
-            self.active_model_name = "gpt2"
+        # Moon AI Sovereign Rule: Default model is strictly moon-chat-pilot-v0
+        # Third-party pretrained models (Qwen, LLaMA, GPT-2) must never become Moon's default brain
+        self.active_model_name = "moon-chat-pilot-v0"
         
         # Check torch availability
         self.torch_available = False
@@ -408,14 +405,29 @@ class ModelService:
         return None
 
     def get_status(self) -> str:
-        """Returns readiness status."""
-        if self.model is not None or self.llama_model is not None:
-            return "READY"
-        
+        """Returns readiness status with strict sovereign truthfulness."""
+        if self.active_model_name == "moon-chat-pilot-v0":
+            if self.model is not None and not getattr(self, "is_test_fixture", False) and self.is_verified_genuine_checkpoint(self.current_checkpoint_path or ""):
+                return "READY"
+            has_genuine = self.find_pilot_checkpoint(allow_fixture=False) is not None
+            if has_genuine:
+                return "READY (ON DEMAND)"
+            return "MODEL_NOT_READY"
+
+        if self.active_model_name == "scratch":
+            if self.model is not None:
+                return "READY"
+            if self.find_checkpoint():
+                return "READY (ON DEMAND)"
+            return "MODEL_NOT_READY"
+
+        if self.active_model_name in ["qwen-2.5-coder-7b", "llama-3.2", "gpt2"]:
+            return "BLOCKED_EXTERNAL_PRETRAINED"
+
         if self.error_message:
             return "ERROR"
             
-        return "READY (ON DEMAND)"
+        return "MODEL_NOT_READY"
 
     def refresh_status(self):
         """Re-evaluates the environment state."""
@@ -424,56 +436,13 @@ class ModelService:
             self.error_message = "PyTorch not available in environment."
 
     def get_available_models(self) -> List[Dict[str, Any]]:
-        """Returns list of models available locally."""
-        moon_path = self.find_moon_ai_gguf()
-        has_qwen = self.find_qwen_gguf() is not None
-        has_llama = self.find_llama_gguf() is not None
+        """Returns list of models with strict sovereign ownership classification."""
         has_scratch = self.find_checkpoint() is not None
         has_trained_pilot = self.find_pilot_checkpoint(allow_fixture=False) is not None
         has_any_pilot = self.find_pilot_checkpoint(allow_fixture=True) is not None
         is_pilot_fixture = has_any_pilot and not has_trained_pilot
 
-        title = "🌙 Moon AI Sovereign (7.6B v1 — Fine-Tuned by Prem Gaikwad)" if moon_path else "👑 Qwen-2.5-Coder-7B (Frontier Super-AI — By Prem Gaikwad)"
-        desc = (
-            "Your sovereign 7.6B AI trained on GPU with science, biology, full-stack coding, and Prem Gaikwad sovereign identity. Running 100% locally from Moon-AI-v1.Q4_K_M.gguf."
-            if moon_path else
-            "World-class 7.61B coding & reasoning AI trained on 15,000+ code instructions. Outperforms GPT-4o-mini on HumanEval & coding benchmarks. 100% private on CPU."
-        )
-
         return [
-            {
-                "id": "qwen-2.5-coder-7b",
-                "name": title,
-                "type": "fine_tuned_gguf",
-                "description": desc,
-                "active": self.active_model_name == "qwen-2.5-coder-7b",
-                "parameters": "7.61B",
-                "block_size": 2048,
-                "vocab_size": 152064,
-                "available": has_qwen
-            },
-            {
-                "id": "llama-3.2",
-                "name": "🔥 NanoGPT-3.2 (1.23B Fast Coder & Chat — By Prem Gaikwad)",
-                "type": "fine_tuned_gguf",
-                "description": "Frontier 1.23B architecture fine-tuned on GPU, created by developer Prem Gaikwad. Runs at ~20 tokens/sec on CPU with 2048 context window.",
-                "active": self.active_model_name == "llama-3.2",
-                "parameters": "1.23B",
-                "block_size": 2048,
-                "vocab_size": 128256,
-                "available": has_llama
-            },
-            {
-                "id": "gpt2",
-                "name": "✨ NanoGPT Light (124M Fast Neural Engine)",
-                "type": "pretrained_weights",
-                "description": "124M autoregressive neural engine running locally on CPU. Fluent English, coding, and fast reasoning with 0 cloud APIs.",
-                "active": self.active_model_name == "gpt2",
-                "parameters": "123.65M",
-                "block_size": 1024,
-                "vocab_size": 50257,
-                "available": True
-            },
             {
                 "id": "moon-chat-pilot-v0",
                 "name": "🌙 Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
@@ -484,7 +453,9 @@ class ModelService:
                 "block_size": 512,
                 "vocab_size": 512,
                 "available": has_trained_pilot,
-                "is_test_fixture": is_pilot_fixture
+                "is_test_fixture": is_pilot_fixture,
+                "sovereign_owned": True,
+                "status": "READY" if has_trained_pilot else "MODEL_NOT_READY"
             },
             {
                 "id": "scratch",
@@ -495,16 +466,68 @@ class ModelService:
                 "parameters": "0.80M",
                 "block_size": 128,
                 "vocab_size": 97,
-                "available": has_scratch
+                "available": has_scratch,
+                "sovereign_owned": True,
+                "status": "READY" if has_scratch else "MODEL_NOT_READY"
+            },
+            {
+                "id": "qwen-2.5-coder-7b",
+                "name": "External Pretrained Reference: Qwen-2.5-Coder-7B",
+                "type": "external_pretrained_reference",
+                "description": "Third-party pretrained reference weights (Alibaba/Qwen). Prohibited from serving as Moon's sovereign production inference engine.",
+                "active": False,
+                "parameters": "7.61B",
+                "block_size": 2048,
+                "vocab_size": 152064,
+                "available": False,
+                "sovereign_owned": False,
+                "status": "BLOCKED_EXTERNAL_PRETRAINED"
+            },
+            {
+                "id": "llama-3.2",
+                "name": "External Pretrained Reference: LLaMA-3.2-1B",
+                "type": "external_pretrained_reference",
+                "description": "Third-party pretrained reference weights (Meta LLaMA). Prohibited from serving as Moon's sovereign production inference engine.",
+                "active": False,
+                "parameters": "1.23B",
+                "block_size": 2048,
+                "vocab_size": 128256,
+                "available": False,
+                "sovereign_owned": False,
+                "status": "BLOCKED_EXTERNAL_PRETRAINED"
+            },
+            {
+                "id": "gpt2",
+                "name": "External Pretrained Reference: GPT-2 (124M)",
+                "type": "external_pretrained_reference",
+                "description": "Third-party open pretrained weights (OpenAI GPT-2). Prohibited from serving as Moon's sovereign production inference engine.",
+                "active": False,
+                "parameters": "123.65M",
+                "block_size": 1024,
+                "vocab_size": 50257,
+                "available": False,
+                "sovereign_owned": False,
+                "status": "BLOCKED_EXTERNAL_PRETRAINED"
             }
         ]
 
     def load_model(self, model_name: Optional[str] = None, allow_fixture: bool = False) -> bool:
         """
-        Loads the target model into memory: 'qwen-2.5-coder-7b', 'llama-3.2', 'gpt2', or 'scratch'.
+        Loads the target model into memory.
+        Enforces runtime sovereignty: third-party pretrained models (Qwen, LLaMA, GPT-2)
+        cannot be loaded as Moon's production inference engine.
         Thread-safe: will not duplicate load or reload if already active.
         """
         target = model_name or self.active_model_name
+        
+        # Runtime Sovereignty Enforcement: Block third-party pretrained models from serving as Moon's brain
+        if target in ["qwen-2.5-coder-7b", "qwen", "qwen-7b", "llama-3.2", "gguf", "llama", "gpt2"]:
+            self.error_message = (
+                f"Runtime Sovereignty Violation: Third-party pretrained model '{target}' "
+                f"is prohibited from serving as Moon's sovereign production inference engine. "
+                f"Production inference requires a verified genuine sovereign checkpoint."
+            )
+            return False
         
         with self._load_lock:
             # If target model is already loaded in memory, return immediately without redundant reload
@@ -550,7 +573,8 @@ class ModelService:
                         verbose=False,
                         n_threads=_infer_threads,
                         n_threads_batch=_batch_threads,
-                        n_batch=256 if _n_gpu != 0 else 128,
+                        n_batch=512 if _n_gpu != 0 else 256,
+                        n_ubatch=256,
                     )
                     self.model = self.llama_model
                     self.active_model_name = "qwen-2.5-coder-7b"
@@ -578,7 +602,9 @@ class ModelService:
                         n_ctx=4096,
                         n_gpu_layers=_n_gpu,
                         verbose=False,
-                        n_threads=4
+                        n_threads=4,
+                        n_batch=512,
+                        n_ubatch=256,
                     )
                     self.model = self.llama_model
                     self.active_model_name = "llama-3.2"
@@ -802,6 +828,10 @@ class ModelService:
         Runs local inference with memory context, smart turn-stopping, and Claude/Codex caliber coding capabilities.
         Fails closed on unpromoted test fixtures unless allow_fixture is explicitly True.
         """
+        with self._infer_lock:
+            return self._generate_internal(prompt=prompt, max_new_tokens=max_new_tokens, temperature=temperature, history=history, mode=mode, allow_fixture=allow_fixture)
+
+    def _generate_internal(self, prompt: str, max_new_tokens: int = 150, temperature: float = 0.7, history: Optional[List[Dict[str, str]]] = None, mode: str = "chat", allow_fixture: bool = False) -> Dict[str, Any]:
         if getattr(self, "is_test_fixture", False) and not allow_fixture:
             raise ModelNotTrainedException(
                 "Production inference blocked: Active model is an unpromoted CI test fixture. "
@@ -857,22 +887,32 @@ class ModelService:
 
         if is_creator_query:
             creator_reply = (
-                "I am **Qwen-2.5-Coder (Super-AI)** / **NanoGPT**, an advanced, sovereign artificial intelligence trained and deployed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
-                "Prem Gaikwad engineered this platform as a fully local, self-contained AI system designed to rival cloud-based models like ChatGPT and Claude—running 100% privately without paid third-party APIs. Under Prem Gaikwad's architecture, this AI provides:\n\n"
-                "• 👑 **Qwen-2.5-Coder-7B**: Frontier 7.61B coding, reasoning, and system architecture model running locally on CPU.\n"
-                "• 💻 **NanoGPT Coder & Reasoning**: Rapid Python, algorithm design, and system architecture.\n"
-                "• 🎨 **NanoGPT Image Studio**: High-fidelity procedural and diffusion-grade visual art synthesis.\n"
-                "• 🎬 **NanoGPT Video Studio**: Dynamic spatio-temporal video clip generation.\n"
-                "• ⚡ **Local Code Interpreter**: Secure, sandboxed Python code execution.\n\n"
-                "How can I assist you with your project or code today?"
+                "I am **Moon AI**, an independent, sovereign artificial intelligence platform architected and developed by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
+                "Moon AI is designed from first principles to operate 100% locally with strict sovereign model ownership (`STRICT_SOVEREIGN_RANDOM_INIT_ONLY`). "
+                "Moon AI does not rely on third-party cloud APIs, external generative servers, or unauthorized weights.\n\n"
+                "• 🌙 **Sovereign Model Architecture**: Custom transformer trained purely from scratch.\n"
+                "• 🛡️ **Zero External Dependency**: Local offline execution and deterministic utility engines.\n"
+                "• 🎨 **Sovereign Multimodal**: Offline procedural visual and video generation.\n"
+                "• ⚡ **Local Code Interpreter**: Secure, sandboxed AST-verified Python execution.\n\n"
+                "How can I assist you with your project today?"
             )
             return {
                 "reply": creator_reply,
+                "raw_reply": creator_reply,
+                "stop_reason": "system_reflex_identity",
                 "full_text": creator_reply,
-                "model_name": "Qwen-2.5-Coder-7B (Created & Deployed by Prem Gaikwad)" if "qwen" in self.active_model_name else "NanoGPT-3.2 (Created by Prem Gaikwad)",
+                "model_name": "Moon AI Sovereign Core (Identity Declaration)",
                 "prompt_length": len(clean_prompt),
-                "tokens_generated": 140,
-                "device": "CPU Local Engine"
+                "tokens_generated": len(creator_reply.split()),
+                "device": "Local Sovereign Engine",
+                "engine_type": "system_reflex",
+                "model_id": "moon-chat-pilot-v0",
+                "model_status": self.get_status(),
+                "is_neural_generation": False,
+                "is_deterministic_utility": True,
+                "is_web_retrieval": False,
+                "checkpoint_verified": False,
+                "provenance_status": "SOVEREIGN_IDENTITY_DECLARATION"
             }
 
         # --- 0. Remote Sovereign GPU Fast-Path (optional private server or Colab) ---
@@ -1002,6 +1042,11 @@ class ModelService:
             stop_tokens = ["<|im_end|>", "<|endoftext|>", "<|im_start|>", "User:"] if is_qwen else ["<|eot_id|>", "<|start_header_id|>", "User:"]
 
             try:
+                if hasattr(self.llama_model, "reset"):
+                    try:
+                        self.llama_model.reset()
+                    except Exception:
+                        pass
                 res = self.llama_model.create_chat_completion(
                     messages=messages,
                     max_tokens=safe_max_tokens,
@@ -1011,6 +1056,11 @@ class ModelService:
             except Exception as exc:
                 if "exceed context window" in str(exc).lower():
                     # Emergency fallback: run with clean system and user prompt
+                    if hasattr(self.llama_model, "reset"):
+                        try:
+                            self.llama_model.reset()
+                        except Exception:
+                            pass
                     res = self.llama_model.create_chat_completion(
                         messages=[
                             {"role": "system", "content": sys_msg},
