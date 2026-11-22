@@ -148,61 +148,112 @@ def is_historical_pilot_checkpoint(ckpt_path: str) -> bool:
     return True
 
 
+def classify_checkpoint(ckpt_path: str) -> str:
+    """
+    Categorizes a checkpoint file into one of the mutually exclusive provenance tiers:
+    - STRUCTURALLY_INVALID: Nonexistent, empty, malformed, non-dict, non-tensor, or unreadable.
+    - TEST_FIXTURE: Explicitly generated as CI fixture or smoke test.
+    - HISTORICAL_POLICY_B: Stage 2.1.6 pilot checkpoint with quarantined Policy B provenance.
+    - UNAPPROVED_POLICY: Policy identifier does not match STRICT_SOVEREIGN_RANDOM_INIT_ONLY.
+    - NON_SCRATCH_INITIALIZATION: Initialized from pretrained weights or non-scratch Gaussian method.
+    - TEACHER_CONTAMINATION: Contains teacher weights, teacher model refs, or transferred weights.
+    - UNTRAINED_RANDOM_INIT: Random Gaussian initialization lacking training progress (iter_num <= 0).
+    - SYNTHETIC_MOCK: Generated synthetically with random weights without authentic training telemetry.
+    - GENUINE_TRAINED_SOVEREIGN: Verified scratch-trained model satisfying all strict provenance pillars.
+    - PROMOTED_PRODUCTION: Fully certified sovereign checkpoint promoted for production serving.
+    """
+    ok, reason, ckpt = validate_checkpoint_structure(ckpt_path)
+    if not ok:
+        return "STRUCTURALLY_INVALID"
+
+    cfg = ckpt.get("config", {}) or ckpt.get("metadata", {})
+    if not isinstance(cfg, dict):
+        cfg = {}
+
+    # Explicit test fixtures and synthetic mocks
+    filename = os.path.basename(ckpt_path).lower()
+    is_synth = (
+        ckpt.get("is_synthetic") is True
+        or cfg.get("is_synthetic") is True
+        or ckpt.get("mock") is True
+        or cfg.get("mock") is True
+        or "synthetic" in str(ckpt.get("status", "")).lower()
+        or "mock" in str(ckpt.get("status", "")).lower()
+        or "synthetic" in filename
+        or "mock" in filename
+    )
+    if is_synth:
+        return "SYNTHETIC_MOCK"
+
+    if ckpt.get("is_test_fixture") is True or cfg.get("is_test_fixture") is True:
+        return "TEST_FIXTURE"
+    if ckpt.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY", "DATA_INSUFFICIENT"):
+        return "TEST_FIXTURE"
+    if cfg.get("run_id") == "ci_test_fixture":
+        return "TEST_FIXTURE"
+
+    # Check for historical Policy B
+    policy = cfg.get("ownership_policy") or cfg.get("policy")
+    if policy in ("TEACHER_STUDENT_RANDOM_INIT", "POLICY_B_TEACHER_STUDENT_RANDOM_INIT"):
+        return "HISTORICAL_POLICY_B"
+
+    # Strict sovereign policy enforcement
+    if policy != "STRICT_SOVEREIGN_RANDOM_INIT_ONLY":
+        return "UNAPPROVED_POLICY"
+
+    # Initialization method must strictly be random Gaussian scratch
+    init_method = cfg.get("initialization") or cfg.get("student_init_method")
+    if init_method != "random_gaussian_scratch":
+        return "NON_SCRATCH_INITIALIZATION"
+
+    # Teacher transfer must be literal False
+    if cfg.get("teacher_checkpoint_weights_transferred") is not False:
+        return "TEACHER_CONTAMINATION"
+
+    # Reject external base weights or teacher references
+    base_weights = cfg.get("base_weights") or cfg.get("pretrained_source")
+    if base_weights and base_weights not in ("none", "scratch", "random_gaussian", "random_gaussian_scratch"):
+        return "TEACHER_CONTAMINATION"
+    if cfg.get("teacher_checkpoint") or cfg.get("teacher_model"):
+        return "TEACHER_CONTAMINATION"
+
+    # Verifiable Training Telemetry & Evidence Verification:
+    # Check for explicitly zero or negative iteration progress indicating untrained state
+    iter_num = ckpt.get("iter_num") if "iter_num" in ckpt else cfg.get("iter_num")
+    if iter_num is None:
+        iter_num = cfg.get("step")
+    val_loss = ckpt.get("best_val_loss") if "best_val_loss" in ckpt else ckpt.get("val_loss")
+    if val_loss is None:
+        val_loss = cfg.get("best_val_loss") if "best_val_loss" in cfg else cfg.get("val_loss")
+
+    if iter_num is not None and isinstance(iter_num, int) and iter_num <= 0:
+        return "UNTRAINED_RANDOM_INIT"
+    if val_loss is not None and isinstance(val_loss, (int, float)) and val_loss <= 0.0:
+        return "UNTRAINED_RANDOM_INIT"
+
+    status = ckpt.get("status")
+    if status == "PROMOTED_PRODUCTION":
+        return "PROMOTED_PRODUCTION"
+    if status in ("PILOT_TRAINED", "PILOT_TRAINED_BEST", "PRODUCTION_TRAINED", "EVALUATION_PASSED"):
+        return "GENUINE_TRAINED_SOVEREIGN"
+
+    return "GENUINE_TRAINED_SOVEREIGN"
+
+
 def is_verified_genuine_checkpoint(ckpt_path: str) -> bool:
     """
     Positively validates that a checkpoint is a genuine, trained student checkpoint.
     Fails closed on:
-    - Corrupted, malformed, or unreadable files
-    - Missing or incomplete metadata
-    - CI test fixtures or engineering smoke test checkpoints
-    - Policy B violations (e.g. teacher checkpoint weights transferred)
-    - Contradictory external base weights or teacher model references
+    - Corrupted, malformed, or unreadable files (STRUCTURALLY_INVALID)
+    - Synthetic mock checkpoints without verified training telemetry (SYNTHETIC_MOCK)
+    - Untrained random initializations lacking iteration progress (UNTRAINED_RANDOM_INIT)
+    - CI test fixtures or engineering smoke test checkpoints (TEST_FIXTURE)
+    - Policy B violations or unapproved policies (HISTORICAL_POLICY_B, UNAPPROVED_POLICY)
+    - Teacher contamination or external base weights (TEACHER_CONTAMINATION)
+    Returns True ONLY if classification is GENUINE_TRAINED_SOVEREIGN or PROMOTED_PRODUCTION.
     """
-    ok, reason, ckpt = validate_checkpoint_structure(ckpt_path)
-    if not ok:
-        return False
-
-    # Must not be marked as a test fixture or smoke test
-    if ckpt.get("is_test_fixture") is True:
-        return False
-    if ckpt.get("status") in ("CI_TEST_FIXTURE", "ENGINEERING_SMOKE_TEST_ONLY", "DATA_INSUFFICIENT"):
-        return False
-
-    # Model and model_args must be present
-    if "model" not in ckpt or "model_args" not in ckpt:
-        return False
-
-    cfg = ckpt.get("config", {}) or ckpt.get("metadata", {})
-    if not isinstance(cfg, dict) or not cfg:
-        return False
-    if cfg.get("is_test_fixture") is True or cfg.get("run_id") == "ci_test_fixture":
-        return False
-
-    # Strict sovereign provenance verification:
-    # Must explicitly declare that NO teacher checkpoint weights were transferred (must be literal False)
-    if cfg.get("teacher_checkpoint_weights_transferred") is not False:
-        return False
-    init_method = cfg.get("initialization") or cfg.get("student_init_method")
-    if init_method != "random_gaussian_scratch":
-        return False
-    policy = cfg.get("ownership_policy") or cfg.get("policy")
-    if policy != "STRICT_SOVEREIGN_RANDOM_INIT_ONLY":
-        return False
-
-    # Reject contradictory base weights or external pretrained sources
-    base_weights = cfg.get("base_weights") or cfg.get("pretrained_source")
-    if base_weights and base_weights not in ("none", "scratch", "random_gaussian", "random_gaussian_scratch"):
-        return False
-    if cfg.get("teacher_checkpoint") or cfg.get("teacher_model"):
-        return False
-
-    # Status must be positively genuine
-    valid_statuses = ("PILOT_TRAINED", "PILOT_TRAINED_BEST", "EVALUATION_PASSED", "PRODUCTION_TRAINED", "PROMOTED_PRODUCTION")
-    status = ckpt.get("status")
-    if status not in valid_statuses:
-        return False
-
-    return True
+    tier = classify_checkpoint(ckpt_path)
+    return tier in ("GENUINE_TRAINED_SOVEREIGN", "PROMOTED_PRODUCTION")
 
 
 class ModelNotTrainedException(Exception):
@@ -342,6 +393,7 @@ class ModelService:
         return self.find_qwen_gguf() or self.find_llama_gguf()
 
     validate_checkpoint_structure = staticmethod(validate_checkpoint_structure)
+    classify_checkpoint = staticmethod(classify_checkpoint)
     is_checkpoint_fixture = staticmethod(is_checkpoint_fixture)
     is_historical_pilot_checkpoint = staticmethod(is_historical_pilot_checkpoint)
     is_verified_genuine_checkpoint = staticmethod(is_verified_genuine_checkpoint)
@@ -372,41 +424,46 @@ class ModelService:
 
         return None
 
-    def find_checkpoint(self, preferred_path: Optional[str] = None) -> Optional[str]:
+    def find_checkpoint(self, preferred_path: Optional[str] = None, allow_fixture: bool = True) -> Optional[str]:
         """
         Safely locates an explicit or default scratch assistant checkpoint.
-        Prioritizes:
-        1. Explicit preferred_path parameter (no fallback if specified)
-        2. self.preferred_checkpoint (no fallback if specified)
-        3. Environment variable NANOGPT_CHECKPOINT_PATH (no fallback if specified)
-        4. Environment variable NANOGPT_CHECKPOINT_DIR/ckpt.pt (no fallback if specified)
-        5. out-assistant/ckpt.pt or out-nanogpt-scratch/ckpt.pt (default dirs)
+        - If allow_fixture is False: ONLY returns a positively verified genuine strict sovereign checkpoint.
+        - If allow_fixture is True: returns a verified genuine checkpoint OR a valid structural test fixture.
         NEVER silently falls back to Shakespeare or unrelated datasets.
         """
         if preferred_path:
-            return os.path.abspath(preferred_path) if os.path.isfile(preferred_path) else None
+            candidate_paths = [preferred_path]
+        elif getattr(self, "preferred_checkpoint", None):
+            candidate_paths = [self.preferred_checkpoint]
+        else:
+            candidate_paths = []
+            env_path = os.environ.get("NANOGPT_CHECKPOINT_PATH")
+            if env_path:
+                candidate_paths.append(env_path)
 
-        if getattr(self, "preferred_checkpoint", None):
-            return os.path.abspath(self.preferred_checkpoint) if os.path.isfile(self.preferred_checkpoint) else None
+            env_dir = os.environ.get("NANOGPT_CHECKPOINT_DIR")
+            if env_dir:
+                candidate_paths.append(os.path.join(env_dir, "ckpt.pt"))
 
-        env_path = os.environ.get("NANOGPT_CHECKPOINT_PATH")
-        if env_path:
-            return os.path.abspath(env_path) if os.path.isfile(env_path) else None
+            for rel_dir in self.ALLOWED_CHECKPOINT_DIRS:
+                candidate_paths.append(os.path.join(self.base_dir, rel_dir, "ckpt.pt"))
 
-        env_dir = os.environ.get("NANOGPT_CHECKPOINT_DIR")
-        if env_dir:
-            cand = os.path.join(env_dir, "ckpt.pt")
-            return os.path.abspath(cand) if os.path.isfile(cand) else None
+        for cand in candidate_paths:
+            if not cand or not os.path.isfile(cand):
+                continue
+            cand_abs = os.path.abspath(cand)
+            if self.is_verified_genuine_checkpoint(cand_abs):
+                return cand_abs
+            if allow_fixture:
+                ok, _, _ = self.validate_checkpoint_structure(cand_abs)
+                if ok:
+                    return cand_abs
 
-        for rel_dir in self.ALLOWED_CHECKPOINT_DIRS:
-            candidate = os.path.join(self.base_dir, rel_dir, "ckpt.pt")
-            if os.path.isfile(candidate):
-                return os.path.abspath(candidate)
         return None
 
     def get_status(self) -> str:
         """Returns readiness status with strict sovereign truthfulness."""
-        if self.active_model_name == "moon-chat-pilot-v0":
+        if self.active_model_name in ("moon-chat-pilot-v0", "moon-pilot", "pilot"):
             if self.model is not None and not getattr(self, "is_test_fixture", False) and self.is_verified_genuine_checkpoint(self.current_checkpoint_path or ""):
                 return "READY"
             has_genuine = self.find_pilot_checkpoint(allow_fixture=False) is not None
@@ -415,9 +472,10 @@ class ModelService:
             return "MODEL_NOT_READY"
 
         if self.active_model_name == "scratch":
-            if self.model is not None:
+            if self.model is not None and not getattr(self, "is_test_fixture", False) and self.is_verified_genuine_checkpoint(self.current_checkpoint_path or ""):
                 return "READY"
-            if self.find_checkpoint():
+            has_genuine = self.find_checkpoint(allow_fixture=False) is not None
+            if has_genuine:
                 return "READY (ON DEMAND)"
             return "MODEL_NOT_READY"
 
@@ -437,7 +495,10 @@ class ModelService:
 
     def get_available_models(self) -> List[Dict[str, Any]]:
         """Returns list of models with strict sovereign ownership classification."""
-        has_scratch = self.find_checkpoint() is not None
+        has_trained_scratch = self.find_checkpoint(allow_fixture=False) is not None
+        has_any_scratch = self.find_checkpoint(allow_fixture=True) is not None
+        is_scratch_fixture = has_any_scratch and not has_trained_scratch
+
         has_trained_pilot = self.find_pilot_checkpoint(allow_fixture=False) is not None
         has_any_pilot = self.find_pilot_checkpoint(allow_fixture=True) is not None
         is_pilot_fixture = has_any_pilot and not has_trained_pilot
@@ -447,7 +508,7 @@ class ModelService:
                 "id": "moon-chat-pilot-v0",
                 "name": "🌙 Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
                 "type": "sovereign_scratch",
-                "description": "Stage 2.1.6 sovereign 25.7M parameter transformer initialized from Gaussian random scratch. Evaluated on 572-record verified curriculum. Zero teacher weights transferred (Strict Sovereign Init).",
+                "description": "Stage 2.1.6 sovereign 25.7M parameter transformer initialized from Gaussian random scratch. In MODEL_NOT_READY status pending authorized training run.",
                 "active": self.active_model_name == "moon-chat-pilot-v0",
                 "parameters": "25.70M",
                 "block_size": 512,
@@ -459,16 +520,17 @@ class ModelService:
             },
             {
                 "id": "scratch",
-                "name": "🔬 NanoGPT Core (Trained from Scratch)",
+                "name": "🔬 NanoGPT Core (Scratch Architecture)",
                 "type": "local_checkpoint",
-                "description": "Locally trained character-level transformer on assistant Q&A dataset. Demonstrates learning from zero.",
+                "description": "Character-level transformer architected for scratch training. In MODEL_NOT_READY status pending verified strict sovereign training run.",
                 "active": self.active_model_name == "scratch",
                 "parameters": "0.80M",
                 "block_size": 128,
                 "vocab_size": 97,
-                "available": has_scratch,
+                "available": has_trained_scratch,
+                "is_test_fixture": is_scratch_fixture,
                 "sovereign_owned": True,
-                "status": "READY" if has_scratch else "MODEL_NOT_READY"
+                "status": "READY" if has_trained_scratch else "MODEL_NOT_READY"
             },
             {
                 "id": "qwen-2.5-coder-7b",
@@ -652,10 +714,20 @@ class ModelService:
                 if not self.torch_available:
                     self.error_message = "PyTorch is not installed in the current environment."
                     return False
-                ckpt_path = self.find_checkpoint()
+                eff_allow_fixture = allow_fixture or self.debug_mode
+                ckpt_path = self.find_checkpoint(allow_fixture=eff_allow_fixture)
                 if not ckpt_path:
                     self.model = None
                     self.error_message = "No local scratch assistant checkpoint found on disk. Expected out-assistant/ckpt.pt or NANOGPT_CHECKPOINT_PATH."
+                    return False
+
+                # Positive genuine verification gate for production inference
+                if not eff_allow_fixture and not self.is_verified_genuine_checkpoint(ckpt_path):
+                    self.model = None
+                    self.error_message = (
+                        "Production inference blocked: Scratch checkpoint failed positive strict sovereign verification. "
+                        "Unpromoted or unverified scratch checkpoints are restricted to isolated retrospective testing (allow_fixture=True)."
+                    )
                     return False
 
                 try:
@@ -663,6 +735,7 @@ class ModelService:
                     from model import GPTConfig, GPT
 
                     checkpoint = torch.load(ckpt_path, map_location=self.device, weights_only=True)
+                    self.is_test_fixture = self.is_checkpoint_fixture(ckpt_path) or not self.is_verified_genuine_checkpoint(ckpt_path)
                     if not isinstance(checkpoint, dict) or "model" not in checkpoint or "model_args" not in checkpoint:
                         self.error_message = f"Invalid checkpoint format in {ckpt_path}: missing required 'model' or 'model_args' keys."
                         return False
@@ -832,14 +905,15 @@ class ModelService:
             return self._generate_internal(prompt=prompt, max_new_tokens=max_new_tokens, temperature=temperature, history=history, mode=mode, allow_fixture=allow_fixture)
 
     def _generate_internal(self, prompt: str, max_new_tokens: int = 150, temperature: float = 0.7, history: Optional[List[Dict[str, str]]] = None, mode: str = "chat", allow_fixture: bool = False) -> Dict[str, Any]:
-        if getattr(self, "is_test_fixture", False) and not allow_fixture:
+        eff_allow_fixture = allow_fixture or self.debug_mode
+        if getattr(self, "is_test_fixture", False) and not eff_allow_fixture:
             raise ModelNotTrainedException(
                 "Production inference blocked: Active model is an unpromoted CI test fixture. "
                 "Retrospective testing or audit generation requires allow_fixture=True."
             )
 
         if self.model is None and self.llama_model is None:
-            success = self.load_model(self.active_model_name, allow_fixture=allow_fixture)
+            success = self.load_model(self.active_model_name, allow_fixture=eff_allow_fixture)
             if not success:
                 raise ModelNotTrainedException(self.error_message or "Model could not be initialized.")
 
@@ -1081,9 +1155,9 @@ class ModelService:
 
             usage = res.get("usage", {})
             if is_qwen:
-                display_model_name = "Qwen-2.5-Coder-7B (Master Coder — By Prem Gaikwad)" if is_coding else "Qwen-2.5-Coder-7B (Super-AI — By Prem Gaikwad)"
+                display_model_name = "Qwen-2.5-Coder-7B (External Pretrained Reference)" if is_coding else "Qwen-2.5-Coder-7B (External Pretrained Reference)"
             else:
-                display_model_name = "NanoGPT-3.2 Coder Engine" if is_coding else "NanoGPT-3.2 (Frontier Engine — By Prem Gaikwad)"
+                display_model_name = "LLaMA-3.2-1B (External Pretrained Reference)" if is_coding else "LLaMA-3.2-1B (External Pretrained Reference)"
 
             dev_label = "NVIDIA GPU (CUDA 4-Bit Acceleration)" if (self.device == "cuda" or os.environ.get("USE_GPU") == "1") else "CPU (AVX2 4-Bit Quantized)"
             return {

@@ -122,18 +122,21 @@ async def health_check():
     Returns the server health, PyTorch status, and honest model checkpoint readiness.
     """
     model_service.refresh_status()
-    ckpt = model_service.find_checkpoint()
+    ckpt = model_service.find_checkpoint(allow_fixture=True) or model_service.find_pilot_checkpoint(allow_fixture=True)
     pilot_ckpt = model_service.find_pilot_checkpoint(allow_fixture=False)
+    scratch_ckpt = model_service.find_checkpoint(allow_fixture=False)
+    active_genuine = pilot_ckpt if model_service.active_model_name in ("moon-chat-pilot-v0", "moon-pilot", "pilot") else scratch_ckpt
+
     return HealthResponse(
         status="ok",
         model_status=model_service.get_status(),
         checkpoint_exists=ckpt is not None,
-        model_loaded=model_service.model is not None,
+        model_loaded=model_service.model is not None and not getattr(model_service, "is_test_fixture", False),
         device=model_service.device,
         torch_available=model_service.torch_available,
         torch_version=model_service.torch_version,
-        is_sovereign_ready=pilot_ckpt is not None,
-        sovereign_checkpoint_path=pilot_ckpt
+        is_sovereign_ready=active_genuine is not None,
+        sovereign_checkpoint_path=active_genuine
     )
 
 @app.get("/api/model-info", response_model=ModelInfoResponse)
@@ -153,20 +156,20 @@ async def list_models():
 def switch_model(request: SwitchModelRequest):
     """
     Switches active model between available production engines.
-    Blocks switching to unpromoted test fixtures in production.
+    Blocks switching to unpromoted test fixtures or unready models in production.
     """
     available_models = {m["id"]: m for m in model_service.get_available_models()}
     target_meta = available_models.get(request.model_name)
-    if target_meta and (target_meta.get("available") is False or target_meta.get("is_test_fixture") is True):
+    if not target_meta or target_meta.get("available") is False or target_meta.get("is_test_fixture") is True or target_meta.get("status") == "MODEL_NOT_READY":
         raise HTTPException(
             status_code=403,
-            detail=f"Cannot switch to '{request.model_name}': model is an uncertified test fixture and cannot be deployed for production inference."
+            detail=f"Cannot switch to '{request.model_name}': model is not ready (MODEL_NOT_READY) or is an uncertified test fixture."
         )
 
     success = model_service.switch_model(request.model_name, allow_fixture=False)
     if not success:
         raise HTTPException(
-            status_code=400,
+            status_code=403,
             detail=model_service.error_message or f"Failed to switch to {request.model_name}"
         )
     return {
@@ -306,7 +309,7 @@ def chat(request: ChatRequest, req: Request):
         reply = (
             "I am **Moon AI**, an independent sovereign artificial intelligence project designed and architected by **Prem Gaikwad** from **India** 🇮🇳.\n\n"
             "Prem Gaikwad engineered Moon AI as a fully local, self-contained AI system built from first principles without paid third-party APIs or cloud subscriptions. Under Prem Gaikwad's architecture:\n\n"
-            "• 🌙 **Sovereign Student Core**: Custom transformer trained purely from scratch (`STRICT_SOVEREIGN_RANDOM_INIT_ONLY`).\n"
+            "• 🌙 **Sovereign Student Core**: Architected for Gaussian random scratch initialization (`STRICT_SOVEREIGN_RANDOM_INIT_ONLY`), with production model training pending explicit owner preflight authorization (`AUTHORIZED_BY_PREM`). Current neural status: `MODEL_NOT_READY`.\n"
             "• 🛡️ **Absolute Weight Sovereignty**: Zero third-party pretrained weights transferred.\n"
             "• 🎨 **Moon AI Image Studio**: Offline procedural visual synthesis.\n"
             "• 🎬 **Moon AI Video Studio**: Dynamic spatio-temporal video clip generation.\n"
@@ -319,7 +322,7 @@ def chat(request: ChatRequest, req: Request):
             reply=reply,
             model_name="Moon AI Sovereign Core (Identity Declaration)",
             prompt_length=len(clean_msg),
-            tokens_generated=len(reply.split()),
+            tokens_generated=0,
             device="Local Sovereign Core",
             session_id=session_id,
             engine_type="system_reflex",
@@ -375,9 +378,18 @@ def chat(request: ChatRequest, req: Request):
             reply=reply,
             model_name="Moon Image Sovereign Studio (moon-image-v0)",
             prompt_length=len(clean_msg),
-            tokens_generated=35,
+            tokens_generated=0,
             device="CPU Local Visualizer",
-            session_id=session_id
+            session_id=session_id,
+            engine_type="deterministic_utility",
+            model_id="moon-image-v0",
+            model_status="READY",
+            is_neural_generation=False,
+            is_deterministic_utility=True,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="PROCEDURAL_VISUAL_ENGINE",
+            sources=[]
         )
 
     # 2. Video intent check (e.g. "show video of...", "generate video of...")
@@ -670,7 +682,7 @@ def chat(request: ChatRequest, req: Request):
             reply=reply,
             model_name="Moon AI Reflex Engine (Deterministic Greeting)",
             prompt_length=len(clean_msg),
-            tokens_generated=len(reply.split()),
+            tokens_generated=0,
             device="Local Instant Engine",
             session_id=session_id,
             engine_type="system_reflex",
@@ -685,11 +697,11 @@ def chat(request: ChatRequest, req: Request):
         )
 
     # 8. Sovereign Neural Model Route & Model Readiness Verification
-    # Phase 2.7.6 Runtime Sovereignty Audit:
+    # Phase 2.7.6 & 2.7.6.1 Runtime Sovereignty Audit:
     # 1. Hardcoded general-knowledge fast paths (_fast_knowledge_reply) are permanently removed from the chat route.
     # 2. Test fixtures remain strictly blocked with HTTP 403.
-    # 3. If moon-chat-pilot-v0 is selected but no verified genuine strict sovereign checkpoint exists on disk,
-    #    an honest MODEL_NOT_READY notice is returned (zero fake neural answers or silent third-party fallback).
+    # 3. If any neural model is active (moon-chat-pilot-v0, scratch, etc.) but has no verified genuine strict sovereign checkpoint on disk,
+    #    an honest MODEL_NOT_READY notice is returned (zero fake neural answers, zero unverified scratch bypass, or silent third-party fallback).
 
     if getattr(model_service, "is_test_fixture", False):
         raise HTTPException(
@@ -697,37 +709,42 @@ def chat(request: ChatRequest, req: Request):
             detail="Production inference blocked: Active model is an unpromoted CI test fixture."
         )
 
-    if model_service.active_model_name == "moon-chat-pilot-v0":
+    has_genuine = False
+    if model_service.active_model_name in ("moon-chat-pilot-v0", "moon-pilot", "pilot"):
         has_genuine = model_service.find_pilot_checkpoint(allow_fixture=False) is not None
-        if not has_genuine:
-            notice_reply = (
-                "🌙 **Moon AI Sovereign Status: MODEL_NOT_READY**\n\n"
-                "The sovereign neural language model (`moon-chat-pilot-v0`) is currently in status **MODEL_NOT_READY**.\n\n"
-                "### 🛡️ Runtime Sovereignty & Integrity Audit:\n"
-                "• **Ownership Policy**: `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`\n"
-                "• **Verified Checkpoint**: None on disk (existing pilot checkpoint is an unpromoted historical Policy B fixture)\n"
-                "• **Third-Party Pretrained Weights**: Quarantined & blocked (Qwen, LLaMA, GPT-2 are prohibited from production inference)\n"
-                "• **Next Milestone**: Official preflight authorization (`core.policy.AUTHORIZED_BY_PREM = True`) and verified scratch training run.\n\n"
-                "*Moon AI strictly guarantees runtime truthfulness: no hardcoded answers or third-party pretrained weights are presented as sovereign neural generation.*"
-            )
-            db.add_message(session_id, "assistant", notice_reply, meta={"system": "model_not_ready"})
-            return ChatResponse(
-                reply=notice_reply,
-                model_name="Moon AI Sovereign Core (moon-chat-pilot-v0)",
-                prompt_length=len(clean_msg),
-                tokens_generated=0,
-                device="Local Sovereign Core",
-                session_id=session_id,
-                engine_type="system_notice",
-                model_id="moon-chat-pilot-v0",
-                model_status="MODEL_NOT_READY",
-                is_neural_generation=False,
-                is_deterministic_utility=False,
-                is_web_retrieval=False,
-                checkpoint_verified=False,
-                provenance_status="UNPROMOTED_HISTORICAL_OR_ABSENT",
-                sources=[]
-            )
+    elif model_service.active_model_name == "scratch":
+        has_genuine = model_service.find_checkpoint(allow_fixture=False) is not None
+
+    if not has_genuine:
+        notice_reply = (
+            f"🌙 **Moon AI Sovereign Status: MODEL_NOT_READY**\n\n"
+            f"The sovereign neural language model (`{model_service.active_model_name}`) is currently in status **MODEL_NOT_READY**.\n\n"
+            f"### 🛡️ Runtime Sovereignty & Integrity Audit:\n"
+            f"• **Active Model**: `{model_service.active_model_name}`\n"
+            f"• **Ownership Policy**: `STRICT_SOVEREIGN_RANDOM_INIT_ONLY`\n"
+            f"• **Verified Checkpoint**: None on disk (existing checkpoints are unpromoted historical fixtures or unverified scratch files)\n"
+            f"• **Third-Party Pretrained Weights**: Quarantined & blocked (Qwen, LLaMA, GPT-2 are prohibited from production inference)\n"
+            f"• **Next Milestone**: Official preflight authorization (`core.policy.AUTHORIZED_BY_PREM = True`) and verified scratch training run.\n\n"
+            f"*Moon AI strictly guarantees runtime truthfulness: no hardcoded answers, unverified scratch files, or third-party pretrained weights are presented as sovereign neural generation.*"
+        )
+        db.add_message(session_id, "assistant", notice_reply, meta={"system": "model_not_ready"})
+        return ChatResponse(
+            reply=notice_reply,
+            model_name=f"Moon AI Sovereign Core ({model_service.active_model_name})",
+            prompt_length=len(clean_msg),
+            tokens_generated=0,
+            device="Local Sovereign Core",
+            session_id=session_id,
+            engine_type="system_notice",
+            model_id=model_service.active_model_name,
+            model_status="MODEL_NOT_READY",
+            is_neural_generation=False,
+            is_deterministic_utility=False,
+            is_web_retrieval=False,
+            checkpoint_verified=False,
+            provenance_status="UNPROMOTED_HISTORICAL_OR_ABSENT",
+            sources=[]
+        )
 
     try:
         result = model_service.generate(

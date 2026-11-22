@@ -82,6 +82,8 @@ class TestModelInference(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        os.environ.pop("DEBUG_INFERENCE", None)
+        os.environ.pop("DISABLE_REMOTE_GPU", None)
         if cls._created_test_checkpoint and cls.test_ckpt_dir and os.path.exists(cls.test_ckpt_dir):
             import shutil
             shutil.rmtree(cls.test_ckpt_dir, ignore_errors=True)

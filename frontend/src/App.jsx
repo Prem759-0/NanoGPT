@@ -895,7 +895,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
             const gpuData = await gpuRes.json();
             if (gpuData.reply) {
               replyText = gpuData.reply;
-              meta.model_name = gpuData.model_name || 'Moon AI Sovereign 7.6B (Trained by Prem Gaikwad)';
+              meta.model_name = gpuData.model_name || 'Moon AI Sovereign Core';
               meta.device = gpuData.device || 'Google Colab NVIDIA GPU (Live Custom Model)';
               success = true;
             }
@@ -951,7 +951,7 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
       if (!success) {
         try {
           replyText = await callGradioChatFn(outgoingMessage);
-          meta.model_name = 'Moon AI Sovereign (7.6B Cloud — ZeroGPU)';
+          meta.model_name = 'Moon AI Sovereign Core (ZeroGPU Cloud Engine)';
           meta.device = 'Cloud NVIDIA GPU';
           success = true;
         } catch (gradioErr) {
@@ -1489,8 +1489,8 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                 <span>ONLINE</span>
               </span>
             </div>
-            <div>Model: {modelSpecs?.model_name || modelSpecs?.model_type || 'Moon AI Sovereign (7.6B)'}</div>
-            <div>Parameters: 7.61 Billion (4-Bit GGUF)</div>
+            <div>Model: {modelSpecs?.model_name || modelSpecs?.model_type || 'Moon AI Sovereign Core (moon-chat-pilot-v0)'}</div>
+            <div>Architecture: Scratch-Init Sovereign Transformer (25.7M)</div>
             <div>Storage: Neon PostgreSQL / SQLite</div>
             <div>Cost: $0.00 / Zero Third-Party APIs</div>
           </div>
@@ -1722,8 +1722,8 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
                           : generationSeconds < 30
                             ? `Moon AI is thinking... (${generationSeconds}s)`
                             : generationSeconds < 90
-                              ? `⏳ Loading 7B model into memory... (${generationSeconds}s — first load takes ~60s)`
-                              : `🔄 Generating response... (${generationSeconds}s — 7B CPU inference is slow, please wait)`
+                              ? `⏳ Preparing inference engine... (${generationSeconds}s)`
+                              : `🔄 Generating response... (${generationSeconds}s)`
                         }
                       </span>
                     </div>
