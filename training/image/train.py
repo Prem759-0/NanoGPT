@@ -113,30 +113,43 @@ def train(args):
     print(f"  • Weight Provenance: {model.provenance}\n")
 
     # 2. Setup Datasets (Train and Validation)
+    val_manifest_path = args.val_manifest or args.manifest
+    val_manifest_full = os.path.normpath(os.path.join(PROJECT_ROOT, val_manifest_path))
+
     train_dataset = MoonImageDataset(
         manifest_path=manifest_full,
         base_dir=PROJECT_ROOT,
         split="train",
-        image_size=args.image_size
+        image_size=args.image_size,
+        allow_synthetic=args.allow_synthetic
     )
     if len(train_dataset) == 0:
         raise ValueError(f"No training samples found in manifest '{args.manifest}' with split='train'.")
 
-    val_dataset = MoonImageDataset(
-        manifest_path=manifest_full,
-        base_dir=PROJECT_ROOT,
-        split="val",
-        image_size=args.image_size
-    )
-    if len(val_dataset) == 0:
+    val_dataset = None
+    try:
         val_dataset = MoonImageDataset(
-            manifest_path=manifest_full,
+            manifest_path=val_manifest_full,
             base_dir=PROJECT_ROOT,
-            split="test",
-            image_size=args.image_size
+            split="val",
+            image_size=args.image_size,
+            allow_synthetic=args.allow_synthetic
         )
+    except Exception as val_e:
+        if not args.allow_synthetic:
+            raise ValueError(
+                f"STRICT IMAGE INTEGRITY ERROR: Genuine image validation split is missing or invalid: {val_e}. "
+                "Production training strictly prohibits fallback to training data."
+            )
+        else:
+            val_dataset = train_dataset
+
     if len(val_dataset) == 0:
-        # If no explicit val/test split, use train subset for validation monitoring
+        if not args.allow_synthetic:
+            raise ValueError(
+                f"STRICT IMAGE INTEGRITY ERROR: Validation dataset contains 0 records in '{val_manifest_path}'. "
+                "Production training strictly prohibits fallback to training data."
+            )
         val_dataset = train_dataset
 
     train_loader = DataLoader(
@@ -151,7 +164,7 @@ def train(args):
         shuffle=False,
         drop_last=False
     )
-    print(f"Loaded Datasets: {len(train_dataset)} training samples | {len(val_dataset)} validation samples")
+    print(f"Loaded Datasets: {len(train_dataset)} training samples | {len(val_dataset)} validation samples (allow_synthetic={args.allow_synthetic})")
 
     # 3. Optimizer, Scheduler & GradScaler
     optimizer = torch.optim.AdamW(
@@ -379,7 +392,9 @@ def train(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Moon Image Latent Diffusion Model.")
-    parser.add_argument("--manifest", type=str, default="datasets/image/manifest.jsonl")
+    parser.add_argument("--manifest", type=str, default="datasets/manifests/image_train.jsonl")
+    parser.add_argument("--val_manifest", type=str, default="datasets/manifests/image_val.jsonl")
+    parser.add_argument("--allow_synthetic", action="store_true", help="Development mode: allow synthetic dev fixtures (disables production checkpoint emission)")
     parser.add_argument("--image_size", type=int, default=128)
     parser.add_argument("--batch_size", type=int, default=2)
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1)
