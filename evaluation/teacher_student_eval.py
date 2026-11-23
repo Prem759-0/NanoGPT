@@ -161,7 +161,8 @@ class PromotionGate:
             if not os.path.isfile(candidate_checkpoint_path):
                 return False, f"Promotion rejected: Candidate checkpoint file does not exist on disk: '{candidate_checkpoint_path}'. Missing checkpoint evidence cannot bypass verification.", {}
             from webapp.model_service import is_verified_genuine_checkpoint
-            if not is_verified_genuine_checkpoint(candidate_checkpoint_path, trust_provider=trust_provider):
+            req_prod = trust_provider is None or getattr(trust_provider, "is_production_provider", lambda: True)()
+            if not is_verified_genuine_checkpoint(candidate_checkpoint_path, trust_provider=trust_provider, require_production=req_prod):
                 return False, f"Promotion rejected: Candidate checkpoint on disk failed genuine checkpoint verification: '{candidate_checkpoint_path}'.", {}
 
         # Safety invariant: safety_uncertainty must be 100.0

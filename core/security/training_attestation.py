@@ -69,6 +69,7 @@ VALID_TRAINING_PROVENANCE_TIERS = {
     "ATTESTATION_UNTRUSTED_SIGNER",
     "ATTESTATION_REVOKED_AUTHORITY",
     "ATTESTATION_EXPIRED_AUTHORITY",
+    "ATTESTATION_EVIDENCE_INVALID",
     "EVIDENCE_MISSING",
     "EVIDENCE_INVALID",
     "GENUINE_TRAINED_SOVEREIGN",
@@ -170,6 +171,9 @@ def verify_training_attestation(
     evidence_manifest: Optional[Dict[str, Any]] = None,
     authorities_path: Optional[str] = None,
     allow_untrusted_for_test: bool = False,
+    require_production_provider: bool = False,
+    evidence_store: Optional[Any] = None,
+    require_artifacts: bool = False,
 ) -> Tuple[bool, str, str]:
     """
     Performs comprehensive cryptographic verification of training attestation against trust roots:
@@ -279,6 +283,16 @@ def verify_training_attestation(
         resolved_provider = ExternalTrustRootProvider(trust_store_path=authorities_path)
     else:
         resolved_provider = get_default_trust_provider()
+
+    if require_production_provider:
+        if not resolved_provider.is_production_provider() or not resolved_provider.is_configured():
+            return (
+                False,
+                "ATTESTATION_UNTRUSTED_SIGNER",
+                f"Production verification requires a configured production trust root provider. "
+                f"Provider '{resolved_provider.get_provider_type()}' is not an active production provider.",
+            )
+
     authorities = resolved_provider.get_authorities()
     if not isinstance(authorities, dict) or len(authorities) == 0:
         return (
@@ -316,6 +330,19 @@ def verify_training_attestation(
             "ATTESTATION_EXPIRED_AUTHORITY",
             f"Authority '{verifier_id}' registration has expired.",
         )
+
+    # Check expiration if valid_until is specified on authority
+    valid_until_str = auth_entry.get("valid_until")
+    if valid_until_str:
+        valid_until_dt = parse_iso_utc_timestamp(valid_until_str)
+        now = datetime.now(timezone.utc)
+        if valid_until_dt and now > valid_until_dt:
+            return (
+                False,
+                "ATTESTATION_EXPIRED_AUTHORITY",
+                f"Authority '{verifier_id}' registration expired at {valid_until_dt}.",
+            )
+
     if status != "active":
         return (
             False,
@@ -355,14 +382,30 @@ def verify_training_attestation(
             f"Ed25519 cryptographic signature verification error: {str(e)}",
         )
 
-    # 10. Deep Evidence Manifest Validation (if evidence attached or provided)
+    # 10. Deep Evidence Manifest Validation (Mandatory for genuine verification)
     ev_data = evidence_manifest or attestation.get("evidence_manifest")
-    if ev_data is not None:
-        ev_ok, ev_tier, ev_reason = TrainingEvidenceValidator.validate_evidence_manifest(
-            ev_data, actual_sha256, attestation=attestation
+    if ev_data is None:
+        return (
+            False,
+            "ATTESTATION_EVIDENCE_INVALID",
+            "Training evidence manifest is strictly mandatory. Unattested or evidence-free models cannot be verified.",
         )
-        if not ev_ok:
-            return False, ev_tier, ev_reason
+    if not isinstance(ev_data, dict) or not ev_data:
+        return (
+            False,
+            "ATTESTATION_EVIDENCE_INVALID",
+            "Training evidence manifest must be a non-empty JSON dictionary.",
+        )
+
+    ev_ok, ev_tier, ev_reason = TrainingEvidenceValidator.validate_evidence_manifest(
+        ev_data,
+        actual_sha256,
+        attestation=attestation,
+        evidence_store=evidence_store,
+        require_artifacts=require_artifacts,
+    )
+    if not ev_ok:
+        return False, ev_tier, ev_reason
 
     return (
         True,
@@ -401,6 +444,9 @@ def create_test_training_attestation(
     start_iso = (now - timedelta(hours=2)).isoformat()
     completion_iso = (now - timedelta(minutes=5)).isoformat()
 
+    st = overrides.pop("training_start_time", None) or overrides.pop("start_time", None) or start_iso
+    ct = overrides.pop("training_completion_time", None) or overrides.pop("completion_time", None) or completion_iso
+
     raw_attestation = {
         "run_id": run_id,
         "policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
@@ -408,8 +454,8 @@ def create_test_training_attestation(
         "model_architecture_hash": hashlib.sha256(b"moon_arch_test").hexdigest(),
         "dataset_manifest_hash": hashlib.sha256(b"moon_dataset_test").hexdigest(),
         "training_code_hash": hashlib.sha256(b"moon_code_test").hexdigest(),
-        "training_start_time": start_iso,
-        "training_completion_time": completion_iso,
+        "training_start_time": st,
+        "training_completion_time": ct,
         "step_count": step_count,
         "metrics": {"train_loss": 2.14, "val_loss": 2.21},
         "checkpoint_sha256": ckpt_hash,
@@ -422,6 +468,8 @@ def create_test_training_attestation(
             ckpt_hash,
             run_id=run_id,
             step_count=step_count,
+            start_time=raw_attestation["training_start_time"],
+            completion_time=raw_attestation["training_completion_time"],
             model_architecture={"model_architecture_hash": raw_attestation["model_architecture_hash"]},
             dataset_manifest={"dataset_manifest_hash": raw_attestation["dataset_manifest_hash"]},
             training_code={"training_code_hash": raw_attestation["training_code_hash"]},

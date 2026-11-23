@@ -306,7 +306,7 @@ class TestStage24CheckpointIsolationAndIntegrity(unittest.TestCase):
                 json.dump(att, f)
             test_provider = TestIsolatedTrustProvider(auth)
             self.assertTrue(validate_checkpoint_structure(genuine_file))
-            self.assertTrue(is_verified_genuine_checkpoint(genuine_file, trust_provider=test_provider))
+            self.assertTrue(is_verified_genuine_checkpoint(genuine_file, trust_provider=test_provider, require_production=False))
             self.assertFalse(is_checkpoint_fixture(genuine_file))
 
             # 7. Quarantined historical policy checkpoint rejected by genuine check

@@ -55,6 +55,21 @@ class BaseTrustRootProvider(ABC):
         """Indicates whether this provider satisfies production isolation requirements."""
         pass
 
+    @abstractmethod
+    def is_configured(self) -> bool:
+        """Indicates whether this provider has a non-empty, valid authority configuration."""
+        pass
+
+    def get_configuration_status(self) -> Dict[str, Any]:
+        """Returns structured metadata about the trust provider's operational configuration."""
+        auths = self.get_authorities()
+        return {
+            "provider_type": self.get_provider_type(),
+            "is_production_provider": self.is_production_provider(),
+            "is_configured": self.is_configured(),
+            "authority_count": len(auths) if isinstance(auths, dict) else 0,
+        }
+
 
 class ExternalTrustRootProvider(BaseTrustRootProvider):
     """
@@ -79,8 +94,26 @@ class ExternalTrustRootProvider(BaseTrustRootProvider):
         self._cached_authorities: Optional[Dict[str, Any]] = None
         self._provider_type: str = "UnconfiguredFailClosed"
 
+    def is_configured(self) -> bool:
+        auths = self.get_authorities()
+        return bool(
+            isinstance(auths, dict)
+            and len(auths) > 0
+            and self._provider_type not in (
+                "UnconfiguredFailClosed",
+                "MalformedSecretFailClosed",
+                "InRepoSecurityViolationFailClosed",
+                "UnreadableFileFailClosed",
+            )
+        )
+
     def is_production_provider(self) -> bool:
-        return True
+        """
+        External provider is an active production provider ONLY IF it is configured
+        with non-empty valid external authorities. An unconfigured provider fails closed
+        and cannot claim production authorization status.
+        """
+        return self.is_configured()
 
     def get_provider_type(self) -> str:
         return self._provider_type
@@ -243,6 +276,9 @@ class TestIsolatedTrustProvider(BaseTrustRootProvider):
 
     def is_production_provider(self) -> bool:
         return False
+
+    def is_configured(self) -> bool:
+        return bool(isinstance(self.test_authorities, dict) and len(self.test_authorities) > 0)
 
     def get_provider_type(self) -> str:
         return self._provider_type

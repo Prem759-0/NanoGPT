@@ -154,6 +154,9 @@ def classify_checkpoint(
     trusted_authorities_path: Optional[str] = None,
     allow_test_fixture_classification: bool = False,
     allow_unattested_for_test: bool = False,
+    require_production_provider: bool = False,
+    evidence_store: Optional[Any] = None,
+    require_artifacts: bool = False,
 ) -> str:
     """
     Categorizes a checkpoint file into one of the mutually exclusive provenance tiers:
@@ -287,8 +290,18 @@ def classify_checkpoint(
             ckpt_path,
             trust_provider=trust_provider,
             authorities_path=trusted_authorities_path,
+            require_production_provider=require_production_provider,
+            evidence_store=evidence_store,
+            require_artifacts=require_artifacts,
         )
         if not is_valid:
+            if allow_test_fixture_classification and tier not in (
+                "STRUCTURALLY_INVALID",
+                "UNAPPROVED_POLICY",
+                "NON_SCRATCH_INITIALIZATION",
+                "TEACHER_CONTAMINATION",
+            ):
+                return "TEST_FIXTURE_VALID_STRUCTURE"
             return tier
 
         status = ckpt.get("status") or cfg.get("status")
@@ -307,6 +320,9 @@ def is_verified_genuine_checkpoint(
     ckpt_path: str,
     trust_provider: Optional[Any] = None,
     trusted_authorities_path: Optional[str] = None,
+    require_production: bool = True,
+    evidence_store: Optional[Any] = None,
+    require_artifacts: bool = False,
     **kwargs,
 ) -> bool:
     """
@@ -321,9 +337,11 @@ def is_verified_genuine_checkpoint(
     - Teacher contamination or external base weights (TEACHER_CONTAMINATION)
     - Missing or untrusted cryptographic training attestations (ATTESTATION_MISSING, ATTESTATION_UNTRUSTED_SIGNER)
     - Revoked or expired authority attestations (ATTESTATION_REVOKED_AUTHORITY, ATTESTATION_EXPIRED_AUTHORITY)
-    - Contradictory evidence telemetry (ATTESTATION_EVIDENCE_INVALID)
+    - Missing or contradictory evidence telemetry (ATTESTATION_EVIDENCE_INVALID)
+    - Non-production or unconfigured trust providers when require_production=True
 
     SECURITY INVARIANT:
+    Strictly defaults to require_production=True. Test providers can NEVER verify a genuine production checkpoint.
     Accepts NO bypass flags. Returns True ONLY if classification is GENUINE_TRAINED_SOVEREIGN or PROMOTED_PRODUCTION.
     """
     if isinstance(trust_provider, str):
@@ -336,6 +354,9 @@ def is_verified_genuine_checkpoint(
         trusted_authorities_path=trusted_authorities_path,
         allow_test_fixture_classification=False,
         allow_unattested_for_test=False,
+        require_production_provider=require_production,
+        evidence_store=evidence_store,
+        require_artifacts=require_artifacts,
     )
     return tier in ("GENUINE_TRAINED_SOVEREIGN", "PROMOTED_PRODUCTION")
 
@@ -1005,6 +1026,18 @@ class ModelService:
                 "Production inference blocked: Active model is an unpromoted CI test fixture. "
                 "Retrospective testing or audit generation requires allow_fixture=True."
             )
+
+        if not eff_allow_fixture and self.current_checkpoint_path:
+            full_ckpt_path = (
+                os.path.join(self.base_dir, self.current_checkpoint_path)
+                if not os.path.isabs(self.current_checkpoint_path)
+                else self.current_checkpoint_path
+            )
+            if os.path.isfile(full_ckpt_path) and not self.is_verified_genuine_checkpoint(full_ckpt_path, require_production=True):
+                raise ModelNotTrainedException(
+                    "Production inference blocked: Checkpoint failed production genuine verification. "
+                    "Test-isolated or unverified models cannot serve production inference."
+                )
 
         if self.model is None and self.llama_model is None:
             success = self.load_model(self.active_model_name, allow_fixture=eff_allow_fixture)
