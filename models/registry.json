@@ -15,9 +15,9 @@
       "architecture": "MoonUNet2D + MoonTextEncoder + MoonImageAutoencoder",
       "initialization_source": "moon_ai_random_init",
       "trainable_parameters": 23713743,
-      "status": "INITIALIZED_READY_FOR_TRAINING",
+      "status": "DATA_READY",
       "training_config": "training/image/config.yaml",
-      "dataset_manifest": "datasets/image/manifest.jsonl",
+      "dataset_manifest": "datasets/manifests/image_train.jsonl",
       "provenance": "moon_ai_random_init",
       "evaluation_score": null,
       "parameter_breakdown": {
@@ -34,9 +34,9 @@
       "architecture": "MoonUNet3D + MoonVideoTextEncoder + MoonVideoAutoencoder",
       "initialization_source": "moon_ai_random_init",
       "trainable_parameters": 17014643,
-      "status": "INITIALIZED_READY_FOR_TRAINING",
+      "status": "DATA_READY",
       "training_config": "training/video/config.yaml",
-      "dataset_manifest": "datasets/video/manifest.jsonl",
+      "dataset_manifest": "datasets/manifests/video_train.jsonl",
       "provenance": "moon_ai_random_init",
       "evaluation_score": null,
       "parameter_breakdown": {
@@ -57,6 +57,32 @@
       "status": "EXPERIMENTAL_BENCHMARK_ONLY",
       "composite_score": 10.5,
       "provenance": "moon_ai_random_init"
+    },
+    "moon-chat-v0": {
+      "model_name": "moon-chat-v0",
+      "version": "0.1.0",
+      "type": "causal_autoregressive_transformer",
+      "architecture": "Causal Decoder-Only Transformer (12L, 12H, 768D, RoPE, SwiGLU)",
+      "initialization_source": "moon_ai_random_init",
+      "trainable_parameters": 124000000,
+      "status": "DATA_READY",
+      "training_config": "docs/MOON_CHAT_TRAINING_PLAN.md",
+      "dataset_manifest": "datasets/manifests/chat_train.jsonl",
+      "provenance": "moon_ai_random_init",
+      "evaluation_score": null
+    },
+    "moon-code-v0": {
+      "model_name": "moon-code-v0",
+      "version": "0.1.0",
+      "type": "fim_transformer",
+      "architecture": "Fill-In-The-Middle Causal Transformer (12L, 12H, 768D)",
+      "initialization_source": "moon_ai_random_init",
+      "trainable_parameters": 124000000,
+      "status": "DATA_READY",
+      "training_config": "docs/MOON_CODE_TRAINING_PLAN.md",
+      "dataset_manifest": "datasets/manifests/code_train.jsonl",
+      "provenance": "moon_ai_random_init",
+      "evaluation_score": null
     }
   },
   "promotion_history": [
