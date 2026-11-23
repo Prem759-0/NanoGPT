@@ -84,12 +84,20 @@ class Database:
                 conn = self._get_sqlite_connection()
                 try:
                     yield conn
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+                    raise
                 finally:
                     conn.close()
         else:
             conn = self._get_sqlite_connection()
             try:
                 yield conn
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
             finally:
                 conn.close()
 

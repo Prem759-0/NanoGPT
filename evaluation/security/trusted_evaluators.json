@@ -1,0 +1,8 @@
+{
+  "schema_version": "2.0",
+  "authority": "Moon AI Autonomous Evaluation & Quality Governance",
+  "updated_at": "2026-11-01T12:00:00Z",
+  "policy": "ASYMMETRIC_ED25519_ONLY",
+  "notes": "Private signing keys are held strictly by authorized independent evaluators outside this repository. If no genuine active evaluator is configured, model promotion remains blocked.",
+  "trusted_evaluators": {}
+}

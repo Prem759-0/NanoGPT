@@ -1,0 +1,8 @@
+{
+  "schema_version": "2.0",
+  "authority": "Moon AI Cryptographic Governance & Provenance Registry",
+  "updated_at": "2026-11-01T12:00:00Z",
+  "policy": "ASYMMETRIC_ED25519_ONLY",
+  "notes": "Private signing keys are held strictly outside this repository by authorized independent auditors. Only public verification keys may be registered. In the absence of an authorized active external public key, production dataset verification remains blocked (PENDING_MANUAL_VERIFICATION).",
+  "trusted_verifiers": {}
+}
