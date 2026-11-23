@@ -282,7 +282,7 @@ class TestStage24CheckpointIsolationAndIntegrity(unittest.TestCase):
             self.assertTrue(validate_checkpoint_structure(violating_file))
             self.assertFalse(is_verified_genuine_checkpoint(violating_file))
 
-            # 6. Genuine unpromoted checkpoint passes structure and genuine check
+            # 6. Genuine unpromoted checkpoint passes structure and genuine check with attestation
             genuine_file = os.path.join(tmp_dir, "genuine_pilot.pt")
             torch.save({
                 "status": "PILOT_TRAINED",
@@ -298,8 +298,15 @@ class TestStage24CheckpointIsolationAndIntegrity(unittest.TestCase):
                     "teacher_checkpoint_weights_transferred": False
                 }
             }, genuine_file)
+            from core.security.trust_provider import TestIsolatedTrustProvider
+            from core.security.training_attestation import generate_training_authority_keypair, create_test_training_attestation
+            priv_hex, pub_hex = generate_training_authority_keypair()
+            att, auth = create_test_training_attestation(genuine_file, private_key_hex=priv_hex, verifier_id="test_auth_s24")
+            with open(genuine_file + ".attestation.json", "w", encoding="utf-8") as f:
+                json.dump(att, f)
+            test_provider = TestIsolatedTrustProvider(auth)
             self.assertTrue(validate_checkpoint_structure(genuine_file))
-            self.assertTrue(is_verified_genuine_checkpoint(genuine_file))
+            self.assertTrue(is_verified_genuine_checkpoint(genuine_file, trust_provider=test_provider))
             self.assertFalse(is_checkpoint_fixture(genuine_file))
 
             # 7. Quarantined historical policy checkpoint rejected by genuine check

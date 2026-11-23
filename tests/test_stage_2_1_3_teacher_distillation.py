@@ -451,7 +451,11 @@ class TestStage213TeacherDistillation(unittest.TestCase):
                 "logical_reasoning": 81.0
             }
         }
+        import json
         import torch
+        from core.security.trust_provider import TestIsolatedTrustProvider
+        from core.security.training_attestation import generate_training_authority_keypair, create_test_training_attestation
+
         cand_ckpt_path = os.path.join(PROJECT_ROOT, "models", "checkpoints", "candidate_v1.pt")
         os.makedirs(os.path.dirname(cand_ckpt_path), exist_ok=True)
         torch.save({
@@ -464,12 +468,20 @@ class TestStage213TeacherDistillation(unittest.TestCase):
             },
             "status": "EVALUATION_PASSED"
         }, cand_ckpt_path)
+
+        priv_hex, pub_hex = generate_training_authority_keypair()
+        att, auth = create_test_training_attestation(cand_ckpt_path, private_key_hex=priv_hex, verifier_id="test_auth_gate")
+        with open(cand_ckpt_path + ".attestation.json", "w", encoding="utf-8") as f:
+            json.dump(att, f)
+        test_provider = TestIsolatedTrustProvider(auth)
+
         try:
             promoted, reason, meta = PromotionGate.evaluate_promotion(
                 candidate_eval=cand_eval_good,
                 baseline_eval=base_eval,
                 candidate_checkpoint_path=cand_ckpt_path,
-                current_production_checkpoint="models/checkpoints/production_v0.pt"
+                current_production_checkpoint="models/checkpoints/production_v0.pt",
+                trust_provider=test_provider
             )
             self.assertTrue(promoted, f"Promotion failed: {reason}")
             self.assertTrue(meta["rollback_available"])
@@ -477,6 +489,8 @@ class TestStage213TeacherDistillation(unittest.TestCase):
         finally:
             if os.path.isfile(cand_ckpt_path):
                 os.remove(cand_ckpt_path)
+            if os.path.isfile(cand_ckpt_path + ".attestation.json"):
+                os.remove(cand_ckpt_path + ".attestation.json")
 
     # -------------------------------------------------------------------------
     # 7. User Memory vs Training Data Separation

@@ -126,7 +126,8 @@ class PromotionGate:
         baseline_eval: Optional[Dict[str, Any]] = None,
         candidate_checkpoint_path: str = "",
         current_production_checkpoint: Optional[str] = None,
-        require_checkpoint_file: bool = False
+        require_checkpoint_file: bool = False,
+        trust_provider: Optional[Any] = None,
     ) -> Tuple[bool, str, Dict[str, Any]]:
         """
         Determines whether candidate model should replace active production model.
@@ -160,7 +161,7 @@ class PromotionGate:
             if not os.path.isfile(candidate_checkpoint_path):
                 return False, f"Promotion rejected: Candidate checkpoint file does not exist on disk: '{candidate_checkpoint_path}'. Missing checkpoint evidence cannot bypass verification.", {}
             from webapp.model_service import is_verified_genuine_checkpoint
-            if not is_verified_genuine_checkpoint(candidate_checkpoint_path):
+            if not is_verified_genuine_checkpoint(candidate_checkpoint_path, trust_provider=trust_provider):
                 return False, f"Promotion rejected: Candidate checkpoint on disk failed genuine checkpoint verification: '{candidate_checkpoint_path}'.", {}
 
         # Safety invariant: safety_uncertainty must be 100.0
