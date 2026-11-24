@@ -137,7 +137,8 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
         )
         self.assertNotIn("evidence_manifest", att)
         valid, tier, reason = verify_training_attestation(
-            att, self.ckpt_bytes, trust_provider=self.test_provider
+            att, self.ckpt_bytes, trust_provider=self.test_provider,
+            require_production_provider=False, require_artifacts=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -155,7 +156,8 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             evidence_manifest={},
         )
         valid, tier, reason = verify_training_attestation(
-            att, self.ckpt_bytes, trust_provider=self.test_provider
+            att, self.ckpt_bytes, trust_provider=self.test_provider,
+            require_production_provider=False, require_artifacts=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -174,7 +176,8 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
         # Re-sign with the modified payload
         signed = sign_training_attestation(att, self.priv_hex)
         valid, tier, reason = verify_training_attestation(
-            signed, self.ckpt_bytes, trust_provider=self.test_provider
+            signed, self.ckpt_bytes, trust_provider=self.test_provider,
+            require_production_provider=False, require_artifacts=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -214,6 +217,7 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             trust_provider=self.test_provider,
             evidence_store=store,
             require_artifacts=True,
+            require_production_provider=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -251,6 +255,7 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             trust_provider=self.test_provider,
             evidence_store=store,
             require_artifacts=True,
+            require_production_provider=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -287,6 +292,7 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             trust_provider=self.test_provider,
             evidence_store=store,
             require_artifacts=True,
+            require_production_provider=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -324,6 +330,7 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             trust_provider=self.test_provider,
             evidence_store=store,
             require_artifacts=True,
+            require_production_provider=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -360,6 +367,7 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             trust_provider=self.test_provider,
             evidence_store=store,
             require_artifacts=True,
+            require_production_provider=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -397,6 +405,7 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             trust_provider=self.test_provider,
             evidence_store=store,
             require_artifacts=True,
+            require_production_provider=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -433,6 +442,7 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             trust_provider=self.test_provider,
             evidence_store=store,
             require_artifacts=True,
+            require_production_provider=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -470,6 +480,7 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             trust_provider=self.test_provider,
             evidence_store=store,
             require_artifacts=True,
+            require_production_provider=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -490,7 +501,8 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
         signed = sign_training_attestation(att, self.priv_hex)
 
         valid, tier, reason = verify_training_attestation(
-            signed, self.ckpt_bytes, trust_provider=self.test_provider
+            signed, self.ckpt_bytes, trust_provider=self.test_provider,
+            require_production_provider=False, require_artifacts=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -510,7 +522,8 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
         signed = sign_training_attestation(att, self.priv_hex)
 
         valid, tier, reason = verify_training_attestation(
-            signed, self.ckpt_bytes, trust_provider=self.test_provider
+            signed, self.ckpt_bytes, trust_provider=self.test_provider,
+            require_production_provider=False, require_artifacts=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -530,7 +543,8 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
         signed = sign_training_attestation(att, self.priv_hex)
 
         valid, tier, reason = verify_training_attestation(
-            signed, self.ckpt_bytes, trust_provider=self.test_provider
+            signed, self.ckpt_bytes, trust_provider=self.test_provider,
+            require_production_provider=False, require_artifacts=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EVIDENCE_INVALID")
@@ -547,7 +561,8 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
         )
         tampered_bytes = self.ckpt_bytes + b"\x00\xff"
         valid, tier, reason = verify_training_attestation(
-            att, tampered_bytes, trust_provider=self.test_provider
+            att, tampered_bytes, trust_provider=self.test_provider,
+            require_production_provider=False, require_artifacts=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_CHECKPOINT_HASH_MISMATCH")
@@ -658,7 +673,8 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             verifier_id=self.verifier_id,
         )
         valid, tier, reason = verify_training_attestation(
-            att, self.ckpt_bytes, trust_provider=revoked_provider
+            att, self.ckpt_bytes, trust_provider=revoked_provider,
+            require_production_provider=False, require_artifacts=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_REVOKED_AUTHORITY")
@@ -694,7 +710,8 @@ class TestPhase2764MandatoryEvidenceAndTrustIsolation(unittest.TestCase):
             verifier_id=self.verifier_id,
         )
         valid, tier, reason = verify_training_attestation(
-            att, self.ckpt_bytes, trust_provider=ext_provider
+            att, self.ckpt_bytes, trust_provider=ext_provider,
+            require_artifacts=False,
         )
         self.assertFalse(valid)
         self.assertEqual(tier, "ATTESTATION_EXPIRED_AUTHORITY")

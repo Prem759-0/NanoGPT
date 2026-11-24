@@ -35,6 +35,10 @@ from core.security.training_attestation import (
     create_test_training_attestation,
     DEFAULT_AUTHORITIES_PATH,
 )
+from core.security.training_evidence import (
+    create_sample_training_artifacts,
+    EvidenceArtifactStore,
+)
 from webapp.model_service import (
     ModelService,
     classify_checkpoint,
@@ -256,7 +260,14 @@ class TestPhase2762CryptographicProvenance(unittest.TestCase):
         """Validly signed attestation against registered authority returns GENUINE_TRAINED_SOVEREIGN."""
         ckpt = self._create_minimal_checkpoint("genuine_attested.pt")
         priv_hex, pub_hex = generate_training_authority_keypair()
-        att, auth = create_test_training_attestation(ckpt, private_key_hex=priv_hex, verifier_id="trusted_auth_01")
+        art_dir = os.path.join(self.tmp_path, "evidence_artifacts_16")
+        paths, manifest = create_sample_training_artifacts(art_dir)
+        att, auth = create_test_training_attestation(
+            ckpt,
+            private_key_hex=priv_hex,
+            verifier_id="trusted_auth_01",
+            evidence_manifest=manifest,
+        )
 
         auth_store = os.path.join(self.tmp_path, "test_authorities.json")
         with open(auth_store, "w", encoding="utf-8") as f:
@@ -265,16 +276,24 @@ class TestPhase2762CryptographicProvenance(unittest.TestCase):
         with open(ckpt + ".attestation.json", "w", encoding="utf-8") as f:
             json.dump(att, f)
 
-        tier = classify_checkpoint(ckpt, trusted_authorities_path=auth_store)
+        ev_store = EvidenceArtifactStore(art_dir)
+        tier = classify_checkpoint(ckpt, trusted_authorities_path=auth_store, evidence_store=ev_store)
         self.assertEqual(tier, "GENUINE_TRAINED_SOVEREIGN")
-        self.assertTrue(is_verified_genuine_checkpoint(ckpt, trusted_authorities_path=auth_store))
+        self.assertTrue(is_verified_genuine_checkpoint(ckpt, trusted_authorities_path=auth_store, evidence_store=ev_store))
 
     # Test 17: Promoted Production Checkpoint with Valid Attestation
     def test_17_promoted_production_checkpoint_with_valid_attestation(self):
         """Promoted checkpoint with valid attestation classifies as PROMOTED_PRODUCTION."""
         ckpt = self._create_minimal_checkpoint("promoted_attested.pt", status="PROMOTED_PRODUCTION")
         priv_hex, pub_hex = generate_training_authority_keypair()
-        att, auth = create_test_training_attestation(ckpt, private_key_hex=priv_hex, verifier_id="trusted_auth_01")
+        art_dir = os.path.join(self.tmp_path, "evidence_artifacts_17")
+        paths, manifest = create_sample_training_artifacts(art_dir)
+        att, auth = create_test_training_attestation(
+            ckpt,
+            private_key_hex=priv_hex,
+            verifier_id="trusted_auth_01",
+            evidence_manifest=manifest,
+        )
 
         auth_store = os.path.join(self.tmp_path, "test_authorities.json")
         with open(auth_store, "w", encoding="utf-8") as f:
@@ -283,9 +302,10 @@ class TestPhase2762CryptographicProvenance(unittest.TestCase):
         with open(ckpt + ".attestation.json", "w", encoding="utf-8") as f:
             json.dump(att, f)
 
-        tier = classify_checkpoint(ckpt, trusted_authorities_path=auth_store)
+        ev_store = EvidenceArtifactStore(art_dir)
+        tier = classify_checkpoint(ckpt, trusted_authorities_path=auth_store, evidence_store=ev_store)
         self.assertEqual(tier, "PROMOTED_PRODUCTION")
-        self.assertTrue(is_verified_genuine_checkpoint(ckpt, trusted_authorities_path=auth_store))
+        self.assertTrue(is_verified_genuine_checkpoint(ckpt, trusted_authorities_path=auth_store, evidence_store=ev_store))
 
     # Test 18: find_checkpoint and find_pilot_checkpoint Default to No Fixtures
     def test_18_find_checkpoint_and_find_pilot_checkpoint_default_to_no_fixtures(self):

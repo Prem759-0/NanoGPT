@@ -34,6 +34,7 @@ from core.security.training_evidence import (
     parse_iso_utc_timestamp,
     TrainingEvidenceValidator,
     create_sample_training_evidence,
+    EvidenceArtifactStore,
 )
 
 REQUIRED_ATTESTATION_FIELDS = [
@@ -171,9 +172,10 @@ def verify_training_attestation(
     evidence_manifest: Optional[Dict[str, Any]] = None,
     authorities_path: Optional[str] = None,
     allow_untrusted_for_test: bool = False,
-    require_production_provider: bool = False,
+    require_production_provider: bool = True,
     evidence_store: Optional[Any] = None,
-    require_artifacts: bool = False,
+    require_artifacts: bool = True,
+    require_production: Optional[bool] = None,
 ) -> Tuple[bool, str, str]:
     """
     Performs comprehensive cryptographic verification of training attestation against trust roots:
@@ -185,10 +187,14 @@ def verify_training_attestation(
     6. Checks chronological timestamp ordering and rejects future timestamps.
     7. Checks verifier identity against configured trust provider (fails closed if unconfigured or revoked).
     8. Asymmetrically verifies Ed25519 signature over MRDC-JSON-2.1 canonical payload.
-    9. If evidence manifest is attached or provided: executes deep evidence validation.
+    9. Enforces presence and containment of physical evidence artifacts in production boundaries.
+    10. If evidence manifest is attached or provided: executes deep evidence and disk artifact validation.
 
     Returns: (is_valid: bool, tier: str, reason: str)
     """
+    if require_production is not None:
+        require_production_provider = require_production
+
     if attestation is None:
         return False, "ATTESTATION_MISSING", "Training attestation is missing."
     if not isinstance(attestation, dict):
@@ -397,12 +403,35 @@ def verify_training_attestation(
             "Training evidence manifest must be a non-empty JSON dictionary.",
         )
 
+    # Production Boundary Enforcement: Physical evidence is strictly mandatory in production
+    if require_production_provider:
+        require_artifacts = True
+
+    if require_artifacts:
+        if evidence_store is None:
+            evidence_store = EvidenceArtifactStore()
+        if not evidence_store.is_configured():
+            msg = (
+                "Production verification requires a configured, independently trusted external evidence store (MOON_EVIDENCE_STORE_DIR)."
+                if require_production_provider
+                else "Physical evidence artifact store is unconfigured or directory does not exist."
+            )
+            return False, "ATTESTATION_EVIDENCE_INVALID", msg
+        if require_production_provider and not evidence_store.is_production_store():
+            return (
+                False,
+                "ATTESTATION_EVIDENCE_INVALID",
+                "Production verification requires an external evidence store located strictly outside the repository.",
+            )
+
+    ckpt_path_str = checkpoint_bytes_or_path if isinstance(checkpoint_bytes_or_path, str) else None
     ev_ok, ev_tier, ev_reason = TrainingEvidenceValidator.validate_evidence_manifest(
         ev_data,
         actual_sha256,
         attestation=attestation,
         evidence_store=evidence_store,
         require_artifacts=require_artifacts,
+        checkpoint_file_path=ckpt_path_str,
     )
     if not ev_ok:
         return False, ev_tier, ev_reason
@@ -444,16 +473,24 @@ def create_test_training_attestation(
     start_iso = (now - timedelta(hours=2)).isoformat()
     completion_iso = (now - timedelta(minutes=5)).isoformat()
 
-    st = overrides.pop("training_start_time", None) or overrides.pop("start_time", None) or start_iso
-    ct = overrides.pop("training_completion_time", None) or overrides.pop("completion_time", None) or completion_iso
+    ev_m = overrides.get("evidence_manifest")
+    st_from_ev = ev_m.get("timestamps", {}).get("start_time") if isinstance(ev_m, dict) else None
+    ct_from_ev = ev_m.get("timestamps", {}).get("completion_time") if isinstance(ev_m, dict) else None
+    arch_from_ev = ev_m.get("model_architecture", {}).get("model_architecture_hash") if isinstance(ev_m, dict) else None
+    data_from_ev = ev_m.get("dataset_manifest", {}).get("dataset_manifest_hash") if isinstance(ev_m, dict) else None
+    code_from_ev = ev_m.get("training_code", {}).get("training_code_hash") if isinstance(ev_m, dict) else None
+    run_from_ev = ev_m.get("run_id") if isinstance(ev_m, dict) else None
+
+    st = overrides.pop("training_start_time", None) or overrides.pop("start_time", None) or st_from_ev or start_iso
+    ct = overrides.pop("training_completion_time", None) or overrides.pop("completion_time", None) or ct_from_ev or completion_iso
 
     raw_attestation = {
-        "run_id": run_id,
+        "run_id": run_from_ev or run_id,
         "policy": "STRICT_SOVEREIGN_RANDOM_INIT_ONLY",
         "initialization": "random_gaussian_scratch",
-        "model_architecture_hash": hashlib.sha256(b"moon_arch_test").hexdigest(),
-        "dataset_manifest_hash": hashlib.sha256(b"moon_dataset_test").hexdigest(),
-        "training_code_hash": hashlib.sha256(b"moon_code_test").hexdigest(),
+        "model_architecture_hash": arch_from_ev or hashlib.sha256(b"moon_arch_test").hexdigest(),
+        "dataset_manifest_hash": data_from_ev or hashlib.sha256(b"moon_dataset_test").hexdigest(),
+        "training_code_hash": code_from_ev or hashlib.sha256(b"moon_code_test").hexdigest(),
         "training_start_time": st,
         "training_completion_time": ct,
         "step_count": step_count,
@@ -462,6 +499,10 @@ def create_test_training_attestation(
         "verifier_id": verifier_id,
     }
     raw_attestation.update(overrides)
+
+    if "evidence_manifest" in raw_attestation and isinstance(raw_attestation["evidence_manifest"], dict):
+        if not raw_attestation["evidence_manifest"].get("checkpoint_sha256") or raw_attestation["evidence_manifest"]["checkpoint_sha256"] == "00" * 32:
+            raw_attestation["evidence_manifest"]["checkpoint_sha256"] = ckpt_hash
 
     if include_evidence and "evidence_manifest" not in raw_attestation:
         ev = create_sample_training_evidence(

@@ -154,9 +154,9 @@ def classify_checkpoint(
     trusted_authorities_path: Optional[str] = None,
     allow_test_fixture_classification: bool = False,
     allow_unattested_for_test: bool = False,
-    require_production_provider: bool = False,
+    require_production_provider: bool = True,
     evidence_store: Optional[Any] = None,
-    require_artifacts: bool = False,
+    require_artifacts: Optional[bool] = None,
 ) -> str:
     """
     Categorizes a checkpoint file into one of the mutually exclusive provenance tiers:
@@ -183,6 +183,9 @@ def classify_checkpoint(
     allow_test_fixture_classification and allow_unattested_for_test CAN NEVER produce GENUINE_TRAINED_SOVEREIGN
     or PROMOTED_PRODUCTION. They can only produce TEST_FIXTURE_VALID_STRUCTURE.
     """
+    if require_artifacts is None:
+        require_artifacts = require_production_provider
+
     if isinstance(trust_provider, str):
         trusted_authorities_path = trust_provider
         trust_provider = None
@@ -322,7 +325,7 @@ def is_verified_genuine_checkpoint(
     trusted_authorities_path: Optional[str] = None,
     require_production: bool = True,
     evidence_store: Optional[Any] = None,
-    require_artifacts: bool = False,
+    require_artifacts: Optional[bool] = None,
     **kwargs,
 ) -> bool:
     """
@@ -344,6 +347,9 @@ def is_verified_genuine_checkpoint(
     Strictly defaults to require_production=True. Test providers can NEVER verify a genuine production checkpoint.
     Accepts NO bypass flags. Returns True ONLY if classification is GENUINE_TRAINED_SOVEREIGN or PROMOTED_PRODUCTION.
     """
+    if require_artifacts is None:
+        require_artifacts = require_production
+
     if isinstance(trust_provider, str):
         trusted_authorities_path = trust_provider
         trust_provider = None

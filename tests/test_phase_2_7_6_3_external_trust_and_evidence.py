@@ -150,7 +150,10 @@ class TestPhase2763ExternalTrustAndEvidence(unittest.TestCase):
         auth["authority_01"]["status"] = "revoked"
 
         provider = TestIsolatedTrustProvider(auth)
-        is_valid, tier, reason = verify_training_attestation(att, ckpt, trust_provider=provider)
+        is_valid, tier, reason = verify_training_attestation(
+            att, ckpt, trust_provider=provider,
+            require_production_provider=False, require_artifacts=False,
+        )
         self.assertFalse(is_valid)
         self.assertEqual(tier, "ATTESTATION_REVOKED_AUTHORITY")
 
@@ -163,7 +166,10 @@ class TestPhase2763ExternalTrustAndEvidence(unittest.TestCase):
         auth["authority_01"]["status"] = "expired"
 
         provider = TestIsolatedTrustProvider(auth)
-        is_valid, tier, reason = verify_training_attestation(att, ckpt, trust_provider=provider)
+        is_valid, tier, reason = verify_training_attestation(
+            att, ckpt, trust_provider=provider,
+            require_production_provider=False, require_artifacts=False,
+        )
         self.assertFalse(is_valid)
         self.assertEqual(tier, "ATTESTATION_EXPIRED_AUTHORITY")
 
@@ -180,7 +186,10 @@ class TestPhase2763ExternalTrustAndEvidence(unittest.TestCase):
         priv_hex, pub_hex = generate_training_authority_keypair()
         att, auth = create_test_training_attestation(ckpt, private_key_hex=priv_hex, verifier_id="unknown_verifier")
         provider = TestIsolatedTrustProvider({"trusted_authority_99": {"public_key_hex": pub_hex, "status": "active"}})
-        is_valid, tier, reason = verify_training_attestation(att, ckpt, trust_provider=provider)
+        is_valid, tier, reason = verify_training_attestation(
+            att, ckpt, trust_provider=provider,
+            require_production_provider=False, require_artifacts=False,
+        )
         self.assertFalse(is_valid)
         self.assertEqual(tier, "ATTESTATION_UNTRUSTED_SIGNER")
 
@@ -192,7 +201,10 @@ class TestPhase2763ExternalTrustAndEvidence(unittest.TestCase):
         att, auth = create_test_training_attestation(ckpt, private_key_hex=priv_hex, verifier_id="auth_01")
         att["signature"] = "deadbeef" * 16
         provider = TestIsolatedTrustProvider(auth)
-        is_valid, tier, reason = verify_training_attestation(att, ckpt, trust_provider=provider)
+        is_valid, tier, reason = verify_training_attestation(
+            att, ckpt, trust_provider=provider,
+            require_production_provider=False, require_artifacts=False,
+        )
         self.assertFalse(is_valid)
         self.assertEqual(tier, "ATTESTATION_INVALID")
 
@@ -204,7 +216,10 @@ class TestPhase2763ExternalTrustAndEvidence(unittest.TestCase):
         att, auth = create_test_training_attestation(ckpt, private_key_hex=priv_hex, verifier_id="auth_01")
         att["step_count"] = 500000  # modified after signature
         provider = TestIsolatedTrustProvider(auth)
-        is_valid, tier, reason = verify_training_attestation(att, ckpt, trust_provider=provider)
+        is_valid, tier, reason = verify_training_attestation(
+            att, ckpt, trust_provider=provider,
+            require_production_provider=False, require_artifacts=False,
+        )
         self.assertFalse(is_valid)
         self.assertEqual(tier, "ATTESTATION_INVALID")
 

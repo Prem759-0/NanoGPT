@@ -25,9 +25,13 @@ Attestation Standard: Restricted Deterministic Canonical JSON Ed25519 Training A
 import os
 import re
 import json
+import logging
 import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, Tuple, List, Union
+
+logger = logging.getLogger("moon.security.training_evidence")
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 HEX64_REGEX = re.compile(r"^[0-9a-f]{64}$")
 MAX_CLOCK_SKEW_SECONDS = 300  # 5 minutes clock skew tolerance
@@ -66,61 +70,162 @@ def parse_iso_utc_timestamp(ts_str: Any) -> Optional[datetime]:
 
 class EvidenceArtifactStore:
     """
-    Manages physical storage, resolution, and verification of training evidence artifacts.
-    Enforces that evidence claims are backed by authentic byte-level files on disk.
+    Manages physical storage, resolution, containment, and verification of training evidence artifacts.
+    Enforces that evidence claims are backed by authentic byte-level files strictly contained
+    within the authorized evidence store directory.
     """
     REQUIRED_ARTIFACT_KEYS = [
         "model_architecture",
         "dataset_manifest",
         "training_code",
+        "environment",
         "telemetry_logs",
+        "optimizer",
     ]
 
-    def __init__(self, store_dir: Optional[str] = None):
-        self.store_dir = os.path.abspath(store_dir) if store_dir else os.environ.get("MOON_EVIDENCE_STORE_DIR")
+    STANDARD_FILENAMES = {
+        "model_architecture": ["architecture_spec.json", "model_architecture.json"],
+        "dataset_manifest": ["dataset_manifest.json"],
+        "training_code": ["code_manifest.json", "training_code.json"],
+        "environment": ["environment_manifest.json", "environment.json"],
+        "telemetry_logs": ["telemetry_logs.raw", "telemetry_logs.jsonl", "training.log"],
+        "optimizer": ["optimizer_telemetry.json", "optimizer.json"],
+    }
+
+    def __init__(self, store_dir: Optional[str] = None, base_dir: Optional[str] = None):
+        self.base_dir = os.path.abspath(base_dir or PROJECT_ROOT)
+        raw_dir = store_dir or os.environ.get("MOON_EVIDENCE_STORE_DIR")
+        self.store_dir = os.path.abspath(raw_dir) if raw_dir else None
 
     def is_configured(self) -> bool:
+        """Returns True if store_dir is set and exists as a directory."""
         return bool(self.store_dir and os.path.isdir(self.store_dir))
 
+    def is_production_store(self) -> bool:
+        """
+        Returns True if the store is configured and strictly outside the repository root.
+        Repository files cannot supply production evidence artifacts.
+        """
+        if not self.is_configured():
+            return False
+        try:
+            real_base = os.path.realpath(self.base_dir)
+            real_store = os.path.realpath(self.store_dir)
+            if os.path.splitdrive(real_base)[0].lower() != os.path.splitdrive(real_store)[0].lower():
+                return True  # Different drive is strictly outside the repository
+            common = os.path.commonpath([real_base, real_store])
+            if common == real_base:
+                return False  # Inside repo: strictly forbidden for production evidence!
+            return True
+        except (ValueError, Exception):
+            return False
+
+    def _sanitize_and_contain_path(self, rel_path: Any) -> Optional[str]:
+        """
+        Validates, canonicalizes, and verifies containment of an artifact path:
+        1. Reject non-string, empty, or whitespace-only paths.
+        2. Reject absolute paths (POSIX / or Windows C:\\ or \\\\unc).
+        3. Reject null bytes or control characters.
+        4. Normalize path and reject any traversal escaping root ('..').
+        5. Verify that os.path.realpath(cand) is strictly contained in os.path.realpath(self.store_dir).
+        6. Verify that target is not the store directory itself.
+        7. Verify that target exists and is a regular file (stat.S_ISREG).
+        """
+        if not self.is_configured():
+            return None
+        if not rel_path or not isinstance(rel_path, str):
+            return None
+        clean = rel_path.strip()
+        if not clean or "\x00" in clean:
+            return None
+
+        # Reject absolute paths (POSIX and Windows)
+        if os.path.isabs(clean) or clean.startswith(("/", "\\")):
+            return None
+        if len(clean) >= 2 and clean[1] == ":":  # Windows drive letter e.g. C:
+            return None
+
+        # Normalize and reject path traversal
+        norm = os.path.normpath(clean)
+        if norm == "." or norm.startswith("..") or "/../" in norm or "\\..\\" in norm:
+            return None
+
+        # Build candidate path
+        cand = os.path.join(self.store_dir, norm)
+        try:
+            real_store = os.path.realpath(self.store_dir)
+            real_cand = os.path.realpath(cand)
+
+            # Containment check: commonpath must equal real_store and cand must not be real_store
+            common = os.path.commonpath([real_store, real_cand])
+            if common != real_store or real_cand == real_store:
+                return None
+
+            # File existence and regular file check
+            if not os.path.isfile(real_cand):
+                return None
+            st = os.stat(real_cand)
+            import stat
+            if not stat.S_ISREG(st.st_mode):
+                return None
+            return real_cand
+        except (ValueError, OSError, Exception):
+            return None
+
     def resolve_artifact_path(self, artifact_type: str, evidence: Dict[str, Any]) -> Optional[str]:
+        """
+        Resolves an artifact file path with strict containment and security validation:
+        1. Check section-level 'artifact_file' or 'artifact_path'.
+        2. Check top-level '{artifact_type}_file' or '{artifact_type}_path'.
+        3. Check standard filenames within the evidence store.
+        Returns canonical real file path on success, or None on failure/violation.
+        """
         if not self.is_configured():
             return None
 
-        # Check for explicit artifact_file in section
+        # 1. Section-level declared paths
         section = evidence.get(artifact_type, {})
         if isinstance(section, dict):
-            rel_file = section.get("artifact_file") or section.get("artifact_path")
-            if rel_file:
-                cand = os.path.join(self.store_dir, rel_file)
-                if os.path.isfile(cand):
-                    return cand
+            for key in ("artifact_file", "artifact_path"):
+                val = section.get(key)
+                if val:
+                    safe_path = self._sanitize_and_contain_path(val)
+                    if safe_path:
+                        return safe_path
+                    else:
+                        logger.warning(
+                            f"Evidence artifact '{artifact_type}' specified path '{val}' "
+                            f"which failed containment, traversal, or regular file validation."
+                        )
+                        return None  # Fail closed on path violation!
 
-        # Also check top-level declared paths
-        if artifact_type == "telemetry_logs":
-            rel_file = evidence.get("telemetry_logs_file") or evidence.get("telemetry_logs_path")
-            if rel_file:
-                cand = os.path.join(self.store_dir, rel_file)
-                if os.path.isfile(cand):
-                    return cand
+        # 2. Top-level declared paths
+        for key in (f"{artifact_type}_file", f"{artifact_type}_path"):
+            val = evidence.get(key)
+            if val:
+                safe_path = self._sanitize_and_contain_path(val)
+                if safe_path:
+                    return safe_path
+                else:
+                    logger.warning(
+                        f"Evidence artifact '{artifact_type}' top-level path '{val}' "
+                        f"failed containment, traversal, or regular file validation."
+                    )
+                    return None  # Fail closed!
 
-        STANDARD_FILENAMES = {
-            "model_architecture": ["architecture_spec.json", "model_architecture.json"],
-            "dataset_manifest": ["dataset_manifest.json"],
-            "training_code": ["code_manifest.json", "training_code.json"],
-            "environment": ["environment_manifest.json", "environment.json"],
-            "telemetry_logs": ["telemetry_logs.raw", "telemetry_logs.jsonl", "training.log"],
-            "optimizer": ["optimizer_telemetry.json"],
-        }
-        for fname in STANDARD_FILENAMES.get(artifact_type, []):
-            cand = os.path.join(self.store_dir, fname)
-            if os.path.isfile(cand):
-                return cand
+        # 3. Standard filenames
+        for fname in self.STANDARD_FILENAMES.get(artifact_type, []):
+            safe_path = self._sanitize_and_contain_path(fname)
+            if safe_path:
+                return safe_path
+
         return None
 
     def verify_artifacts(
         self,
         evidence: Dict[str, Any],
         checkpoint_file_path: Optional[str] = None,
+        attestation: Optional[Dict[str, Any]] = None,
     ) -> Tuple[bool, str, str]:
         if not self.is_configured():
             return (
@@ -128,6 +233,8 @@ class EvidenceArtifactStore:
                 "ATTESTATION_EVIDENCE_INVALID",
                 "Evidence artifact store is unconfigured or directory does not exist.",
             )
+
+        declared_run_id = str(evidence.get("run_id", "")).strip()
 
         # 1. Model Architecture
         arch_path = self.resolve_artifact_path("model_architecture", evidence)
@@ -141,8 +248,15 @@ class EvidenceArtifactStore:
                 "ATTESTATION_EVIDENCE_INVALID",
                 f"Model architecture artifact SHA-256 mismatch: disk '{actual_arch_hash}' vs manifest '{expected_arch_hash}'.",
             )
+        try:
+            with open(arch_path, "r", encoding="utf-8") as f:
+                arch_json = json.load(f)
+            if not isinstance(arch_json, dict) or not arch_json.get("architecture_name"):
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Model architecture artifact missing 'architecture_name'."
+        except Exception as e:
+            return False, "ATTESTATION_EVIDENCE_INVALID", f"Failed parsing model architecture artifact: {e}"
 
-        # 2. Dataset Manifest
+        # 2. Dataset Manifest & Referenced Files
         data_path = self.resolve_artifact_path("dataset_manifest", evidence)
         if not data_path or not os.path.isfile(data_path):
             return False, "ATTESTATION_EVIDENCE_INVALID", "Missing required dataset_manifest evidence artifact."
@@ -154,6 +268,28 @@ class EvidenceArtifactStore:
                 "ATTESTATION_EVIDENCE_INVALID",
                 f"Dataset manifest artifact SHA-256 mismatch: disk '{actual_data_hash}' vs manifest '{expected_data_hash}'.",
             )
+        try:
+            with open(data_path, "r", encoding="utf-8") as f:
+                dataset_data = json.load(f)
+            ref_files = dataset_data.get("files") or dataset_data.get("dataset_files")
+            if isinstance(ref_files, dict):
+                for rel_fname, declared_sha in ref_files.items():
+                    data_file_path = self._sanitize_and_contain_path(rel_fname)
+                    if not data_file_path or not os.path.isfile(data_file_path):
+                        return (
+                            False,
+                            "ATTESTATION_EVIDENCE_INVALID",
+                            f"Missing referenced dataset file '{rel_fname}' declared in dataset manifest.",
+                        )
+                    actual_file_sha = compute_file_sha256(data_file_path)
+                    if actual_file_sha != str(declared_sha).strip().lower():
+                        return (
+                            False,
+                            "ATTESTATION_EVIDENCE_INVALID",
+                            f"Referenced dataset file '{rel_fname}' SHA-256 mismatch: disk '{actual_file_sha}' vs declared '{declared_sha}'.",
+                        )
+        except Exception as e:
+            return False, "ATTESTATION_EVIDENCE_INVALID", f"Failed parsing dataset manifest: {e}"
 
         # 3. Training Code
         code_path = self.resolve_artifact_path("training_code", evidence)
@@ -167,8 +303,93 @@ class EvidenceArtifactStore:
                 "ATTESTATION_EVIDENCE_INVALID",
                 f"Training code artifact SHA-256 mismatch: disk '{actual_code_hash}' vs manifest '{expected_code_hash}'.",
             )
+        try:
+            with open(code_path, "r", encoding="utf-8") as f:
+                code_data = json.load(f)
+            commit_sha = code_data.get("commit") or code_data.get("git_commit_sha")
+            if not commit_sha or len(commit_sha) != 40 or not all(c in "0123456789abcdef" for c in commit_sha.lower()):
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Training code manifest specifies invalid git commit hash."
+        except Exception as e:
+            return False, "ATTESTATION_EVIDENCE_INVALID", f"Failed parsing training code manifest: {e}"
 
-        # 4. Telemetry Logs
+        # 4. Environment and Dependency Manifest
+        env_path = self.resolve_artifact_path("environment", evidence)
+        if not env_path or not os.path.isfile(env_path):
+            return False, "ATTESTATION_EVIDENCE_INVALID", "Missing required environment evidence artifact."
+        actual_env_hash = compute_file_sha256(env_path)
+        expected_env_hash = str(
+            evidence.get("environment", {}).get("dependencies_hash")
+            or evidence.get("environment", {}).get("environment_manifest_hash", "")
+        ).strip().lower()
+        if expected_env_hash and actual_env_hash != expected_env_hash:
+            return (
+                False,
+                "ATTESTATION_EVIDENCE_INVALID",
+                f"Environment manifest artifact SHA-256 mismatch: disk '{actual_env_hash}' vs manifest '{expected_env_hash}'.",
+            )
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                env_data = json.load(f)
+            for req_field in ("python", "torch"):
+                if not env_data.get(req_field) and not env_data.get(f"{req_field}_version"):
+                    return False, "ATTESTATION_EVIDENCE_INVALID", f"Environment manifest missing '{req_field}' field."
+        except Exception as e:
+            return False, "ATTESTATION_EVIDENCE_INVALID", f"Failed parsing environment manifest: {e}"
+
+        # 5. Optimizer Telemetry Manifest
+        optim_path = self.resolve_artifact_path("optimizer", evidence)
+        if not optim_path or not os.path.isfile(optim_path):
+            return False, "ATTESTATION_EVIDENCE_INVALID", "Missing required optimizer evidence artifact."
+        actual_optim_hash = compute_file_sha256(optim_path)
+        expected_optim_hash = str(
+            evidence.get("optimizer", {}).get("optimizer_telemetry_hash")
+            or evidence.get("optimizer", {}).get("optimizer_hash", "")
+        ).strip().lower()
+        if expected_optim_hash and actual_optim_hash != expected_optim_hash:
+            return (
+                False,
+                "ATTESTATION_EVIDENCE_INVALID",
+                f"Optimizer artifact SHA-256 mismatch: disk '{actual_optim_hash}' vs manifest '{expected_optim_hash}'.",
+            )
+        try:
+            with open(optim_path, "r", encoding="utf-8") as f:
+                optim_data = json.load(f)
+            optim_run_id = str(optim_data.get("run_id", "")).strip()
+            if optim_run_id and optim_run_id != declared_run_id:
+                return (
+                    False,
+                    "ATTESTATION_EVIDENCE_INVALID",
+                    f"Optimizer telemetry run_id mismatch: disk '{optim_run_id}' vs manifest '{declared_run_id}'.",
+                )
+            optim_steps = int(optim_data.get("total_steps", 0))
+            declared_steps = int(evidence.get("optimizer", {}).get("total_steps", 0))
+            if optim_steps != declared_steps:
+                return (
+                    False,
+                    "ATTESTATION_EVIDENCE_INVALID",
+                    f"Optimizer telemetry total_steps mismatch: disk {optim_steps} vs manifest {declared_steps}.",
+                )
+            # Step records monotonically increasing check
+            step_records = optim_data.get("step_records") or optim_data.get("optimizer_steps")
+            if isinstance(step_records, list):
+                last_step = -1
+                for rec in step_records:
+                    if not isinstance(rec, dict):
+                        return False, "ATTESTATION_EVIDENCE_INVALID", "Optimizer step record must be a dictionary."
+                    st_val = rec.get("step")
+                    if not isinstance(st_val, int) or st_val < 0:
+                        return False, "ATTESTATION_EVIDENCE_INVALID", f"Invalid step in optimizer telemetry: {st_val}"
+                    if st_val <= last_step:
+                        return (
+                            False,
+                            "ATTESTATION_EVIDENCE_INVALID",
+                            f"Optimizer steps not strictly monotonic or contain duplicates: step {st_val} <= previous {last_step}.",
+                        )
+                    last_step = st_val
+        except Exception as e:
+            return False, "ATTESTATION_EVIDENCE_INVALID", f"Failed parsing optimizer telemetry artifact: {e}"
+
+        # 6. Telemetry Logs
         logs_path = self.resolve_artifact_path("telemetry_logs", evidence)
         if not logs_path or not os.path.isfile(logs_path):
             return False, "ATTESTATION_EVIDENCE_INVALID", "Missing required telemetry_logs evidence artifact."
@@ -180,20 +401,61 @@ class EvidenceArtifactStore:
                 "ATTESTATION_EVIDENCE_INVALID",
                 f"Telemetry logs artifact SHA-256 mismatch: disk '{actual_logs_hash}' vs manifest '{expected_logs_hash}'.",
             )
-
-        # Verify run_id inside telemetry logs
         try:
             with open(logs_path, "r", encoding="utf-8", errors="replace") as f:
-                log_content = f.read(65536)
-                declared_run_id = str(evidence.get("run_id", "")).strip()
-                if declared_run_id and declared_run_id not in log_content:
-                    return (
-                        False,
-                        "ATTESTATION_EVIDENCE_INVALID",
-                        f"Run ID '{declared_run_id}' not found in telemetry logs artifact.",
-                    )
+                log_lines = f.readlines()
+            has_init = False
+            has_complete = False
+            last_step = -1
+            for line in log_lines:
+                line_str = line.strip()
+                if not line_str:
+                    continue
+                if "[RUN_INIT]" in line_str:
+                    if declared_run_id and f"run_id={declared_run_id}" in line_str:
+                        has_init = True
+                elif "[STEP_TELEMETRY]" in line_str:
+                    import re
+                    m = re.search(r"step=(\d+)", line_str)
+                    if m:
+                        cur_step = int(m.group(1))
+                        if cur_step <= last_step:
+                            return (
+                                False,
+                                "ATTESTATION_EVIDENCE_INVALID",
+                                f"Telemetry log steps not strictly monotonic or duplicate detected: step {cur_step} <= {last_step}.",
+                            )
+                        last_step = cur_step
+                elif "[RUN_COMPLETE]" in line_str:
+                    if declared_run_id and f"run_id={declared_run_id}" in line_str:
+                        has_complete = True
+            if not has_init:
+                return (
+                    False,
+                    "ATTESTATION_EVIDENCE_INVALID",
+                    f"Telemetry log missing valid [RUN_INIT] record with run_id '{declared_run_id}'.",
+                )
+            if not has_complete:
+                return (
+                    False,
+                    "ATTESTATION_EVIDENCE_INVALID",
+                    f"Telemetry log missing valid [RUN_COMPLETE] record with run_id '{declared_run_id}'.",
+                )
         except Exception as e:
             return False, "ATTESTATION_EVIDENCE_INVALID", f"Failed reading telemetry logs artifact: {e}"
+
+        # 7. Candidate Checkpoint Verification (if path supplied)
+        if checkpoint_file_path:
+            if not os.path.isfile(checkpoint_file_path):
+                return False, "STRUCTURALLY_INVALID", f"Candidate checkpoint file not found: '{checkpoint_file_path}'"
+            actual_ckpt_hash = compute_file_sha256(checkpoint_file_path)
+            expected_ckpt_hash = str(evidence.get("checkpoint_sha256", "")).strip().lower()
+            if actual_ckpt_hash != expected_ckpt_hash:
+                return (
+                    False,
+                    "ATTESTATION_CHECKPOINT_HASH_MISMATCH",
+                    f"Candidate checkpoint disk SHA-256 '{actual_ckpt_hash}' does not match manifest '{expected_ckpt_hash}'.",
+                )
 
         return True, "GENUINE_TRAINED_SOVEREIGN", "Physical evidence artifacts verified against store."
 
@@ -235,7 +497,8 @@ class TrainingEvidenceValidator:
         checkpoint_file_sha256: str,
         attestation: Optional[Dict[str, Any]] = None,
         evidence_store: Optional[EvidenceArtifactStore] = None,
-        require_artifacts: bool = False,
+        require_artifacts: bool = True,
+        checkpoint_file_path: Optional[str] = None,
     ) -> Tuple[bool, str, str]:
         """
         Validates the complete training evidence package against candidate checkpoint and attestation.
@@ -321,6 +584,18 @@ class TrainingEvidenceValidator:
         ev_ckpt_hash = str(evidence.get("checkpoint_sha256", "")).strip().lower()
         if not is_valid_hex64(ev_ckpt_hash):
             return False, "ATTESTATION_EVIDENCE_INVALID", f"Invalid evidence checkpoint_sha256 format: {ev_ckpt_hash}"
+
+        env_dict = evidence.get("environment", {})
+        if isinstance(env_dict, dict):
+            env_hash = env_dict.get("dependencies_hash") or env_dict.get("environment_manifest_hash")
+            if env_hash and not is_valid_hex64(env_hash):
+                return False, "ATTESTATION_EVIDENCE_INVALID", f"Invalid environment dependencies_hash format: {env_hash}"
+
+        optim_dict_manifest = evidence.get("optimizer", {})
+        if isinstance(optim_dict_manifest, dict):
+            opt_hash = optim_dict_manifest.get("optimizer_telemetry_hash") or optim_dict_manifest.get("optimizer_hash")
+            if opt_hash and not is_valid_hex64(opt_hash):
+                return False, "ATTESTATION_EVIDENCE_INVALID", f"Invalid optimizer_telemetry_hash format: {opt_hash}"
 
         # 5. Checkpoint byte binding
         if ev_ckpt_hash != checkpoint_file_sha256.lower().strip():
@@ -503,7 +778,11 @@ class TrainingEvidenceValidator:
                     "ATTESTATION_EVIDENCE_INVALID",
                     "Physical evidence artifact store is unconfigured or directory does not exist.",
                 )
-            art_ok, art_tier, art_reason = resolved_store.verify_artifacts(evidence)
+            art_ok, art_tier, art_reason = resolved_store.verify_artifacts(
+                evidence,
+                checkpoint_file_path=checkpoint_file_path,
+                attestation=attestation,
+            )
             if not art_ok:
                 return False, art_tier, art_reason
 
@@ -577,6 +856,8 @@ def create_sample_training_evidence(
             "betas": [0.9, 0.95],
             "weight_decay": 0.1,
             "total_steps": step_count,
+            "optimizer_telemetry_hash": hashlib.sha256(b"moon_optimizer_telemetry").hexdigest(),
+            "artifact_file": "optimizer_telemetry.json",
         },
         "metrics_history": [
             {"step": 100, "train_loss": 3.85, "val_loss": 3.91},
@@ -584,6 +865,7 @@ def create_sample_training_evidence(
             {"step": 1000, "train_loss": 2.15, "val_loss": 2.21},
         ],
         "telemetry_logs_sha256": hashlib.sha256(b"moon_telemetry_logs_raw").hexdigest(),
+        "telemetry_logs_file": "telemetry_logs.raw",
         "checkpoint_sha256": checkpoint_file_sha256.lower().strip(),
         "verifier": {
             "verifier_id": "test_training_authority",
@@ -601,6 +883,7 @@ def create_sample_training_artifacts(
     step_count: int = 1000,
     start_time: Optional[str] = None,
     completion_time: Optional[str] = None,
+    checkpoint_file_sha256: Optional[str] = None,
 ) -> Tuple[Dict[str, str], Dict[str, Any]]:
     """
     Creates authentic physical files on disk for all required evidence artifacts in target_dir.
@@ -648,6 +931,30 @@ def create_sample_training_artifacts(
         f.write(env_content)
     env_hash = hashlib.sha256(env_content).hexdigest().lower()
 
+    optim_step_500 = 500 if step_count > 500 else max(1, step_count // 2)
+    optim_records = [
+        {"step": min(100, step_count // 4 if step_count >= 4 else 1), "lr": 0.0006, "grad_norm": 0.45},
+        {"step": optim_step_500, "lr": 0.0003, "grad_norm": 0.32},
+        {"step": step_count, "lr": 0.00006, "grad_norm": 0.28},
+    ]
+    # Filter unique steps sorted
+    seen_steps = set()
+    unique_records = []
+    for r in sorted(optim_records, key=lambda x: x["step"]):
+        if r["step"] not in seen_steps:
+            seen_steps.add(r["step"])
+            unique_records.append(r)
+
+    optim_content = json.dumps({
+        "run_id": run_id,
+        "total_steps": step_count,
+        "step_records": unique_records
+    }, indent=2).encode("utf-8")
+    optim_file = os.path.join(target_dir, "optimizer_telemetry.json")
+    with open(optim_file, "wb") as f:
+        f.write(optim_content)
+    optim_hash = hashlib.sha256(optim_content).hexdigest().lower()
+
     log_lines = [
         f"[RUN_INIT] run_id={run_id} policy=STRICT_SOVEREIGN_RANDOM_INIT_ONLY step=0",
         f"[STEP_TELEMETRY] run_id={run_id} step=100 train_loss=3.85 val_loss=3.91",
@@ -666,11 +973,12 @@ def create_sample_training_artifacts(
         "dataset_manifest": data_file,
         "training_code": code_file,
         "environment": env_file,
+        "optimizer": optim_file,
         "telemetry_logs": log_file,
     }
 
     manifest = create_sample_training_evidence(
-        checkpoint_file_sha256="00" * 32,
+        checkpoint_file_sha256=checkpoint_file_sha256 or ("00" * 32),
         run_id=run_id,
         step_count=step_count,
         start_time=st,
@@ -693,6 +1001,20 @@ def create_sample_training_artifacts(
             "dependencies_hash": env_hash,
             "artifact_file": "environment_manifest.json",
         },
+        optimizer={
+            "name": "AdamW",
+            "learning_rate": 0.0006,
+            "betas": [0.9, 0.95],
+            "weight_decay": 0.1,
+            "total_steps": step_count,
+            "optimizer_telemetry_hash": optim_hash,
+            "artifact_file": "optimizer_telemetry.json",
+        },
+        metrics_history=[
+            {"step": min(100, step_count // 4 if step_count >= 4 else 1), "train_loss": 3.85, "val_loss": 3.91},
+            {"step": optim_step_500, "train_loss": 2.65, "val_loss": 2.70},
+            {"step": step_count, "train_loss": 2.15, "val_loss": 2.21},
+        ],
         telemetry_logs_sha256=logs_hash,
         telemetry_logs_file="telemetry_logs.raw",
     )
