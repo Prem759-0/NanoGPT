@@ -905,6 +905,13 @@ class ModelService:
                         "Unpromoted historical pilot checkpoints are restricted to isolated retrospective testing (allow_fixture=True)."
                     )
                     return False
+                if not allow_fixture and not self.is_verified_genuine_checkpoint(ckpt_path, require_production=True):
+                    self.model = None
+                    self.error_message = (
+                        "Production inference blocked: Pilot checkpoint failed positive strict sovereign verification. "
+                        "Unpromoted or unverified checkpoints are restricted to isolated retrospective testing (allow_fixture=True)."
+                    )
+                    return False
                 try:
                     import torch
                     from model import GPT, GPTConfig

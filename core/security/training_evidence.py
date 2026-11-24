@@ -24,6 +24,7 @@ Attestation Standard: Restricted Deterministic Canonical JSON Ed25519 Training A
 
 import os
 import re
+import math
 import json
 import logging
 import hashlib
@@ -242,6 +243,12 @@ class EvidenceArtifactStore:
             return False, "ATTESTATION_EVIDENCE_INVALID", "Missing required model_architecture evidence artifact."
         actual_arch_hash = compute_file_sha256(arch_path)
         expected_arch_hash = str(evidence.get("model_architecture", {}).get("model_architecture_hash", "")).strip().lower()
+        if not is_valid_hex64(expected_arch_hash):
+            return (
+                False,
+                "ATTESTATION_EVIDENCE_INVALID",
+                f"Missing or invalid model_architecture_hash in evidence manifest: '{expected_arch_hash}'",
+            )
         if actual_arch_hash != expected_arch_hash:
             return (
                 False,
@@ -262,6 +269,12 @@ class EvidenceArtifactStore:
             return False, "ATTESTATION_EVIDENCE_INVALID", "Missing required dataset_manifest evidence artifact."
         actual_data_hash = compute_file_sha256(data_path)
         expected_data_hash = str(evidence.get("dataset_manifest", {}).get("dataset_manifest_hash", "")).strip().lower()
+        if not is_valid_hex64(expected_data_hash):
+            return (
+                False,
+                "ATTESTATION_EVIDENCE_INVALID",
+                f"Missing or invalid dataset_manifest_hash in evidence manifest: '{expected_data_hash}'",
+            )
         if actual_data_hash != expected_data_hash:
             return (
                 False,
@@ -297,6 +310,12 @@ class EvidenceArtifactStore:
             return False, "ATTESTATION_EVIDENCE_INVALID", "Missing required training_code evidence artifact."
         actual_code_hash = compute_file_sha256(code_path)
         expected_code_hash = str(evidence.get("training_code", {}).get("training_code_hash", "")).strip().lower()
+        if not is_valid_hex64(expected_code_hash):
+            return (
+                False,
+                "ATTESTATION_EVIDENCE_INVALID",
+                f"Missing or invalid training_code_hash in evidence manifest: '{expected_code_hash}'",
+            )
         if actual_code_hash != expected_code_hash:
             return (
                 False,
@@ -321,7 +340,13 @@ class EvidenceArtifactStore:
             evidence.get("environment", {}).get("dependencies_hash")
             or evidence.get("environment", {}).get("environment_manifest_hash", "")
         ).strip().lower()
-        if expected_env_hash and actual_env_hash != expected_env_hash:
+        if not is_valid_hex64(expected_env_hash):
+            return (
+                False,
+                "ATTESTATION_EVIDENCE_INVALID",
+                f"Missing or invalid expected environment dependencies_hash: '{expected_env_hash}'",
+            )
+        if actual_env_hash != expected_env_hash:
             return (
                 False,
                 "ATTESTATION_EVIDENCE_INVALID",
@@ -345,7 +370,13 @@ class EvidenceArtifactStore:
             evidence.get("optimizer", {}).get("optimizer_telemetry_hash")
             or evidence.get("optimizer", {}).get("optimizer_hash", "")
         ).strip().lower()
-        if expected_optim_hash and actual_optim_hash != expected_optim_hash:
+        if not is_valid_hex64(expected_optim_hash):
+            return (
+                False,
+                "ATTESTATION_EVIDENCE_INVALID",
+                f"Missing or invalid expected optimizer_telemetry_hash: '{expected_optim_hash}'",
+            )
+        if actual_optim_hash != expected_optim_hash:
             return (
                 False,
                 "ATTESTATION_EVIDENCE_INVALID",
@@ -354,14 +385,29 @@ class EvidenceArtifactStore:
         try:
             with open(optim_path, "r", encoding="utf-8") as f:
                 optim_data = json.load(f)
+            if not isinstance(optim_data, dict):
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Optimizer telemetry artifact must be a JSON dictionary."
             optim_run_id = str(optim_data.get("run_id", "")).strip()
-            if optim_run_id and optim_run_id != declared_run_id:
+            if not optim_run_id:
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Optimizer telemetry missing 'run_id'."
+            if optim_run_id != declared_run_id:
                 return (
                     False,
                     "ATTESTATION_EVIDENCE_INVALID",
                     f"Optimizer telemetry run_id mismatch: disk '{optim_run_id}' vs manifest '{declared_run_id}'.",
                 )
-            optim_steps = int(optim_data.get("total_steps", 0))
+            if "total_steps" not in optim_data:
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Optimizer telemetry missing 'total_steps'."
+            try:
+                optim_steps = int(optim_data["total_steps"])
+            except (ValueError, TypeError):
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Optimizer telemetry 'total_steps' must be an integer."
+            if optim_steps <= 0:
+                return (
+                    False,
+                    "ATTESTATION_EVIDENCE_INVALID",
+                    f"Optimizer telemetry declared non-positive total_steps: {optim_steps}.",
+                )
             declared_steps = int(evidence.get("optimizer", {}).get("total_steps", 0))
             if optim_steps != declared_steps:
                 return (
@@ -369,23 +415,70 @@ class EvidenceArtifactStore:
                     "ATTESTATION_EVIDENCE_INVALID",
                     f"Optimizer telemetry total_steps mismatch: disk {optim_steps} vs manifest {declared_steps}.",
                 )
-            # Step records monotonically increasing check
-            step_records = optim_data.get("step_records") or optim_data.get("optimizer_steps")
-            if isinstance(step_records, list):
-                last_step = -1
-                for rec in step_records:
-                    if not isinstance(rec, dict):
-                        return False, "ATTESTATION_EVIDENCE_INVALID", "Optimizer step record must be a dictionary."
-                    st_val = rec.get("step")
-                    if not isinstance(st_val, int) or st_val < 0:
-                        return False, "ATTESTATION_EVIDENCE_INVALID", f"Invalid step in optimizer telemetry: {st_val}"
-                    if st_val <= last_step:
-                        return (
-                            False,
-                            "ATTESTATION_EVIDENCE_INVALID",
-                            f"Optimizer steps not strictly monotonic or contain duplicates: step {st_val} <= previous {last_step}.",
-                        )
-                    last_step = st_val
+            if attestation is not None:
+                att_steps = int(attestation.get("step_count", 0))
+                if optim_steps != att_steps:
+                    return (
+                        False,
+                        "ATTESTATION_EVIDENCE_INVALID",
+                        f"Optimizer telemetry total_steps mismatch: disk {optim_steps} vs attestation {att_steps}.",
+                    )
+
+            # Optimizer configuration checks
+            opt_name = optim_data.get("name") or optim_data.get("optimizer") or evidence.get("optimizer", {}).get("name")
+            if not opt_name or not isinstance(opt_name, str) or not opt_name.strip():
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Optimizer telemetry missing valid optimizer name/type."
+
+            # Step records completeness check (Mandatory, non-empty, strictly monotonic, agreeing with total_steps)
+            step_records = optim_data.get("step_records") if "step_records" in optim_data else optim_data.get("optimizer_steps")
+            if not isinstance(step_records, list) or len(step_records) == 0:
+                return (
+                    False,
+                    "ATTESTATION_EVIDENCE_INVALID",
+                    "Optimizer telemetry missing or empty step_records list. Declared total_steps is not proof of actual optimizer updates.",
+                )
+            if len(step_records) > optim_steps:
+                return (
+                    False,
+                    "ATTESTATION_EVIDENCE_INVALID",
+                    f"Optimizer step records count ({len(step_records)}) exceeds total_steps ({optim_steps}).",
+                )
+
+            last_step = -1
+            for idx, rec in enumerate(step_records):
+                if not isinstance(rec, dict):
+                    return False, "ATTESTATION_EVIDENCE_INVALID", f"Optimizer step record at index {idx} must be a dictionary."
+                st_val = rec.get("step")
+                if not isinstance(st_val, int) or st_val < 0:
+                    return False, "ATTESTATION_EVIDENCE_INVALID", f"Invalid step in optimizer telemetry at index {idx}: {st_val}"
+                if st_val <= last_step:
+                    return (
+                        False,
+                        "ATTESTATION_EVIDENCE_INVALID",
+                        f"Optimizer steps not strictly monotonic or contain duplicates: step {st_val} <= previous {last_step}.",
+                    )
+                if st_val > optim_steps:
+                    return (
+                        False,
+                        "ATTESTATION_EVIDENCE_INVALID",
+                        f"Optimizer step {st_val} exceeds declared total_steps {optim_steps}.",
+                    )
+                if "lr" in rec:
+                    lr_val = rec["lr"]
+                    if not isinstance(lr_val, (int, float)) or not math.isfinite(lr_val) or lr_val <= 0.0:
+                        return False, "ATTESTATION_EVIDENCE_INVALID", f"Optimizer step {st_val} has invalid learning rate: {lr_val}"
+                if "grad_norm" in rec:
+                    gn_val = rec["grad_norm"]
+                    if not isinstance(gn_val, (int, float)) or not math.isfinite(gn_val) or gn_val < 0.0:
+                        return False, "ATTESTATION_EVIDENCE_INVALID", f"Optimizer step {st_val} has invalid gradient norm: {gn_val}"
+                last_step = st_val
+
+            if last_step != optim_steps:
+                return (
+                    False,
+                    "ATTESTATION_EVIDENCE_INVALID",
+                    f"Optimizer telemetry final observed step ({last_step}) does not match declared total_steps ({optim_steps}).",
+                )
         except Exception as e:
             return False, "ATTESTATION_EVIDENCE_INVALID", f"Failed parsing optimizer telemetry artifact: {e}"
 
@@ -395,6 +488,12 @@ class EvidenceArtifactStore:
             return False, "ATTESTATION_EVIDENCE_INVALID", "Missing required telemetry_logs evidence artifact."
         actual_logs_hash = compute_file_sha256(logs_path)
         expected_logs_hash = str(evidence.get("telemetry_logs_sha256", "")).strip().lower()
+        if not is_valid_hex64(expected_logs_hash):
+            return (
+                False,
+                "ATTESTATION_EVIDENCE_INVALID",
+                f"Missing or invalid expected telemetry_logs_sha256: '{expected_logs_hash}'",
+            )
         if actual_logs_hash != expected_logs_hash:
             return (
                 False,
@@ -403,53 +502,140 @@ class EvidenceArtifactStore:
             )
         try:
             with open(logs_path, "r", encoding="utf-8", errors="replace") as f:
-                log_lines = f.readlines()
-            has_init = False
-            has_complete = False
-            last_step = -1
-            for line in log_lines:
-                line_str = line.strip()
-                if not line_str:
-                    continue
-                if "[RUN_INIT]" in line_str:
-                    if declared_run_id and f"run_id={declared_run_id}" in line_str:
-                        has_init = True
-                elif "[STEP_TELEMETRY]" in line_str:
-                    import re
-                    m = re.search(r"step=(\d+)", line_str)
-                    if m:
-                        cur_step = int(m.group(1))
-                        if cur_step <= last_step:
+                raw_lines = [l.strip() for l in f.readlines() if l.strip()]
+            if len(raw_lines) < 3:
+                return (
+                    False,
+                    "ATTESTATION_EVIDENCE_INVALID",
+                    f"Telemetry logs artifact contains insufficient records ({len(raw_lines)} lines; required at least 3: [RUN_INIT], [STEP_TELEMETRY], [RUN_COMPLETE]).",
+                )
+
+            # First line must be [RUN_INIT]
+            first_line = raw_lines[0]
+            if not first_line.startswith("[RUN_INIT]"):
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Telemetry log must start with [RUN_INIT] event."
+            if declared_run_id and f"run_id={declared_run_id}" not in first_line:
+                return False, "ATTESTATION_EVIDENCE_INVALID", f"Telemetry log missing valid [RUN_INIT] record with run_id '{declared_run_id}'."
+            if "policy=STRICT_SOVEREIGN_RANDOM_INIT_ONLY" not in first_line:
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Telemetry log [RUN_INIT] missing policy=STRICT_SOVEREIGN_RANDOM_INIT_ONLY."
+            if "step=0" not in first_line:
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Telemetry log [RUN_INIT] must declare step=0."
+
+            # Last line must be [RUN_COMPLETE]
+            last_line = raw_lines[-1]
+            if not last_line.startswith("[RUN_COMPLETE]"):
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Telemetry log must end with [RUN_COMPLETE] event."
+            if declared_run_id and f"run_id={declared_run_id}" not in last_line:
+                return False, "ATTESTATION_EVIDENCE_INVALID", f"Telemetry log missing valid [RUN_COMPLETE] record with run_id '{declared_run_id}'."
+            if "status=SUCCESS" not in last_line:
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Telemetry log [RUN_COMPLETE] missing status=SUCCESS."
+
+            # Optional total_steps check in [RUN_COMPLETE]
+            import re
+            m_fin = re.search(r"(?:total_steps|final_step)=(\d+)", last_line)
+            if m_fin:
+                fin_st = int(m_fin.group(1))
+                if fin_st != declared_steps:
+                    return (
+                        False,
+                        "ATTESTATION_EVIDENCE_INVALID",
+                        f"Telemetry log [RUN_COMPLETE] step count ({fin_st}) does not match declared total_steps ({declared_steps}).",
+                    )
+
+            # Intermediate lines must be [STEP_TELEMETRY]
+            last_log_step = 0
+            step_event_count = 0
+            for line_idx, line_str in enumerate(raw_lines[1:-1], start=2):
+                if line_str.startswith("[RUN_INIT]") or line_str.startswith("[RUN_COMPLETE]"):
+                    return (
+                        False,
+                        "ATTESTATION_EVIDENCE_INVALID",
+                        f"Telemetry log contains duplicate lifecycle event on line {line_idx}: {line_str}",
+                    )
+                if not line_str.startswith("[STEP_TELEMETRY]"):
+                    return (
+                        False,
+                        "ATTESTATION_EVIDENCE_INVALID",
+                        f"Telemetry log contains unexpected record format on line {line_idx}: {line_str}",
+                    )
+                if declared_run_id and f"run_id={declared_run_id}" not in line_str:
+                    return (
+                        False,
+                        "ATTESTATION_EVIDENCE_INVALID",
+                        f"Telemetry log step event on line {line_idx} does not match run_id '{declared_run_id}'.",
+                    )
+
+                m_step = re.search(r"step=(\d+)", line_str)
+                if not m_step:
+                    return False, "ATTESTATION_EVIDENCE_INVALID", f"Telemetry log step event on line {line_idx} missing valid step number."
+                cur_step = int(m_step.group(1))
+                if cur_step <= last_log_step:
+                    return (
+                        False,
+                        "ATTESTATION_EVIDENCE_INVALID",
+                        f"Telemetry log steps not strictly monotonic or duplicate detected: step {cur_step} <= {last_log_step}.",
+                    )
+                if cur_step > declared_steps:
+                    return (
+                        False,
+                        "ATTESTATION_EVIDENCE_INVALID",
+                        f"Telemetry log step {cur_step} exceeds declared total_steps {declared_steps} on line {line_idx}.",
+                    )
+
+                # Loss metrics verification
+                m_loss = re.search(r"train_loss=([0-9\.\-eE]+)", line_str)
+                if not m_loss:
+                    return False, "ATTESTATION_EVIDENCE_INVALID", f"Telemetry log step event on line {line_idx} missing train_loss."
+                try:
+                    t_loss = float(m_loss.group(1))
+                    if not math.isfinite(t_loss) or t_loss <= 0.0:
+                        return (
+                            False,
+                            "ATTESTATION_EVIDENCE_INVALID",
+                            f"Telemetry log step event on line {line_idx} has non-positive or non-finite train_loss: {t_loss}",
+                        )
+                except ValueError:
+                    return False, "ATTESTATION_EVIDENCE_INVALID", f"Telemetry log step event on line {line_idx} has malformed train_loss: {m_loss.group(1)}"
+
+                m_vloss = re.search(r"val_loss=([0-9\.\-eE]+)", line_str)
+                if m_vloss:
+                    try:
+                        v_loss = float(m_vloss.group(1))
+                        if not math.isfinite(v_loss) or v_loss <= 0.0:
                             return (
                                 False,
                                 "ATTESTATION_EVIDENCE_INVALID",
-                                f"Telemetry log steps not strictly monotonic or duplicate detected: step {cur_step} <= {last_step}.",
+                                f"Telemetry log step event on line {line_idx} has non-positive or non-finite val_loss: {v_loss}",
                             )
-                        last_step = cur_step
-                elif "[RUN_COMPLETE]" in line_str:
-                    if declared_run_id and f"run_id={declared_run_id}" in line_str:
-                        has_complete = True
-            if not has_init:
+                    except ValueError:
+                        return False, "ATTESTATION_EVIDENCE_INVALID", f"Telemetry log step event on line {line_idx} has malformed val_loss: {m_vloss.group(1)}"
+
+                last_log_step = cur_step
+                step_event_count += 1
+
+            if step_event_count == 0:
+                return False, "ATTESTATION_EVIDENCE_INVALID", "Telemetry log contains zero [STEP_TELEMETRY] events."
+            if last_log_step != declared_steps:
                 return (
                     False,
                     "ATTESTATION_EVIDENCE_INVALID",
-                    f"Telemetry log missing valid [RUN_INIT] record with run_id '{declared_run_id}'.",
-                )
-            if not has_complete:
-                return (
-                    False,
-                    "ATTESTATION_EVIDENCE_INVALID",
-                    f"Telemetry log missing valid [RUN_COMPLETE] record with run_id '{declared_run_id}'.",
+                    f"Telemetry log final step ({last_log_step}) does not match declared total_steps ({declared_steps}).",
                 )
         except Exception as e:
             return False, "ATTESTATION_EVIDENCE_INVALID", f"Failed reading telemetry logs artifact: {e}"
 
         # 7. Candidate Checkpoint Verification (if path supplied)
+        expected_ckpt_hash = str(evidence.get("checkpoint_sha256", "")).strip().lower()
+        if not is_valid_hex64(expected_ckpt_hash):
+            return (
+                False,
+                "ATTESTATION_EVIDENCE_INVALID",
+                f"Missing or invalid expected checkpoint_sha256: '{expected_ckpt_hash}'",
+            )
         if checkpoint_file_path:
             if not os.path.isfile(checkpoint_file_path):
                 return False, "STRUCTURALLY_INVALID", f"Candidate checkpoint file not found: '{checkpoint_file_path}'"
             actual_ckpt_hash = compute_file_sha256(checkpoint_file_path)
-            expected_ckpt_hash = str(evidence.get("checkpoint_sha256", "")).strip().lower()
             if actual_ckpt_hash != expected_ckpt_hash:
                 return (
                     False,
@@ -586,16 +772,18 @@ class TrainingEvidenceValidator:
             return False, "ATTESTATION_EVIDENCE_INVALID", f"Invalid evidence checkpoint_sha256 format: {ev_ckpt_hash}"
 
         env_dict = evidence.get("environment", {})
-        if isinstance(env_dict, dict):
-            env_hash = env_dict.get("dependencies_hash") or env_dict.get("environment_manifest_hash")
-            if env_hash and not is_valid_hex64(env_hash):
-                return False, "ATTESTATION_EVIDENCE_INVALID", f"Invalid environment dependencies_hash format: {env_hash}"
+        if not isinstance(env_dict, dict):
+            return False, "ATTESTATION_EVIDENCE_INVALID", "environment section must be a dictionary."
+        env_hash = env_dict.get("dependencies_hash") or env_dict.get("environment_manifest_hash")
+        if not is_valid_hex64(env_hash):
+            return False, "ATTESTATION_EVIDENCE_INVALID", f"Missing or invalid environment dependencies_hash format: {env_hash}"
 
         optim_dict_manifest = evidence.get("optimizer", {})
-        if isinstance(optim_dict_manifest, dict):
-            opt_hash = optim_dict_manifest.get("optimizer_telemetry_hash") or optim_dict_manifest.get("optimizer_hash")
-            if opt_hash and not is_valid_hex64(opt_hash):
-                return False, "ATTESTATION_EVIDENCE_INVALID", f"Invalid optimizer_telemetry_hash format: {opt_hash}"
+        if not isinstance(optim_dict_manifest, dict):
+            return False, "ATTESTATION_EVIDENCE_INVALID", "optimizer section must be a dictionary."
+        opt_hash = optim_dict_manifest.get("optimizer_telemetry_hash") or optim_dict_manifest.get("optimizer_hash")
+        if not is_valid_hex64(opt_hash):
+            return False, "ATTESTATION_EVIDENCE_INVALID", f"Missing or invalid optimizer_telemetry_hash format: {opt_hash}"
 
         # 5. Checkpoint byte binding
         if ev_ckpt_hash != checkpoint_file_sha256.lower().strip():
@@ -932,9 +1120,11 @@ def create_sample_training_artifacts(
     env_hash = hashlib.sha256(env_content).hexdigest().lower()
 
     optim_step_500 = 500 if step_count > 500 else max(1, step_count // 2)
+    s1 = min(100, max(1, step_count // 4 if step_count >= 4 else 1))
+    s2 = optim_step_500
     optim_records = [
-        {"step": min(100, step_count // 4 if step_count >= 4 else 1), "lr": 0.0006, "grad_norm": 0.45},
-        {"step": optim_step_500, "lr": 0.0003, "grad_norm": 0.32},
+        {"step": s1, "lr": 0.0006, "grad_norm": 0.45},
+        {"step": s2, "lr": 0.0003, "grad_norm": 0.32},
         {"step": step_count, "lr": 0.00006, "grad_norm": 0.28},
     ]
     # Filter unique steps sorted
@@ -945,8 +1135,14 @@ def create_sample_training_artifacts(
             seen_steps.add(r["step"])
             unique_records.append(r)
 
+    # Ensure last record is exactly step_count
+    if unique_records[-1]["step"] != step_count:
+        unique_records.append({"step": step_count, "lr": 0.00006, "grad_norm": 0.28})
+
     optim_content = json.dumps({
         "run_id": run_id,
+        "name": "AdamW",
+        "learning_rate": 0.0006,
         "total_steps": step_count,
         "step_records": unique_records
     }, indent=2).encode("utf-8")
@@ -956,12 +1152,14 @@ def create_sample_training_artifacts(
     optim_hash = hashlib.sha256(optim_content).hexdigest().lower()
 
     log_lines = [
-        f"[RUN_INIT] run_id={run_id} policy=STRICT_SOVEREIGN_RANDOM_INIT_ONLY step=0",
-        f"[STEP_TELEMETRY] run_id={run_id} step=100 train_loss=3.85 val_loss=3.91",
-        f"[STEP_TELEMETRY] run_id={run_id} step=500 train_loss=2.65 val_loss=2.70",
-        f"[STEP_TELEMETRY] run_id={run_id} step={step_count} train_loss=2.15 val_loss=2.21",
-        f"[RUN_COMPLETE] run_id={run_id} total_steps={step_count} status=SUCCESS"
+        f"[RUN_INIT] run_id={run_id} policy=STRICT_SOVEREIGN_RANDOM_INIT_ONLY step=0"
     ]
+    for r in unique_records:
+        st_val = r["step"]
+        t_l = 3.85 if st_val <= 100 else (2.65 if st_val <= optim_step_500 else 2.15)
+        v_l = 3.91 if st_val <= 100 else (2.70 if st_val <= optim_step_500 else 2.21)
+        log_lines.append(f"[STEP_TELEMETRY] run_id={run_id} step={st_val} train_loss={t_l} val_loss={v_l}")
+    log_lines.append(f"[RUN_COMPLETE] run_id={run_id} total_steps={step_count} status=SUCCESS")
     log_content = "\n".join(log_lines).encode("utf-8")
     log_file = os.path.join(target_dir, "telemetry_logs.raw")
     with open(log_file, "wb") as f:
