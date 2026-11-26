@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Claude AI — Powered by Qwen-2.5-Coder-7B & NanoGPT</title>
-  <meta name="description" content="Frontier Sovereign Coding AI platform with Claude aesthetics, Clerk user authentication, and 100% private local inference.">
+  <title>Moon AI — Sovereign NanoGPT Research Lab</title>
+  <meta name="description" content="Moon AI sovereign local transformer research platform with honest model status reporting and zero paid cloud APIs.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
@@ -38,13 +38,14 @@
           </div>
           <div class="model-select-wrapper">
             <select id="model-select" class="styled-select" aria-label="Select AI Model">
-              <option value="qwen-2.5-coder-7b" selected>👑 Qwen-2.5-Coder-7B (Frontier Super-AI — By Prem Gaikwad)</option>
-              <option value="llama-3.2">🔥 NanoGPT-3.2 (1.23B Fast Coder & Chat — By Prem Gaikwad)</option>
-              <option value="gpt2">✨ NanoGPT Light (124M Fast Neural Engine)</option>
-              <option value="scratch">🔬 NanoGPT Core (Trained from Scratch)</option>
+              <option value="moon-chat-pilot-v0" selected>🌙 Moon Chat (25.7M Scratch — MODEL_NOT_READY)</option>
+              <option value="scratch">🔬 NanoGPT Core (Scratch Architecture — MODEL_NOT_READY)</option>
+              <option value="qwen-2.5-coder-7b" disabled>⛔ Qwen-2.5-Coder-7B (External Reference — Blocked)</option>
+              <option value="llama-3.2" disabled>⛔ LLaMA-3.2-1B (External Reference — Blocked)</option>
+              <option value="gpt2" disabled>⛔ GPT-2 124M (External Reference — Blocked)</option>
             </select>
           </div>
-          <p id="model-info-note" class="model-info-note">👑 Qwen-2.5-Coder-7B active: Frontier 7.61B coding super-intelligence created by Prem Gaikwad, running locally with 2048 context!</p>
+          <p id="model-info-note" class="model-info-note">🌙 Moon Chat (25.7M Scratch): MODEL_NOT_READY — dataset preparation & owner-authorized training pending.</p>
         </div>
 
         <!-- Model Status Card -->
@@ -205,12 +206,12 @@
 
     <!-- Main Chat Container -->
     <main class="chat-container">
-      <!-- Claude Chat Header -->
+      <!-- Sovereign Chat Header -->
       <header class="chat-header">
         <div class="chat-header-info">
-          <h2 class="chat-header-title">Claude AI <span class="claude-chip">Prem Gaikwad Edition</span></h2>
+          <h2 class="chat-header-title">Moon AI <span class="claude-chip">NanoGPT Sovereign Core</span></h2>
           <span class="chat-header-status-indicator" id="header-status-dot"></span>
-          <span class="chat-header-status-text" id="header-status-text">Qwen-2.5-Coder-7B Ready</span>
+          <span class="chat-header-status-text" id="header-status-text">MODEL_NOT_READY</span>
         </div>
         <div class="chat-header-actions">
           <!-- Clerk User Auth Widget -->
@@ -232,12 +233,12 @@
       <div class="chat-workspace">
         <!-- Messages Stream -->
         <section class="messages-stream" id="messages-stream" aria-live="polite">
-          <!-- Claude Welcome Card -->
+          <!-- Moon AI Sovereign Welcome Card -->
           <div class="welcome-card claude-hero-card" id="welcome-card">
-            <div class="welcome-badge">CLAUDE SOVEREIGN AI • 7.61B SUPER-INTELLIGENCE</div>
-            <h3 class="claude-hero-title">How can I help you build or create today?</h3>
+            <div class="welcome-badge">MOON AI • NANOGPT SOVEREIGN RESEARCH CORE</div>
+            <h3 class="claude-hero-title">How can I help you build or inspect today?</h3>
             <p class="claude-hero-desc">
-              Running <strong>Qwen-2.5-Coder-7B</strong> & <strong>NanoGPT</strong> locally on your system. 100% sovereign, zero external paid APIs, and user-isolated with <strong>Clerk Auth</strong>.
+              Running local deterministic utilities and sovereign <strong>Moon AI / NanoGPT</strong> diagnostics (strictly isolated from quarantined third-party weights, <code>STRICT_SOVEREIGN_RANDOM_INIT_ONLY</code>).
             </p>
             
             <div class="claude-quick-cards-grid">
@@ -274,7 +275,7 @@
             <div class="honest-status-box" id="honest-status-box">
               <div class="honest-status-title">Active AI Engine Status:</div>
               <div id="honest-status-content" class="honest-status-content">
-                Checking Qwen-2.5-Coder-7B engine...
+                Checking Moon AI Sovereign Core status...
               </div>
             </div>
           </div>

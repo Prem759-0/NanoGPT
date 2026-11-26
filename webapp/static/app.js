@@ -234,13 +234,15 @@ document.addEventListener("DOMContentLoaded", () => {
         await refreshStatus();
         if (modelInfoNote) {
           if (selected === "qwen-2.5-coder-7b") {
-            modelInfoNote.textContent = "👑 Qwen-2.5-Coder-7B active: Frontier 7.61B coding super-intelligence created by Prem Gaikwad, running locally with 2048 context!";
+            modelInfoNote.textContent = "⛔ Qwen-2.5-Coder-7B (External Reference): Third-party weights blocked under STRICT_SOVEREIGN_RANDOM_INIT_ONLY policy.";
           } else if (selected === "llama-3.2") {
-            modelInfoNote.textContent = "🔥 NanoGPT-3.2 active: Frontier 1.23B coding & reasoning model created by Prem Gaikwad, running at ~20 tokens/sec on CPU!";
+            modelInfoNote.textContent = "⛔ LLaMA-3.2-1B (External Reference): Third-party weights blocked under STRICT_SOVEREIGN_RANDOM_INIT_ONLY policy.";
           } else if (selected === "gpt2") {
-            modelInfoNote.textContent = "✨ NanoGPT Light (124M) active: Fast, coherent English & coding with 0 cloud APIs.";
+            modelInfoNote.textContent = "⛔ GPT-2 (124M External Reference): Third-party weights blocked under STRICT_SOVEREIGN_RANDOM_INIT_ONLY policy.";
+          } else if (selected === "moon-chat-pilot-v0") {
+            modelInfoNote.textContent = "🌙 Moon Chat (25.7M Scratch Architecture): MODEL_NOT_READY — dataset prep & owner-authorized training pending.";
           } else {
-            modelInfoNote.textContent = "🔬 NanoGPT Core active: Local character-level transformer trained from scratch.";
+            modelInfoNote.textContent = "🔬 NanoGPT Core (Scratch Architecture): MODEL_NOT_READY pending verified sovereign training run.";
           }
         }
       } catch (err) {
@@ -409,56 +411,65 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateStatusUI(health, info) {
-    const status = health.model_status || "NOT TRAINED";
+    const status = health.model_status || "MODEL_NOT_READY";
     modelStatusBadge.className = "status-badge";
 
-    if (status === "READY" || status === "CHECKPOINT FOUND (NOT LOADED)") {
+    if (status === "READY" || status === "EVALUATION_PASSED" || status === "RELEASE_CANDIDATE") {
       modelStatusBadge.classList.add("status-ready");
-      modelStatusBadge.textContent = "READY";
-      modelStatusDesc.textContent = "Model checkpoint is loaded in memory for local inference.";
+      modelStatusBadge.textContent = status;
+      modelStatusDesc.textContent = "Verified sovereign checkpoint loaded for local inference.";
       headerStatusDot.className = "chat-header-status-indicator ready";
-      headerStatusText.textContent = `Model Ready (${health.device.toUpperCase()})`;
+      headerStatusText.textContent = `${status} (${health.device.toUpperCase()})`;
       if (honestStatusContent) {
         honestStatusContent.style.color = "var(--status-ready-text)";
-        honestStatusContent.innerHTML = "✅ Checkpoint is ready! You can chat with your local AI, generate images with <code>/imagine</code>, run Python with <code>/run</code>, or speak with 🎙️ voice input!";
+        honestStatusContent.innerHTML = "✅ Verified sovereign checkpoint ready for local inference.";
       }
-    } else if (status === "NOT TRAINED") {
+    } else if (status === "MODEL_NOT_READY" || status === "DATASET_NOT_READY" || status === "NOT TRAINED") {
       modelStatusBadge.classList.add("status-not-trained");
-      modelStatusBadge.textContent = "NOT TRAINED";
-      modelStatusDesc.textContent = "No trained checkpoint found on disk.";
+      modelStatusBadge.textContent = status;
+      modelStatusDesc.textContent = "Model checkpoint not ready (training pending genuine dataset & authorization).";
       headerStatusDot.className = "chat-header-status-indicator not-trained";
-      headerStatusText.textContent = "No Checkpoint";
+      headerStatusText.textContent = status;
+    } else if (status === "BLOCKED_EXTERNAL_PRETRAINED") {
+      modelStatusBadge.classList.add("status-error");
+      modelStatusBadge.textContent = status;
+      modelStatusDesc.textContent = "External pretrained reference blocked under STRICT_SOVEREIGN_RANDOM_INIT_ONLY.";
+      headerStatusDot.className = "chat-header-status-indicator";
+      headerStatusText.textContent = "External Weights Blocked";
     } else {
       modelStatusBadge.classList.add("status-error");
       modelStatusBadge.textContent = status;
-      modelStatusDesc.textContent = "Model service error.";
+      modelStatusDesc.textContent = "Model status unavailable or error.";
       headerStatusDot.className = "chat-header-status-indicator";
-      headerStatusText.textContent = "Model Error";
+      headerStatusText.textContent = status;
     }
 
     // Sync model select dropdown
     if (modelSelect && info.model_type) {
       if (info.model_type.includes("Qwen")) {
         modelSelect.value = "qwen-2.5-coder-7b";
-        if (modelInfoNote) modelInfoNote.textContent = "👑 Qwen-2.5-Coder-7B active: Frontier 7.61B coding super-intelligence created by Prem Gaikwad, running locally with 2048 context!";
-      } else if (info.model_type.includes("NanoGPT-3.2") || info.model_type.includes("LLaMA")) {
+        if (modelInfoNote) modelInfoNote.textContent = "⛔ Qwen-2.5-Coder-7B (External Reference): Quarantined and blocked under strict sovereign policy.";
+      } else if (info.model_type.includes("LLaMA") || info.model_type.includes("NanoGPT-3.2")) {
         modelSelect.value = "llama-3.2";
-        if (modelInfoNote) modelInfoNote.textContent = "🔥 NanoGPT-3.2 active: Frontier 1.23B coding & reasoning model created by Prem Gaikwad, running at ~20 tokens/sec on CPU!";
+        if (modelInfoNote) modelInfoNote.textContent = "⛔ LLaMA-3.2-1B (External Reference): Quarantined and blocked under strict sovereign policy.";
       } else if (info.model_type.includes("Light") || info.model_type.includes("GPT-2")) {
         modelSelect.value = "gpt2";
-        if (modelInfoNote) modelInfoNote.textContent = "✨ NanoGPT Light (124M) active: Fast, coherent English & coding with 0 cloud APIs.";
+        if (modelInfoNote) modelInfoNote.textContent = "⛔ GPT-2 (124M External Reference): Blocked under strict sovereign policy.";
+      } else if (info.model_type.includes("25.7M") || info.model_type.includes("Pilot")) {
+        modelSelect.value = "moon-chat-pilot-v0";
+        if (modelInfoNote) modelInfoNote.textContent = "🌙 Moon Chat (25.7M Scratch Architecture): MODEL_NOT_READY — dataset prep & owner-authorized training pending.";
       } else {
         modelSelect.value = "scratch";
-        if (modelInfoNote) modelInfoNote.textContent = "🔬 NanoGPT Core active: Local character-level transformer trained from scratch.";
+        if (modelInfoNote) modelInfoNote.textContent = "🔬 NanoGPT Core (Scratch Architecture): MODEL_NOT_READY pending verified sovereign training run.";
       }
     }
 
     // Update specs
     specHardware.textContent = health.device.toUpperCase() + (health.torch_available ? ` (Torch ${health.torch_version || '✓'})` : ' (No Torch)');
-    specCheckpoint.textContent = info.checkpoint_path || "gpt2 (124M)";
-    specDataset.textContent = info.dataset || "OpenWebText";
-    specParams.textContent = info.parameters ? formatNumber(info.parameters) : "123.65M";
-    specVocab.textContent = info.vocab_size ? `${info.vocab_size} tokens` : "50,257 tokens";
+    specCheckpoint.textContent = info.checkpoint_path || "None (MODEL_NOT_READY)";
+    specDataset.textContent = info.dataset || "DATASET_NOT_READY";
+    specParams.textContent = info.parameters ? formatNumber(info.parameters) : "25.70M";
+    specVocab.textContent = info.vocab_size ? `${info.vocab_size} tokens` : "512 tokens";
   }
 
   function formatNumber(num) {

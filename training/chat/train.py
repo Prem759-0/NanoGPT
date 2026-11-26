@@ -50,6 +50,8 @@ from core.policy import (
     assert_production_training_authorized as _core_assert_production_training_authorized,
 )
 from datasets.chat.tokenizer import SovereignTokenizer
+from datasets.chat.truth_audit import audit_single_manifest, verify_production_manifest_group
+from training.chat.config_validator import compute_file_sha256, validate_training_config
 from training.chat.dataset import SovereignChatDataset
 from training.chat.readiness_gate import ChatReadinessGate, STATUS_READY_FOR_PILOT
 from scripts.validate_t4_empirical import check_t4_hardware_identity
@@ -96,9 +98,9 @@ def parse_args():
     return parser.parse_args()
 
 def get_lr(it: int, warmup_iters: int, max_iters: int, lr: float, min_lr: float) -> float:
-    if it < warmup_iters:
+    if warmup_iters > 0 and it < warmup_iters:
         return lr * it / warmup_iters
-    if it > max_iters:
+    if it >= max_iters or max_iters <= warmup_iters:
         return min_lr
     decay_ratio = (it - warmup_iters) / (max_iters - warmup_iters)
     assert 0 <= decay_ratio <= 1
@@ -249,13 +251,33 @@ def train_moon_chat(
             f"Blind-test split collision: test_manifest ({test_manifest}) cannot be identical to val_manifest!"
         )
 
+    is_prod_release = bool(cfg.get("is_production_release", False))
+    config_validation = validate_training_config(cfg, verify_dataset_truth=False, project_root=PROJECT_ROOT)
+    if not config_validation["valid_config"] and not is_smoke_test and not is_dry_run:
+        raise ValueError(f"Training configuration validation failed: {config_validation['config_blockers']}")
+
     # Compute manifest provenance hashes
     train_raw_sha, train_lf_sha = compute_manifest_hashes(train_manifest)
     val_raw_sha, val_lf_sha = compute_manifest_hashes(val_manifest)
     test_raw_sha, test_lf_sha = compute_manifest_hashes(test_manifest)
 
     # Production run manifest hash verification against audited values
-    if not is_smoke_test and not is_dry_run:
+    if is_prod_release:
+        prov_rel = cfg["paths"].get("provenance_manifest")
+        if prov_rel:
+            prov_abs = prov_rel if os.path.isabs(prov_rel) else os.path.join(PROJECT_ROOT, prov_rel)
+            if os.path.isfile(prov_abs):
+                with open(prov_abs, "r", encoding="utf-8") as pf:
+                    prov_data = json.load(pf)
+                expected_outputs = prov_data.get("output_files", {})
+                for split_key, actual_raw in [("train", train_raw_sha), ("val", val_raw_sha), ("test", test_raw_sha)]:
+                    exp_sha = (expected_outputs.get(split_key) or {}).get("sha256")
+                    if exp_sha and actual_raw != exp_sha:
+                        raise ValueError(
+                            f"Production manifest SHA-256 mismatch for '{split_key}': "
+                            f"expected {exp_sha}, got {actual_raw}."
+                        )
+    elif not is_smoke_test and not is_dry_run:
         for m_name, m_path, m_lf_sha in [
             ("train_manifest", train_manifest, train_lf_sha),
             ("val_manifest", val_manifest, val_lf_sha),
@@ -382,7 +404,25 @@ def train_moon_chat(
     # READINESS GATE: Preflight Verification
     # -------------------------------------------------------------------------
     readiness_gate_info = {}
-    if not is_smoke_test:
+    tok_path_pre = cfg["paths"]["tokenizer_path"]
+    if not os.path.isabs(tok_path_pre):
+        tok_path_pre = os.path.join(PROJECT_ROOT, tok_path_pre)
+
+    if is_prod_release and not is_smoke_test:
+        prod_gate_res = verify_production_manifest_group(
+            train_path=train_manifest,
+            val_path=val_manifest,
+            test_path=test_manifest,
+            tokenizer_path=tok_path_pre,
+            require_scale=True,
+        )
+        readiness_gate_info = prod_gate_res
+        if not is_dry_run and not prod_gate_res["passed"]:
+            raise RuntimeError(
+                f"Production release training blocked by Dataset Truth Gate "
+                f"(status: {prod_gate_res['dataset_status']}): {prod_gate_res['blockers']}"
+            )
+    elif not is_smoke_test:
         gate = ChatReadinessGate(
             train_manifest=train_manifest,
             val_manifest=val_manifest,
@@ -568,7 +608,10 @@ def train_moon_chat(
             "supervised_tokens": supervised_tokens,
             "val_chunks": len(val_dataset),
             "device": str(device),
-            "readiness_status": readiness_gate_info.get("status", "NOT_CHECKED"),
+            "readiness_status": readiness_gate_info.get("dataset_status") or readiness_gate_info.get("status", "NOT_CHECKED"),
+            "dataset_status": readiness_gate_info.get("dataset_status", "NOT_CHECKED"),
+            "is_production_release": is_prod_release,
+            "config_validation": config_validation,
             "forward_executed": False,
             "backward_executed": False,
             "optimizer_stepped": False,
@@ -1032,8 +1075,13 @@ def train_moon_chat(
         ckpt_filename = cfg["paths"]["checkpoint_name"]
         checkpoint_path = os.path.join(checkpoint_dir, ckpt_filename)
 
+    # Compute dynamic dataset provenance summary from actual training manifest
+    _train_audit = audit_single_manifest(train_manifest, base_dir=PROJECT_ROOT)
+    _prov_types = sorted((_train_audit.get("raw_provenance_counts") or {}).keys())
+    _dynamic_provenance = " + ".join(_prov_types) if _prov_types else "UNKNOWN_PROVENANCE"
+
     checkpoint_payload = {
-        "status": "PILOT_TRAINED",
+        "status": "TRAINED_PENDING_EVALUATION" if is_prod_release else "PILOT_TRAINED",
         "is_production_trained": False,
         "promotable": False,
         "is_production_eligible": False,
@@ -1058,7 +1106,8 @@ def train_moon_chat(
             "teacher_checkpoint_weights_transferred": False,
             "teacher_models": [],
             "teacher_license": None,
-            "dataset_provenance": "DETERMINISTIC_CURRICULUM_TEMPLATE + ORIGINAL_SELF_AUTHORED_QA",
+            "dataset_provenance": _dynamic_provenance,
+            "dataset_taxonomy_counts": _train_audit.get("taxonomy_counts", {}),
             "run_id": f"moon_chat_run_{int(time.time())}",
             "trained_at": datetime.now(timezone.utc).isoformat(),
             "architect": "Prem Gaikwad (Chief ML Systems Architect, India 🇮🇳)",
@@ -1071,7 +1120,7 @@ def train_moon_chat(
             "promotable": False,
             "is_production_eligible": False,
             "is_test_fixture": False,
-            "status": "PILOT_TRAINED",
+            "status": "TRAINED_PENDING_EVALUATION" if is_prod_release else "PILOT_TRAINED",
             "checkpoint_filename": ckpt_filename,
             "best_checkpoint_filename": best_ckpt_filename,
             "effective_config": cfg,

@@ -1,0 +1,107 @@
+{
+  "classification": "DETERMINISTIC_TEMPLATE",
+  "production_release_eligible": false,
+  "development_use_only": true,
+  "legacy_manifest_paths_preserved_for_regression_tests": [
+    "datasets/manifests/scaled_chat_train.jsonl",
+    "datasets/manifests/scaled_chat_val.jsonl",
+    "datasets/manifests/scaled_chat_test.jsonl",
+    "datasets/manifests/expanded_chat_train.jsonl",
+    "datasets/manifests/expanded_chat_val.jsonl",
+    "datasets/manifests/expanded_chat_test.jsonl"
+  ],
+  "scaled_pilot_audit": {
+    "total_records": 1100,
+    "taxonomy_counts": {
+      "HUMAN_AUTHORED_VERIFIED": 0,
+      "PUBLIC_SOURCE_VERIFIED": 0,
+      "DETERMINISTIC_TEMPLATE": 1100,
+      "SYNTHETIC_FIXTURE": 0,
+      "AI_GENERATED": 0,
+      "UNVERIFIED": 0
+    },
+    "unique_prompts": 1100,
+    "unique_first_assistant_replies": 261,
+    "repeated_answer_templates_count": 41,
+    "max_answer_template_repetition": 110,
+    "cross_split_leakage": {
+      "sha256_overlap": {
+        "train_val": 0,
+        "train_test": 0,
+        "val_test": 0
+      },
+      "normalized_prompt_overlap": {
+        "train_val": 0,
+        "train_test": 0,
+        "val_test": 0
+      },
+      "normalized_assistant_reply_overlap": {
+        "train_val": 36,
+        "train_test": 37,
+        "val_test": 32
+      },
+      "total_leakage_events": 105
+    },
+    "token_stats": {
+      "total_chatml_tokens": 334930,
+      "user_content_tokens": 62717,
+      "assistant_content_tokens": 207764,
+      "assistant_supervised_tokens": 253293,
+      "avg_tokens_per_record": 304.48,
+      "min_tokens_per_record": 178,
+      "max_tokens_per_record": 450,
+      "block_size": 512,
+      "total_windows": 1100
+    },
+    "file_sha256s": {
+      "train": "5e1434977a4eda699fc15af92e9d79ffcd1063e721cb58410ae8d0513cc275b3",
+      "val": "cff8e221cc34ed724c996a62b9b68eea59f4980bf94b14775cb6a33c6686d3cd",
+      "test": "457530a62f20d6b3ad071c5ab68a35cdc87fbd9b48b4bda02889bc78346e441b"
+    }
+  },
+  "expanded_pilot_audit": {
+    "total_records": 572,
+    "taxonomy_counts": {
+      "HUMAN_AUTHORED_VERIFIED": 6,
+      "PUBLIC_SOURCE_VERIFIED": 16,
+      "DETERMINISTIC_TEMPLATE": 550,
+      "SYNTHETIC_FIXTURE": 0,
+      "AI_GENERATED": 0,
+      "UNVERIFIED": 0
+    },
+    "cross_split_leakage": {
+      "sha256_overlap": {
+        "train_val": 0,
+        "train_test": 0,
+        "val_test": 0
+      },
+      "normalized_prompt_overlap": {
+        "train_val": 0,
+        "train_test": 0,
+        "val_test": 0
+      },
+      "normalized_assistant_reply_overlap": {
+        "train_val": 36,
+        "train_test": 36,
+        "val_test": 31
+      },
+      "total_leakage_events": 103
+    },
+    "token_stats": {
+      "total_chatml_tokens": 176738,
+      "user_content_tokens": 32875,
+      "assistant_content_tokens": 110348,
+      "assistant_supervised_tokens": 133786,
+      "avg_tokens_per_record": 308.98,
+      "min_tokens_per_record": 178,
+      "max_tokens_per_record": 576,
+      "block_size": 512,
+      "total_windows": 578
+    },
+    "file_sha256s": {
+      "train": "6ac60385b1903eca32c94182db96fe69e3ad60a923afdc6ca217b1f076207dd4",
+      "val": "9c275ed34dc945bffd0f5ad189745770ee2100c5551e2ee916c2212a687c1387",
+      "test": "06df5bb0742a48c56c60833760e0299c8cd986c16b4c4b89343dd8ed9b261a4e"
+    }
+  }
+}

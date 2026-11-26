@@ -1,0 +1,98 @@
+# Moon AI — Moon Chat v0.1 Production Release Training Configuration (Google Colab T4)
+# Phase 2.7.7 Year-End Acceleration Milestone Configuration
+# Ownership Policy: STRICT_SOVEREIGN_RANDOM_INIT_ONLY (Zero teacher weights, zero external APIs)
+# Target: Moon Chat GPT (25.7M Parameters, Pure Gaussian Scratch Initialization)
+# Hardware Target: Google Colab NVIDIA T4 (15.3 GB VRAM)
+# Note: Production dataset truth gate currently reports DATASET_NOT_READY until Phase 2.7.8 genuine
+#       corpus ingestion supplies >= 500 verified records and >= 100,000 supervised tokens,
+#       and training execution remains locked until core.policy.AUTHORIZED_BY_PREM = True.
+
+model_track: "moon-chat-v0-1-t4-release"
+stage: "Moon Chat v0.1 Release Preparation (Phase 2.7.7+)"
+is_production_release: true
+ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
+canonical_ownership_policy: "STRICT_SOVEREIGN_RANDOM_INIT_ONLY"
+
+teacher_distillation:
+  enabled: false
+  strategy: "POLICY_B_ZERO_TEACHER_INFLUENCE"
+  target_teacher: null
+  teacher_provider: null
+  teacher_license: null
+  student_init_method: "random_gaussian_scratch"
+  allow_teacher_demonstrations: false
+  prohibit_teacher_checkpoint_weights: true
+
+architecture_type: "Causal_Decoder_Only_Transformer_PreLayerNorm_GELU"
+architecture_details:
+  normalization: "Pre-LayerNorm"
+  activation: "GELU"
+  position_encoding: "Learned Absolute Embeddings (wpe)"
+  initialization: "Random Gaussian N(0, 0.02^2)"
+  weight_tying: true
+
+model:
+  name: "moon-chat-v0-1-t4-release-25m"
+  init_from: "scratch"
+  architecture: "Moon-GPT-25.7M"
+  n_layer: 8
+  n_head: 8
+  n_embd: 512
+  block_size: 512
+  vocab_size: 512
+  dropout: 0.1
+  bias: false
+  exact_parameters: 25698816
+
+training:
+  # Selected first-run v0.1 budget: 600 optimizer steps x 16,384 tokens/step = 9,830,400 tokens (~15-22 min T4)
+  is_smoke_test: false
+  batch_size: 8
+  gradient_accumulation_steps: 4
+  max_iters: 600
+  eval_interval: 50
+  eval_iters: 20
+  save_interval: 100
+  warmup_iters: 60
+  lr_decay_iters: 600
+  learning_rate: 0.0006
+  min_lr: 0.00006
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  mixed_precision: "fp16"
+  dtype: "float16"
+  seed: 1337
+  loss_masking: "assistant_only"
+
+paths:
+  train_manifest: "datasets/manifests/prod_chat_train.jsonl"
+  val_manifest: "datasets/manifests/prod_chat_val.jsonl"
+  test_manifest: "datasets/manifests/prod_chat_test.jsonl"
+  provenance_manifest: "datasets/manifests/prod_chat_provenance.json"
+  tokenizer_path: "models/chat/tokenizer.json"
+  checkpoint_dir: "models/checkpoints/chat_v0_1_release"
+  checkpoint_name: "moon_chat_v0_1_t4_release.pt"
+  best_checkpoint_name: "moon_chat_v0_1_t4_release_best.pt"
+  production_genuine_only: true
+  allowed_taxonomies:
+    - "HUMAN_AUTHORED_VERIFIED"
+    - "PUBLIC_SOURCE_VERIFIED"
+
+compute_budget_alternatives:
+  pilot_sanity_300_steps:
+    max_iters: 300
+    tokens_per_step: 16384
+    total_tokens_seen: 4915200
+    estimated_t4_minutes: "8-12"
+  selected_v0_1_release_600_steps:
+    max_iters: 600
+    tokens_per_step: 16384
+    total_tokens_seen: 9830400
+    estimated_t4_minutes: "15-22"
+  extended_v0_2_1200_steps:
+    max_iters: 1200
+    tokens_per_step: 16384
+    total_tokens_seen: 19660800
+    estimated_t4_minutes: "30-44"

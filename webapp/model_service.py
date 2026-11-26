@@ -4,6 +4,8 @@ import glob
 import pickle
 from typing import Optional, Dict, Any, List, Tuple
 
+from core.policy import AUTHORIZED_BY_PREM
+
 
 class CheckpointValidationResult(tuple):
     """Encapsulates checkpoint validation tuple (is_valid, reason, checkpoint_data) with boolean coercion."""
@@ -444,7 +446,11 @@ class ModelService:
         return None
 
     def find_moon_ai_gguf(self) -> Optional[str]:
-        """Finds custom sovereign fine-tuned Moon AI v1 GGUF model."""
+        """
+        Legacy local GGUF file discovery helper retained for quarantine detection.
+        External/GGUF artifacts discovered by this helper are strictly blocked from
+        serving as Moon AI sovereign intelligence.
+        """
         exact = self.find_file("Moon-AI-v1.Q4_K_M.gguf")
         if exact:
             return exact
@@ -461,7 +467,7 @@ class ModelService:
         return None
 
     def find_qwen_gguf(self) -> Optional[str]:
-        """Finds Moon AI v1 or Qwen2.5-Coder-7B GGUF file in project root or Downloads."""
+        """Finds quarantined local GGUF external reference files in project root or Downloads."""
         moon = self.find_moon_ai_gguf()
         if moon:
             return moon
@@ -617,7 +623,7 @@ class ModelService:
                 "id": "moon-chat-pilot-v0",
                 "name": "🌙 Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
                 "type": "sovereign_scratch",
-                "description": "Stage 2.1.6 sovereign 25.7M parameter transformer initialized from Gaussian random scratch. In MODEL_NOT_READY status pending authorized training run.",
+                "description": "Moon Chat 25.7M parameter transformer initialized from Gaussian random scratch. Status: MODEL_NOT_READY / DATASET_NOT_READY pending genuine corpus scaling & owner-authorized training.",
                 "active": self.active_model_name == "moon-chat-pilot-v0",
                 "parameters": "25.70M",
                 "block_size": 512,
@@ -625,13 +631,14 @@ class ModelService:
                 "available": has_trained_pilot,
                 "is_test_fixture": is_pilot_fixture,
                 "sovereign_owned": True,
+                "dataset_status": "DATASET_NOT_READY",
                 "status": "READY" if has_trained_pilot else "MODEL_NOT_READY"
             },
             {
                 "id": "scratch",
                 "name": "🔬 NanoGPT Core (Scratch Architecture)",
                 "type": "local_checkpoint",
-                "description": "Character-level transformer architected for scratch training. In MODEL_NOT_READY status pending verified strict sovereign training run.",
+                "description": "Character-level transformer architected for scratch training. Status: MODEL_NOT_READY / DATASET_NOT_READY pending verified strict sovereign training run.",
                 "active": self.active_model_name == "scratch",
                 "parameters": "0.80M",
                 "block_size": 128,
@@ -639,6 +646,7 @@ class ModelService:
                 "available": has_trained_scratch,
                 "is_test_fixture": is_scratch_fixture,
                 "sovereign_owned": True,
+                "dataset_status": "DATASET_NOT_READY",
                 "status": "READY" if has_trained_scratch else "MODEL_NOT_READY"
             },
             {
@@ -1164,26 +1172,13 @@ class ModelService:
             except Exception:
                 pass  # Fall through to local GGUF / scratch inference seamlessly
 
-        # --- 1. GGUF Generation (Qwen-2.5-Coder-7B & LLaMA-3.2) ---
+        # --- 1. Quarantined External GGUF Reference Sandbox ---
         if self.active_model_name in ["qwen-2.5-coder-7b", "llama-3.2"] and self.llama_model is not None:
             is_qwen = "qwen" in self.active_model_name
-            if is_coding:
-                sys_msg = (
-                    "You are Moon AI (Moon Coder), the world-class coding and reasoning AI assistant created and deployed by developer Prem Gaikwad from India. "
-                    "If asked who made or developed you, always state proudly that you are developed and deployed by developer Prem Gaikwad from India. "
-                    "Write robust, elegant, production-grade, and bug-free code with clear comments. "
-                    "Always format executable code inside markdown triple backticks with language tags (e.g. ```python, ```html, ```javascript). "
-                    "Provide complete, unabbreviated code without skipping parts. "
-                    "CRITICAL: Maintain continuous conversational context across turns. If the user provides a follow-up request (e.g., 'in html, css, js', 'now in python', 'make it faster', 'give full code'), always fulfill this directly in the context of the previous conversation."
-                )
-            else:
-                sys_msg = (
-                    "You are Moon AI, an advanced, highly intelligent, objective, and helpful AI assistant trained and deployed by developer Prem Gaikwad from India. "
-                    "If asked who made or developed you, always state proudly that you are developed and deployed by developer Prem Gaikwad from India. "
-                    "You provide comprehensive, factual, scientific, and educational explanations for all topics including biology, anatomy, science, philosophy, and history. "
-                    "Do not refuse educational, scientific, biological, or physiological questions. Answer them factually, respectfully, and objectively. "
-                    "CRITICAL: Maintain continuous conversational context across turns. Seamlessly remember earlier questions and build upon previous answers."
-                )
+            sys_msg = (
+                "You are running inside a quarantined third-party reference sandbox route. "
+                "Do not claim sovereignty or Moon AI training authorship."
+            )
 
             # --- Inject Long-Term Learned Memories ---
             try:
@@ -1463,53 +1458,69 @@ class ModelService:
         }
 
     def get_info(self) -> Dict[str, Any]:
-        """Returns safe descriptive metadata about current model configuration."""
+        """Returns safe, truthful descriptive metadata about current model configuration."""
         status = self.get_status()
-        
+        has_genuine_ckpt = self.is_verified_genuine_checkpoint(self.current_checkpoint_path or "")
+
         if self.active_model_name == "qwen-2.5-coder-7b":
-            moon_path = self.find_moon_ai_gguf()
-            ckpt_name = os.path.basename(moon_path) if moon_path else "Qwen2.5-Coder-7B-Instruct.Q4_K_M.gguf"
             return {
-                "model_name": "Moon AI Sovereign (7.6B v1 — Fine-Tuned by Prem Gaikwad)" if moon_path else "Qwen-2.5-Coder-7B",
-                "model_type": "Moon AI 7.6B Frontier Engine (Fine-Tuned Sovereign GGUF)" if moon_path else "Qwen-2.5-Coder-7B Frontier Engine (Fine-Tuned GGUF)",
-                "checkpoint_path": self.current_checkpoint_path or ckpt_name,
+                "model_name": "External Pretrained Reference: Qwen-2.5-Coder-7B (Quarantined)",
+                "model_type": "Qwen-2.5-Coder-7B External Pretrained Reference (Quarantined GGUF)",
+                "checkpoint_path": self.current_checkpoint_path or "Qwen2.5-Coder-7B-Instruct.Q4_K_M.gguf",
                 "model_status": status,
-                "dataset": "Moon AI Sovereign Master Dataset (Science, Biology, Coding, Prem Gaikwad Identity)",
+                "dataset": "Third-party external pretrained weights (Alibaba/Qwen — Quarantined)",
+                "dataset_status": "NOT_APPLICABLE_EXTERNAL",
+                "sovereign_owned": False,
+                "is_production_trained": False,
+                "promotable": False,
                 "vocab_size": 152064,
                 "parameters": 7610000000,
                 "block_size": 2048,
                 "n_layer": 28,
                 "n_head": 28,
                 "n_embd": 3584,
-                "hardware": "CPU (4-Bit AVX2 C++ Quantized)",
+                "hardware": "CPU (4-Bit AVX2 C++ Quantized — Blocked)",
                 "description": "Quarantined external base weights. Blocked from serving as Moon AI sovereign intelligence under STRICT_SOVEREIGN_RANDOM_INIT_ONLY policy."
             }
 
         if self.active_model_name == "llama-3.2":
             return {
-                "model_type": "NanoGPT-3.2 Frontier Engine (Fine-Tuned GGUF)",
+                "model_name": "External Pretrained Reference: LLaMA-3.2-1B (Quarantined)",
+                "model_type": "LLaMA-3.2-1B External Pretrained Reference (Quarantined GGUF)",
                 "checkpoint_path": self.current_checkpoint_path or "Llama-3.2-1B-Instruct.Q4_K_M.gguf",
                 "model_status": status,
-                "dataset": "Custom Instruction Dataset (Fine-Tuned on T4 GPU by Prem Gaikwad)",
+                "dataset": "Third-party external pretrained weights (Meta LLaMA — Quarantined)",
+                "dataset_status": "NOT_APPLICABLE_EXTERNAL",
+                "sovereign_owned": False,
+                "is_production_trained": False,
+                "promotable": False,
                 "vocab_size": 128256,
                 "parameters": 1230000000,
                 "block_size": 2048,
                 "n_layer": 16,
                 "n_head": 32,
                 "n_embd": 2048,
-                "hardware": "CPU (4-Bit AVX2 C++ Quantized)",
+                "hardware": "CPU (4-Bit AVX2 C++ Quantized — Blocked)",
                 "description": "Quarantined external base weights. Blocked from serving as Moon AI sovereign intelligence under STRICT_SOVEREIGN_RANDOM_INIT_ONLY policy."
             }
 
         if self.active_model_name == "moon-chat-pilot-v0":
             param_count = sum(p.numel() for p in self.model.parameters()) if self.model is not None else 25698816
             is_fixture = getattr(self, "is_test_fixture", False)
+            if is_fixture:
+                honest_status = "CI_TEST_FIXTURE"
+            elif status == "MODEL_NOT_READY" or not has_genuine_ckpt:
+                honest_status = "MODEL_NOT_READY"
+            else:
+                honest_status = "EVALUATION_PASSED"
+
             return {
                 "model_name": "Moon AI Pilot (25.7M Sovereign Chat — Pure Scratch Init)",
                 "model_type": "Moon AI 25.7M Sovereign Pilot (Pure Scratch Init)",
-                "checkpoint_path": self.current_checkpoint_path or "models/checkpoints/chat/moon_chat_pilot_v0.pt",
+                "checkpoint_path": self.current_checkpoint_path or "models/checkpoints/chat_v0_1_release/moon_chat_v0_1_t4_release.pt",
                 "model_status": "CI TEST FIXTURE (UNPROMOTABLE)" if is_fixture else status,
-                "dataset": "Moon AI Sovereign Expanded Corpus (572 records, 120k+ tokens)",
+                "dataset": "Genuine Baseline Corpus (22 verified records, 7,199 supervised tokens; DATASET_NOT_READY for production training; scaled_chat 1,100 template corpus quarantined dev-only)",
+                "dataset_status": "DATASET_NOT_READY",
                 "vocab_size": 512,
                 "parameters": param_count,
                 "block_size": getattr(self.model_config, "block_size", 512),
@@ -1519,11 +1530,12 @@ class ModelService:
                 "hardware": f"{self.device.upper()} (PyTorch {self.torch_version or 'not installed'})",
                 "ownership_policy": getattr(self, "current_checkpoint_policy", "UNKNOWN_PROVENANCE_INSUFFICIENT"),
                 "teacher_checkpoint_weights_transferred": False,
+                "authorized_by_prem": bool(AUTHORIZED_BY_PREM),
                 "is_test_fixture": is_fixture,
-                "is_production_trained": False,
+                "is_production_trained": bool(has_genuine_ckpt and not is_fixture),
                 "promotable": False,
-                "status": "CI_TEST_FIXTURE" if is_fixture else ("MODEL_NOT_READY" if status == "MODEL_NOT_READY" else "PILOT_TRAINED"),
-                "description": "25.7M parameter sovereign transformer architecture initialized purely from scratch (STRICT_SOVEREIGN_RANDOM_INIT_ONLY). Currently in MODEL_NOT_READY state awaiting authorized training run and sovereign cryptographic attestation."
+                "status": honest_status,
+                "description": "25.7M parameter sovereign transformer architecture initialized purely from scratch (STRICT_SOVEREIGN_RANDOM_INIT_ONLY). Currently in MODEL_NOT_READY state pending Phase 2.7.8 genuine dataset scaling (DATASET_NOT_READY) and explicit owner authorization."
             }
 
         is_gpt2 = self.active_model_name == "gpt2"
@@ -1532,12 +1544,17 @@ class ModelService:
             param_count = sum(p.numel() for p in self.model.parameters())
         elif is_gpt2:
             param_count = 123653376
-            
+
         return {
-            "model_type": f"NanoGPT ({'Light 124M Pretrained' if is_gpt2 else 'Core Scratch Assistant'})",
-            "checkpoint_path": self.current_checkpoint_path or ("pretrained: gpt2" if is_gpt2 else "out-assistant/ckpt.pt"),
+            "model_name": "External Pretrained Reference: GPT-2 (124M — Blocked)" if is_gpt2 else "Moon AI Core Scratch (0.80M)",
+            "model_type": f"NanoGPT ({'External Pretrained GPT-2 124M — Blocked' if is_gpt2 else 'Moon AI Core Scratch Assistant'})",
+            "checkpoint_path": self.current_checkpoint_path or ("pretrained: gpt2 (blocked)" if is_gpt2 else "models/checkpoints/scratch_pending.pt"),
             "model_status": status,
-            "dataset": self.dataset_name or ("OpenWebText" if is_gpt2 else "assistant_chat"),
+            "dataset": "Third-party OpenWebText pretrained reference (Blocked)" if is_gpt2 else (self.dataset_name or "assistant_chat (Dev Fixture — DATASET_NOT_READY)"),
+            "dataset_status": "NOT_APPLICABLE_EXTERNAL" if is_gpt2 else "DATASET_NOT_READY",
+            "sovereign_owned": not is_gpt2,
+            "is_production_trained": False,
+            "promotable": False,
             "vocab_size": self.vocab_size or (50257 if is_gpt2 else 97),
             "parameters": param_count,
             "block_size": getattr(self.model_config, "block_size", 1024 if is_gpt2 else 128),
@@ -1545,5 +1562,9 @@ class ModelService:
             "n_head": getattr(self.model_config, "n_head", 12 if is_gpt2 else 4),
             "n_embd": getattr(self.model_config, "n_embd", 768 if is_gpt2 else 128),
             "hardware": f"{self.device.upper()} (PyTorch {self.torch_version or 'not installed'})",
-            "description": "Local offline Transformer neural network with zero external paid API dependencies."
+            "description": (
+                "Quarantined third-party pretrained GPT-2 weights blocked from serving as Moon sovereign intelligence."
+                if is_gpt2
+                else "Local scratch transformer architecture in MODEL_NOT_READY state until verified genuine training completes."
+            ),
         }

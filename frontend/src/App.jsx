@@ -105,12 +105,13 @@ const apiFetch = (path, options = {}) => {
 const DEFAULT_MODELS = [
   {
     id: 'moon-chat-pilot-v0',
-    name: '🌙 Moon Chat — Model Not Ready',
+    name: '🌙 Moon Chat — MODEL_NOT_READY',
     type: 'sovereign_scratch',
-    description: 'Stage 2.1.6 sovereign transformer (Gaussian random scratch). In MODEL_NOT_READY status pending authorized training run.',
+    description: 'Moon Chat 25.7M sovereign transformer (Gaussian random scratch, block_size=512, vocab=512). Status: MODEL_NOT_READY / DATASET_NOT_READY pending genuine corpus & authorized T4 training.',
     active: true,
     parameters: '25.70M',
     available: false,
+    dataset_status: 'DATASET_NOT_READY',
     status: 'MODEL_NOT_READY'
   },
   {
@@ -1521,7 +1522,8 @@ function GrokWorkspace({ clerkKey, onUpdateKey, isGuestMode }) {
               )}
             </div>
             <div>Platform: Web & Utilities (Online)</div>
-            <div>Neural Core: {modelSpecs?.model_status === 'READY' ? 'READY' : 'MODEL_NOT_READY (Scratch Pending)'}</div>
+            <div>Neural Core: {modelSpecs?.model_status || 'MODEL_NOT_READY'}</div>
+            <div>Dataset Gate: {modelSpecs?.dataset_status || 'DATASET_NOT_READY'}</div>
             <div>Model: {modelSpecs?.model_name || modelSpecs?.model_type || 'Moon AI Sovereign Core (moon-chat-pilot-v0)'}</div>
             <div>Architecture: Scratch-Init Sovereign Transformer (25.7M)</div>
             <div>Storage: Neon PostgreSQL / SQLite</div>

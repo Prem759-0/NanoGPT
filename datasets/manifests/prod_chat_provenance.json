@@ -1,0 +1,85 @@
+{
+  "schema_version": "moon_chat_genuine_ingestion_v1",
+  "generated_at_utc": "2026-11-25T18:32:21.676448+00:00",
+  "dataset_status": "DATASET_NOT_READY",
+  "eligible_for_production_training": false,
+  "blockers": [
+    "Insufficient genuine records: 22 < 500",
+    "Insufficient genuine train records: 18 < 400",
+    "Insufficient genuine val records: 2 < 50",
+    "Insufficient genuine test records: 2 < 50",
+    "Insufficient supervised assistant tokens: 7199 < 100000"
+  ],
+  "raw_input_records": 22,
+  "malformed_input_lines": 0,
+  "accepted_genuine_records": 22,
+  "rejected_records_count": 0,
+  "rejection_reasons": {},
+  "taxonomy_counts": {
+    "HUMAN_AUTHORED_VERIFIED": 6,
+    "PUBLIC_SOURCE_VERIFIED": 16,
+    "DETERMINISTIC_TEMPLATE": 0,
+    "SYNTHETIC_FIXTURE": 0,
+    "AI_GENERATED": 0,
+    "UNVERIFIED": 0
+  },
+  "source_file_sha256s": {
+    "datasets/manifests/chat_train.jsonl": "7dd4d051c5e0767e50d6c793e178d1c8c01e1d8d0ec33682e5a4403b5eae5d56",
+    "datasets/manifests/chat_val.jsonl": "28bf073aa0bcdc23ae7cf2b2d865f9cf45afc91a30149828a0ac3c9e781d0a23",
+    "datasets/manifests/chat_test.jsonl": "33898a2e90a6a65ebc6eccb53461e12aab6f9c208fe69a627959d610fcd0b53c"
+  },
+  "output_files": {
+    "train": {
+      "path": "datasets/manifests/prod_chat_train.jsonl",
+      "sha256": "32dde32456abf8914e1badb6094784c9d3d71ad662eab2d5fc18f6359c15d1c7",
+      "records_count": 18
+    },
+    "val": {
+      "path": "datasets/manifests/prod_chat_val.jsonl",
+      "sha256": "26cf357fd0b32c49b9b774b04c0d24f5d7200c87c9bc623624de53c6d1647ad4",
+      "records_count": 2
+    },
+    "test": {
+      "path": "datasets/manifests/prod_chat_test.jsonl",
+      "sha256": "e2989269e6121d2e2220223dd020dc1ecfa96df4285d7e1bbdcf5f9b98d7ed29",
+      "records_count": 2
+    }
+  },
+  "token_stats": {
+    "total_chatml_tokens": 9445,
+    "user_content_tokens": 1629,
+    "assistant_content_tokens": 6522,
+    "assistant_supervised_tokens": 7199,
+    "avg_tokens_per_record": 429.32,
+    "min_tokens_per_record": 304,
+    "max_tokens_per_record": 576,
+    "block_size": 512,
+    "total_windows": 28
+  },
+  "cross_split_leakage": {
+    "sha256_overlap": {
+      "train_val": 0,
+      "train_test": 0,
+      "val_test": 0
+    },
+    "normalized_prompt_overlap": {
+      "train_val": 0,
+      "train_test": 0,
+      "val_test": 0
+    },
+    "normalized_assistant_reply_overlap": {
+      "train_val": 0,
+      "train_test": 0,
+      "val_test": 0
+    },
+    "total_leakage_events": 0
+  },
+  "shortfall": {
+    "qualifying_records_shortfall": 478,
+    "train_records_shortfall": 382,
+    "val_records_shortfall": 48,
+    "test_records_shortfall": 48,
+    "supervised_tokens_shortfall": 92801,
+    "total_chatml_tokens_shortfall": 90555
+  }
+}
