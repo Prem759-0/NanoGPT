@@ -1,6 +1,6 @@
 {
   "schema_version": "moon_chat_genuine_ingestion_v1",
-  "generated_at_utc": "2026-11-25T18:32:21.676448+00:00",
+  "generated_at_utc": "2026-11-27T17:47:55.181911+00:00",
   "dataset_status": "DATASET_NOT_READY",
   "eligible_for_production_training": false,
   "blockers": [
@@ -23,6 +23,26 @@
     "AI_GENERATED": 0,
     "UNVERIFIED": 0
   },
+  "license_counts": {
+    "CustomSovereign": 6,
+    "CC-BY-SA-4.0": 15,
+    "CC0-1.0": 1
+  },
+  "category_counts_13_targets": {
+    "general_knowledge": 0,
+    "basic_science": 3,
+    "mathematics": 4,
+    "programming_fundamentals": 3,
+    "python": 0,
+    "javascript": 0,
+    "html_css": 0,
+    "web_development": 0,
+    "computer_science": 6,
+    "ai_ml_fundamentals": 2,
+    "instruction_following": 1,
+    "reasoning_problem_solving": 1,
+    "helpful_conversational": 2
+  },
   "source_file_sha256s": {
     "datasets/manifests/chat_train.jsonl": "7dd4d051c5e0767e50d6c793e178d1c8c01e1d8d0ec33682e5a4403b5eae5d56",
     "datasets/manifests/chat_val.jsonl": "28bf073aa0bcdc23ae7cf2b2d865f9cf45afc91a30149828a0ac3c9e781d0a23",
@@ -31,17 +51,17 @@
   "output_files": {
     "train": {
       "path": "datasets/manifests/prod_chat_train.jsonl",
-      "sha256": "32dde32456abf8914e1badb6094784c9d3d71ad662eab2d5fc18f6359c15d1c7",
+      "sha256": "a269c0477e04a3c35bf4e264f6eb71187b3b03ed534d0b1d1ca2c98ac986fe77",
       "records_count": 18
     },
     "val": {
       "path": "datasets/manifests/prod_chat_val.jsonl",
-      "sha256": "26cf357fd0b32c49b9b774b04c0d24f5d7200c87c9bc623624de53c6d1647ad4",
+      "sha256": "e7c4fa56ebe90d430670dd2a2bde77d61b45ccc1425ea49e1c9bc07df4d151ba",
       "records_count": 2
     },
     "test": {
       "path": "datasets/manifests/prod_chat_test.jsonl",
-      "sha256": "e2989269e6121d2e2220223dd020dc1ecfa96df4285d7e1bbdcf5f9b98d7ed29",
+      "sha256": "d559e188e3a8f79296e45776529e7c9619de804a06491a021f8897572da1f74d",
       "records_count": 2
     }
   },
@@ -68,6 +88,11 @@
       "val_test": 0
     },
     "normalized_assistant_reply_overlap": {
+      "train_val": 0,
+      "train_test": 0,
+      "val_test": 0
+    },
+    "public_source_url_overlap": {
       "train_val": 0,
       "train_test": 0,
       "val_test": 0

@@ -1,0 +1,128 @@
+{
+  "schema_version": "phase_2_7_8_dataset_progress_v1",
+  "generated_at_utc": "2026-11-27T18:07:59.995037+00:00",
+  "dataset_status": "DATASET_NOT_READY",
+  "eligible_for_production_training": false,
+  "targets": {
+    "min_total_records": 500,
+    "min_train_records": 400,
+    "min_val_records": 50,
+    "min_test_records": 50,
+    "min_supervised_tokens": 100000,
+    "min_total_tokens": 100000
+  },
+  "current_approved_production": {
+    "total_records": 22,
+    "train_records": 18,
+    "val_records": 2,
+    "test_records": 2,
+    "total_chatml_tokens": 9445,
+    "supervised_assistant_tokens": 7199,
+    "taxonomy_counts": {
+      "HUMAN_AUTHORED_VERIFIED": 6,
+      "PUBLIC_SOURCE_VERIFIED": 16,
+      "DETERMINISTIC_TEMPLATE": 0,
+      "SYNTHETIC_FIXTURE": 0,
+      "AI_GENERATED": 0,
+      "UNVERIFIED": 0
+    },
+    "license_distribution": {
+      "CustomSovereign": 6,
+      "CC-BY-SA-4.0": 15,
+      "CC0-1.0": 1
+    },
+    "category_13_distribution": {
+      "general_knowledge": 0,
+      "basic_science": 3,
+      "mathematics": 4,
+      "programming_fundamentals": 3,
+      "python": 0,
+      "javascript": 0,
+      "html_css": 0,
+      "web_development": 0,
+      "computer_science": 6,
+      "ai_ml_fundamentals": 2,
+      "instruction_following": 1,
+      "reasoning_problem_solving": 1,
+      "helpful_conversational": 2
+    },
+    "category_raw_distribution": {
+      "beginner_educational": 1,
+      "physics": 1,
+      "computer_science": 3,
+      "cryptography": 1,
+      "mathematics": 3,
+      "programming_fundamentals": 2,
+      "distributed_systems": 1,
+      "instruction_following": 1,
+      "science": 2,
+      "software_engineering": 1,
+      "general_conversation": 2,
+      "operating_systems": 1,
+      "sovereign_identity": 2,
+      "reasoning_explanations": 1
+    },
+    "cross_split_leakage": {
+      "sha256_overlap": {
+        "train_val": 0,
+        "train_test": 0,
+        "val_test": 0
+      },
+      "normalized_prompt_overlap": {
+        "train_val": 0,
+        "train_test": 0,
+        "val_test": 0
+      },
+      "normalized_assistant_reply_overlap": {
+        "train_val": 0,
+        "train_test": 0,
+        "val_test": 0
+      },
+      "public_source_url_overlap": {
+        "train_val": 0,
+        "train_test": 0,
+        "val_test": 0
+      },
+      "total_leakage_events": 0
+    }
+  },
+  "review_queue": {
+    "pending_review_count": 20,
+    "pending_malformed_lines": 0,
+    "rejected_count": 0,
+    "registered_sources_count": 20,
+    "pending_category_13_distribution": {
+      "general_knowledge": 1,
+      "basic_science": 3,
+      "mathematics": 2,
+      "programming_fundamentals": 2,
+      "python": 1,
+      "javascript": 1,
+      "html_css": 2,
+      "web_development": 2,
+      "computer_science": 1,
+      "ai_ml_fundamentals": 3,
+      "instruction_following": 0,
+      "reasoning_problem_solving": 2,
+      "helpful_conversational": 0
+    },
+    "pending_license_distribution": {
+      "CC-BY-SA-4.0": 20
+    },
+    "pending_provenance_distribution": {
+      "SOURCE_DERIVED_EDUCATIONAL_SUMMARY": 20
+    }
+  },
+  "shortfall": {
+    "qualifying_records_shortfall": 478,
+    "train_records_shortfall": 382,
+    "val_records_shortfall": 48,
+    "test_records_shortfall": 48,
+    "supervised_tokens_shortfall": 92801,
+    "total_chatml_tokens_shortfall": 90555
+  },
+  "completion_pct": {
+    "records_pct": 4.4,
+    "supervised_tokens_pct": 7.2
+  }
+}

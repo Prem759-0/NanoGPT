@@ -29,6 +29,8 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from datasets.chat.schema import (
     APPROVED_LICENSES,
+    SUPPORTED_CHAT_CATEGORIES,
+    canonicalize_category,
     compute_conversation_sha256,
     normalize_text,
     validate_chat_record,
@@ -38,6 +40,9 @@ from datasets.chat.tokenizer import SovereignTokenizer
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEFAULT_TOKENIZER_PATH = os.path.join(PROJECT_ROOT, "models", "chat", "tokenizer.json")
 DEFAULT_REPORT_PATH = os.path.join(PROJECT_ROOT, "data", "reports", "moon_chat_dataset_truth_audit.json")
+DEFAULT_PROGRESS_REPORT_PATH = os.path.join(PROJECT_ROOT, "data", "reports", "moon_chat_dataset_progress.json")
+DEFAULT_AUDIT_CACHE_PATH = os.path.join(PROJECT_ROOT, "datasets", "sources", ".manifest_audit_cache.json")
+AUDIT_CACHE_SCHEMA_VERSION = "phase_2_7_8_file_audit_cache_v1"
 
 # Explicit Phase 2.7.7 Taxonomy
 TAXONOMY_HUMAN_AUTHORED_VERIFIED = "HUMAN_AUTHORED_VERIFIED"
@@ -234,22 +239,104 @@ def classify_chat_record(rec: Dict[str, Any]) -> Tuple[str, List[str]]:
     return TAXONOMY_UNVERIFIED, [f"Unclassified or unverified provenance_type '{prov}'."]
 
 
-def load_jsonl_records(path: str) -> Tuple[List[Dict[str, Any]], int]:
-    """Loads JSONL records and counts malformed JSON lines."""
-    records: List[Dict[str, Any]] = []
-    malformed = 0
+def iter_jsonl_records(path: str):
+    """Streams JSONL records line-by-line yielding (line_no, record_or_none, parse_error_or_none)."""
     if not os.path.isfile(path):
-        return records, malformed
+        return
     with open(path, "r", encoding="utf-8") as f:
-        for line in f:
+        for line_no, line in enumerate(f, start=1):
             raw = line.strip()
             if not raw:
                 continue
             try:
-                records.append(json.loads(raw))
-            except json.JSONDecodeError:
-                malformed += 1
+                yield line_no, json.loads(raw), None
+            except json.JSONDecodeError as exc:
+                yield line_no, None, f"{os.path.basename(path)} line {line_no}: {exc.msg}"
+
+
+def load_jsonl_records(path: str) -> Tuple[List[Dict[str, Any]], int]:
+    """Loads JSONL records and counts malformed JSON lines."""
+    records: List[Dict[str, Any]] = []
+    malformed = 0
+    for _, rec, err in iter_jsonl_records(path):
+        if err is not None:
+            malformed += 1
+        elif rec is not None:
+            records.append(rec)
     return records, malformed
+
+
+def _sha256_str(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _load_disk_audit_cache(cache_path: str = DEFAULT_AUDIT_CACHE_PATH) -> Dict[str, Any]:
+    if not cache_path or not os.path.isfile(cache_path):
+        return {"schema_version": AUDIT_CACHE_SCHEMA_VERSION, "entries": {}}
+    try:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if data.get("schema_version") == AUDIT_CACHE_SCHEMA_VERSION and isinstance(data.get("entries"), dict):
+            return data
+    except Exception:
+        pass
+    return {"schema_version": AUDIT_CACHE_SCHEMA_VERSION, "entries": {}}
+
+
+def _save_disk_audit_cache(cache_data: Dict[str, Any], cache_path: str = DEFAULT_AUDIT_CACHE_PATH) -> None:
+    if not cache_path:
+        return
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    with open(cache_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(cache_data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+
+def _compute_record_token_metrics(
+    rec: Dict[str, Any],
+    tokenizer: Optional[SovereignTokenizer],
+    block_size: int,
+    enc_cache: Dict[str, int],
+    chat_cache: Dict[str, Tuple[int, int]],
+) -> Tuple[int, int, int, int, int]:
+    """Computes (seq_len, user_toks, asst_content_toks, asst_sup_toks, windows) streaming per record."""
+    if tokenizer is None:
+        return 0, 0, 0, 0, 0
+    msgs = rec.get("messages") or []
+    if not isinstance(msgs, list) or not msgs:
+        return 0, 0, 0, 0, 0
+    cache_key = json.dumps(msgs, ensure_ascii=False, sort_keys=True)
+    cached = chat_cache.get(cache_key)
+    if cached is None:
+        ids, mask = tokenizer.encode_chat_with_loss_mask(msgs)
+        cached = (len(ids), sum(1 for m in mask if m))
+        chat_cache[cache_key] = cached
+    seq_len, sup_len = cached
+
+    u_toks = 0
+    a_toks = 0
+    for m in msgs:
+        if not isinstance(m, dict):
+            continue
+        c = normalize_text(str(m.get("content", "")))
+        val = enc_cache.get(c)
+        if val is None:
+            val = len(tokenizer.encode_text(c))
+            enc_cache[c] = val
+        if m.get("role") == "user":
+            u_toks += val
+        elif m.get("role") == "assistant":
+            a_toks += val
+
+    windows = 0
+    if seq_len > 1:
+        stride = max(1, block_size // 2)
+        if seq_len <= block_size + 1:
+            windows = 1
+        else:
+            windows = len(range(0, max(1, seq_len - 1), stride))
+
+    return seq_len, u_toks, a_toks, sup_len, windows
 
 
 def _compute_token_stats(
@@ -364,6 +451,30 @@ def _aggregate_split_token_stats(split_reports: Sequence[Dict[str, Any]], block_
     }
 
 
+def _aggregate_category_counters(counters: Sequence[Dict[str, int]]) -> Dict[str, int]:
+    merged: Counter[str] = Counter()
+    for c in counters:
+        merged.update(c or {})
+    return dict(merged)
+
+
+def _aggregate_13_category_targets(counters: Sequence[Dict[str, int]]) -> Dict[str, int]:
+    totals = {k: 0 for k in SUPPORTED_CHAT_CATEGORIES}
+    for c in counters:
+        for k, v in (c or {}).items():
+            totals[canonicalize_category(k)] = totals.get(canonicalize_category(k), 0) + v
+    return totals
+
+
+def _safe_relpath(path: str, base_dir: str) -> str:
+    if not os.path.isabs(path):
+        return path.replace("\\", "/")
+    try:
+        return os.path.relpath(path, base_dir).replace("\\", "/")
+    except ValueError:
+        return os.path.abspath(path).replace("\\", "/")
+
+
 def audit_single_manifest(
     path: str,
     tokenizer: Optional[SovereignTokenizer] = None,
@@ -371,9 +482,12 @@ def audit_single_manifest(
     base_dir: str = PROJECT_ROOT,
     _encode_cache: Optional[Dict[str, int]] = None,
     _chat_cache: Optional[Dict[str, Tuple[int, int]]] = None,
+    use_disk_cache: bool = True,
+    _disk_cache: Optional[Dict[str, Any]] = None,
+    _tokenizer_sha256: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Audits a single JSONL manifest file in detail."""
-    rel_path = os.path.relpath(path, base_dir).replace("\\", "/") if os.path.isabs(path) else path.replace("\\", "/")
+    """Audits a single JSONL manifest file via line-by-line streaming and optional file-SHA caching."""
+    rel_path = _safe_relpath(path, base_dir)
     exists = os.path.isfile(path)
     if not exists:
         return {
@@ -383,27 +497,78 @@ def audit_single_manifest(
             "records_count": 0,
             "malformed_lines": 0,
             "taxonomy_counts": {k: 0 for k in ALL_TAXONOMY_CLASSES},
+            "category_counts_raw": {},
+            "category_counts_13_targets": {k: 0 for k in SUPPORTED_CHAT_CATEGORIES},
             "qualifying_production_genuine_records": 0,
             "token_stats": _compute_token_stats([], tokenizer, block_size),
+            "_fingerprints": {
+                "conv_shas": {},
+                "prompt_counts": {},
+                "reply_counts": {},
+                "public_source_urls": [],
+                "malformed_errors": [],
+            },
         }
 
-    records, malformed = load_jsonl_records(path)
+    f_sha = file_sha256(path) or ""
+    tok_sha = _tokenizer_sha256 if _tokenizer_sha256 is not None else (file_sha256(DEFAULT_TOKENIZER_PATH) if tokenizer else "none")
+    cache_key = f"{rel_path}::{f_sha}::{tok_sha}::{block_size}"
+
+    local_disk_cache = _disk_cache
+    own_disk_cache = False
+    if use_disk_cache and local_disk_cache is None:
+        local_disk_cache = _load_disk_audit_cache()
+        own_disk_cache = True
+
+    if use_disk_cache and local_disk_cache is not None:
+        cached_entry = local_disk_cache.get("entries", {}).get(cache_key)
+        if isinstance(cached_entry, dict) and cached_entry.get("sha256") == f_sha:
+            return cached_entry
+
+    enc_cache = _encode_cache if _encode_cache is not None else {}
+    chat_cache = _chat_cache if _chat_cache is not None else {}
+
     taxonomy_counts: Counter[str] = Counter({k: 0 for k in ALL_TAXONOMY_CLASSES})
     provenance_counts: Counter[str] = Counter()
     license_counts: Counter[str] = Counter()
+    category_counts_raw: Counter[str] = Counter()
+    category_counts_13: Counter[str] = Counter({k: 0 for k in SUPPORTED_CHAT_CATEGORIES})
 
     sha_counter: Counter[str] = Counter()
     prompt_counter: Counter[str] = Counter()
     reply_counter: Counter[str] = Counter()
+    public_source_urls: set[str] = set()
     external_url_count = 0
     local_template_url_count = 0
     valid_attribution_count = 0
+    records_count = 0
+    malformed = 0
+    malformed_errors: List[str] = []
 
-    for rec in records:
+    tot_chatml = 0
+    tot_user = 0
+    tot_asst_content = 0
+    tot_asst_sup = 0
+    tot_windows = 0
+    lengths: List[int] = []
+
+    for line_no, rec, parse_err in iter_jsonl_records(path):
+        if parse_err is not None or rec is None:
+            malformed += 1
+            if parse_err and len(malformed_errors) < 20:
+                malformed_errors.append(parse_err)
+            continue
+
+        records_count += 1
         tax, _ = classify_chat_record(rec)
         taxonomy_counts[tax] += 1
         provenance_counts[str(rec.get("provenance_type") or "MISSING")] += 1
         license_counts[str(rec.get("license") or "MISSING")] += 1
+
+        raw_cat = str(rec.get("category") or "uncategorized").strip()
+        category_counts_raw[raw_cat] += 1
+        canon_cat = canonicalize_category(raw_cat)
+        category_counts_13[canon_cat] = category_counts_13.get(canon_cat, 0) + 1
 
         msgs = rec.get("messages") or []
         conv_sha = str(rec.get("sha256") or "") or compute_conversation_sha256(msgs)
@@ -415,9 +580,11 @@ def audit_single_manifest(
         if reply:
             reply_counter[reply.lower()] += 1
 
-        url = str(rec.get("source_url") or "")
+        url = str(rec.get("source_url") or "").strip()
         if is_external_http_url(url):
             external_url_count += 1
+            if tax == TAXONOMY_PUBLIC_SOURCE_VERIFIED:
+                public_source_urls.add(url.lower())
         elif url.startswith("local://"):
             local_template_url_count += 1
 
@@ -425,20 +592,43 @@ def audit_single_manifest(
         if len(attr) >= 3:
             valid_attribution_count += 1
 
+        seq_len, u_toks, a_toks, sup_toks, windows = _compute_record_token_metrics(
+            rec, tokenizer, block_size, enc_cache, chat_cache
+        )
+        if seq_len > 0:
+            lengths.append(seq_len)
+            tot_chatml += seq_len
+            tot_user += u_toks
+            tot_asst_content += a_toks
+            tot_asst_sup += sup_toks
+            tot_windows += windows
+
     repeated_replies = {r: c for r, c in reply_counter.items() if c > 1}
     qualifying = (
         taxonomy_counts[TAXONOMY_HUMAN_AUTHORED_VERIFIED]
         + taxonomy_counts[TAXONOMY_PUBLIC_SOURCE_VERIFIED]
     )
 
-    return {
+    token_stats = {
+        "total_chatml_tokens": tot_chatml,
+        "user_content_tokens": tot_user,
+        "assistant_content_tokens": tot_asst_content,
+        "assistant_supervised_tokens": tot_asst_sup,
+        "avg_tokens_per_record": round(tot_chatml / len(lengths), 2) if lengths else 0.0,
+        "min_tokens_per_record": min(lengths) if lengths else 0,
+        "max_tokens_per_record": max(lengths) if lengths else 0,
+        "block_size": block_size,
+        "total_windows": tot_windows,
+    }
+
+    result = {
         "exists": True,
         "path": rel_path,
-        "sha256": file_sha256(path),
-        "records_count": len(records),
+        "sha256": f_sha,
+        "records_count": records_count,
         "malformed_lines": malformed,
         "unique_sha256_records": len(sha_counter),
-        "duplicate_sha256_count": len(records) - len(sha_counter),
+        "duplicate_sha256_count": records_count - len(sha_counter),
         "unique_prompts": len(prompt_counter),
         "unique_first_assistant_replies": len(reply_counter),
         "repeated_answer_templates_count": len(repeated_replies),
@@ -446,14 +636,35 @@ def audit_single_manifest(
         "taxonomy_counts": {k: taxonomy_counts[k] for k in ALL_TAXONOMY_CLASSES},
         "raw_provenance_counts": dict(provenance_counts),
         "license_counts": dict(license_counts),
+        "category_counts_raw": dict(category_counts_raw),
+        "category_counts_13_targets": {k: category_counts_13.get(k, 0) for k in SUPPORTED_CHAT_CATEGORIES},
         "external_http_url_count": external_url_count,
         "local_template_url_count": local_template_url_count,
         "valid_attribution_count": valid_attribution_count,
         "qualifying_production_genuine_records": qualifying,
-        "token_stats": _compute_token_stats(
-            records, tokenizer, block_size, _encode_cache=_encode_cache, _chat_cache=_chat_cache
-        ),
+        "token_stats": token_stats,
+        "_fingerprints": {
+            "conv_shas": dict(sha_counter),
+            "prompt_hashes": {_sha256_str(k): v for k, v in prompt_counter.items()},
+            "reply_hashes": {_sha256_str(k): v for k, v in reply_counter.items()},
+            "reply_previews": {_sha256_str(k): (k[:100] + "..." if len(k) > 100 else k) for k, v in reply_counter.items() if v > 1},
+            "public_source_urls": sorted(public_source_urls),
+            "malformed_errors": malformed_errors,
+        },
     }
+
+    if use_disk_cache and local_disk_cache is not None:
+        local_disk_cache.setdefault("entries", {})[cache_key] = result
+        if own_disk_cache:
+            _save_disk_audit_cache(local_disk_cache)
+
+    return result
+
+
+def _strip_internal_fingerprints(split_report: Dict[str, Any]) -> Dict[str, Any]:
+    cleaned = dict(split_report)
+    cleaned.pop("_fingerprints", None)
+    return cleaned
 
 
 def audit_manifest_group(
@@ -464,86 +675,97 @@ def audit_manifest_group(
     base_dir: str = PROJECT_ROOT,
     _encode_cache: Optional[Dict[str, int]] = None,
     _chat_cache: Optional[Dict[str, Tuple[int, int]]] = None,
+    use_disk_cache: bool = True,
+    _disk_cache: Optional[Dict[str, Any]] = None,
+    _tokenizer_sha256: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Audits a train/val/test group including cross-split leakage and global uniqueness."""
-    splits_report: Dict[str, Any] = {}
-    all_records: List[Dict[str, Any]] = []
+    """Audits a train/val/test group including cross-split leakage, 13 categories, and global uniqueness."""
+    raw_splits_report: Dict[str, Any] = {}
     split_hashes: Dict[str, set[str]] = {}
     split_prompts: Dict[str, set[str]] = {}
     split_replies: Dict[str, set[str]] = {}
+    split_pub_urls: Dict[str, set[str]] = {}
     enc_cache = _encode_cache if _encode_cache is not None else {}
     chat_cache = _chat_cache if _chat_cache is not None else {}
 
+    local_disk_cache = _disk_cache
+    own_disk_cache = False
+    if use_disk_cache and local_disk_cache is None:
+        local_disk_cache = _load_disk_audit_cache()
+        own_disk_cache = True
+
     for split_name, path in split_paths.items():
-        splits_report[split_name] = audit_single_manifest(
-            path, tokenizer, block_size, base_dir=base_dir, _encode_cache=enc_cache, _chat_cache=chat_cache
+        sr = audit_single_manifest(
+            path,
+            tokenizer,
+            block_size,
+            base_dir=base_dir,
+            _encode_cache=enc_cache,
+            _chat_cache=chat_cache,
+            use_disk_cache=use_disk_cache,
+            _disk_cache=local_disk_cache,
+            _tokenizer_sha256=_tokenizer_sha256,
         )
-        recs, _ = load_jsonl_records(path)
-        all_records.extend(recs)
-        hashes = set()
-        prompts = set()
-        replies = set()
-        for r in recs:
-            msgs = r.get("messages") or []
-            hashes.add(compute_conversation_sha256(msgs) if isinstance(msgs, list) and msgs else str(r.get("sha256") or ""))
-            p = extract_first_user_prompt(msgs)
-            a = extract_first_assistant_reply(msgs)
-            if p:
-                prompts.add(p.lower())
-            if a:
-                replies.add(a.lower())
-        split_hashes[split_name] = hashes
-        split_prompts[split_name] = prompts
-        split_replies[split_name] = replies
+        raw_splits_report[split_name] = sr
+        fps = sr.get("_fingerprints") or {}
+        split_hashes[split_name] = set((fps.get("conv_shas") or {}).keys())
+        split_prompts[split_name] = set((fps.get("prompt_hashes") or {}).keys())
+        split_replies[split_name] = set((fps.get("reply_hashes") or {}).keys())
+        split_pub_urls[split_name] = set(fps.get("public_source_urls") or [])
+
+    if use_disk_cache and own_disk_cache and local_disk_cache is not None:
+        _save_disk_audit_cache(local_disk_cache)
 
     pairs = [("train", "val"), ("train", "test"), ("val", "test")]
     sha_leakage: Dict[str, int] = {}
     prompt_leakage: Dict[str, int] = {}
     reply_leakage: Dict[str, int] = {}
+    public_source_url_leakage: Dict[str, int] = {}
     for a, b in pairs:
         key = f"{a}_{b}"
         sha_leakage[key] = len(split_hashes.get(a, set()) & split_hashes.get(b, set()))
         prompt_leakage[key] = len(split_prompts.get(a, set()) & split_prompts.get(b, set()))
         reply_leakage[key] = len(split_replies.get(a, set()) & split_replies.get(b, set()))
+        public_source_url_leakage[key] = len(split_pub_urls.get(a, set()) & split_pub_urls.get(b, set()))
 
     taxonomy_totals: Counter[str] = Counter({k: 0 for k in ALL_TAXONOMY_CLASSES})
     global_hashes: Counter[str] = Counter()
     global_prompts: Counter[str] = Counter()
     global_replies: Counter[str] = Counter()
+    reply_previews: Dict[str, str] = {}
     raw_prov_totals: Counter[str] = Counter()
     license_totals: Counter[str] = Counter()
+    cat_raw_totals: Counter[str] = Counter()
+    cat_13_totals: Counter[str] = Counter({k: 0 for k in SUPPORTED_CHAT_CATEGORIES})
     ext_url_total = 0
     local_url_total = 0
     valid_attr_total = 0
+    total_records = 0
 
-    for rec in all_records:
-        tax, _ = classify_chat_record(rec)
-        taxonomy_totals[tax] += 1
-        raw_prov_totals[str(rec.get("provenance_type") or "MISSING")] += 1
-        license_totals[str(rec.get("license") or "MISSING")] += 1
-        msgs = rec.get("messages") or []
-        conv_sha = compute_conversation_sha256(msgs) if isinstance(msgs, list) and msgs else str(rec.get("sha256") or "")
-        global_hashes[conv_sha] += 1
-        p = extract_first_user_prompt(msgs)
-        a = extract_first_assistant_reply(msgs)
-        if p:
-            global_prompts[p.lower()] += 1
-        if a:
-            global_replies[a.lower()] += 1
-        url = str(rec.get("source_url") or "")
-        if is_external_http_url(url):
-            ext_url_total += 1
-        elif url.startswith("local://"):
-            local_url_total += 1
-        if len(str(rec.get("attribution") or "").strip()) >= 3:
-            valid_attr_total += 1
+    for sr in raw_splits_report.values():
+        total_records += sr.get("records_count", 0)
+        for k, v in (sr.get("taxonomy_counts") or {}).items():
+            taxonomy_totals[k] += v
+        raw_prov_totals.update(sr.get("raw_provenance_counts") or {})
+        license_totals.update(sr.get("license_counts") or {})
+        cat_raw_totals.update(sr.get("category_counts_raw") or {})
+        cat_13_totals.update(sr.get("category_counts_13_targets") or {})
+        ext_url_total += sr.get("external_http_url_count", 0)
+        local_url_total += sr.get("local_template_url_count", 0)
+        valid_attr_total += sr.get("valid_attribution_count", 0)
+        fps = sr.get("_fingerprints") or {}
+        global_hashes.update(fps.get("conv_shas") or {})
+        global_prompts.update(fps.get("prompt_hashes") or {})
+        global_replies.update(fps.get("reply_hashes") or {})
+        reply_previews.update(fps.get("reply_previews") or {})
 
     repeated_global_replies = {k: v for k, v in global_replies.items() if v > 1}
     top_repeated = [
-        {"count": c, "reply_preview": (txt[:100] + "...") if len(txt) > 100 else txt}
-        for txt, c in sorted(repeated_global_replies.items(), key=lambda x: -x[1])[:5]
+        {"count": c, "reply_preview": reply_previews.get(h, f"reply_sha:{h[:16]}")}
+        for h, c in sorted(repeated_global_replies.items(), key=lambda x: -x[1])[:5]
     ]
 
+    splits_report = {k: _strip_internal_fingerprints(v) for k, v in raw_splits_report.items()}
     token_totals = _aggregate_split_token_stats(list(splits_report.values()), block_size=block_size)
     qualifying_total = (
         taxonomy_totals[TAXONOMY_HUMAN_AUTHORED_VERIFIED]
@@ -551,7 +773,6 @@ def audit_manifest_group(
     )
     disallowed_total = sum(taxonomy_totals[k] for k in DISALLOWED_PRODUCTION_TAXONOMIES)
 
-    total_records = len(all_records)
     train_count = splits_report.get("train", {}).get("records_count", 0)
     val_count = splits_report.get("val", {}).get("records_count", 0)
     test_count = splits_report.get("test", {}).get("records_count", 0)
@@ -562,6 +783,7 @@ def audit_manifest_group(
         sum(sha_leakage.values())
         + sum(prompt_leakage.values())
         + sum(reply_leakage.values())
+        + sum(public_source_url_leakage.values())
     )
 
     blockers: List[str] = []
@@ -592,7 +814,8 @@ def audit_manifest_group(
         )
     if leakage_total > 0:
         blockers.append(
-            f"Cross-split leakage detected: sha={sha_leakage}, prompt={prompt_leakage}, reply={reply_leakage}."
+            f"Cross-split leakage detected: sha={sha_leakage}, prompt={prompt_leakage}, "
+            f"reply={reply_leakage}, public_source_url={public_source_url_leakage}."
         )
 
     is_production_ready = len(blockers) == 0
@@ -609,6 +832,8 @@ def audit_manifest_group(
         "taxonomy_counts": {k: taxonomy_totals[k] for k in ALL_TAXONOMY_CLASSES},
         "raw_provenance_counts": dict(raw_prov_totals),
         "license_counts": dict(license_totals),
+        "category_counts_raw": dict(cat_raw_totals),
+        "category_counts_13_targets": {k: cat_13_totals.get(k, 0) for k in SUPPORTED_CHAT_CATEGORIES},
         "external_http_url_count": ext_url_total,
         "local_template_url_count": local_url_total,
         "valid_attribution_count": valid_attr_total,
@@ -618,6 +843,7 @@ def audit_manifest_group(
             "sha256_overlap": sha_leakage,
             "normalized_prompt_overlap": prompt_leakage,
             "normalized_assistant_reply_overlap": reply_leakage,
+            "public_source_url_overlap": public_source_url_leakage,
             "total_leakage_events": leakage_total,
         },
         "token_stats": token_totals,
@@ -718,20 +944,18 @@ def run_full_truth_audit(
     tokenizer_path: Optional[str] = None,
     output_path: Optional[str] = None,
     use_cache: bool = True,
+    use_disk_cache: bool = True,
 ) -> Dict[str, Any]:
-    """Executes or loads the complete Phase 2.7.7 Dataset Truth Audit across all repository chat manifests."""
-    out_target = output_path or DEFAULT_REPORT_PATH
-    if use_cache and os.path.isfile(out_target):
-        try:
-            with open(out_target, "r", encoding="utf-8") as f:
-                cached_data = json.load(f)
-            if cached_data.get("schema_version") == "phase_2_7_7_dataset_truth_audit_v1" and "manifest_groups" in cached_data:
-                return cached_data
-        except Exception:
-            pass
+    """Executes the complete Dataset Truth Audit across all repository chat manifests using safe SHA-keyed file caching."""
     tok_path = tokenizer_path or os.path.join(base_dir, "models", "chat", "tokenizer.json")
+    tok_sha = file_sha256(tok_path) if os.path.isfile(tok_path) else None
     tokenizer = SovereignTokenizer.load(tok_path) if os.path.isfile(tok_path) else None
     manifests_dir = os.path.join(base_dir, "datasets", "manifests")
+
+    enc_cache: Dict[str, int] = {}
+    chat_cache: Dict[str, Tuple[int, int]] = {}
+    cache_path = os.path.join(base_dir, "datasets", "sources", ".manifest_audit_cache.json")
+    disk_cache = _load_disk_audit_cache(cache_path) if (use_cache and use_disk_cache) else {"schema_version": AUDIT_CACHE_SCHEMA_VERSION, "entries": {}}
 
     groups = {
         "genuine_baseline": {
@@ -760,7 +984,17 @@ def run_full_truth_audit(
         groups["production_v0_1_candidate"] = prod_paths
 
     audited_groups = {
-        gname: audit_manifest_group(gname, spaths, tokenizer=tokenizer, base_dir=base_dir)
+        gname: audit_manifest_group(
+            gname,
+            spaths,
+            tokenizer=tokenizer,
+            base_dir=base_dir,
+            _encode_cache=enc_cache,
+            _chat_cache=chat_cache,
+            use_disk_cache=(use_cache and use_disk_cache),
+            _disk_cache=disk_cache,
+            _tokenizer_sha256=tok_sha,
+        )
         for gname, spaths in groups.items()
     }
 
@@ -770,11 +1004,26 @@ def run_full_truth_audit(
         "quarantined_teacher_data": os.path.join(manifests_dir, "quarantined_teacher_data.jsonl"),
     }
     standalone_reports = {
-        name: audit_single_manifest(path, tokenizer=tokenizer, base_dir=base_dir)
+        name: _strip_internal_fingerprints(
+            audit_single_manifest(
+                path,
+                tokenizer=tokenizer,
+                base_dir=base_dir,
+                _encode_cache=enc_cache,
+                _chat_cache=chat_cache,
+                use_disk_cache=(use_cache and use_disk_cache),
+                _disk_cache=disk_cache,
+                _tokenizer_sha256=tok_sha,
+            )
+        )
         for name, path in standalone_candidates.items()
     }
 
+    if use_disk_cache:
+        _save_disk_audit_cache(disk_cache, cache_path)
+
     genuine_summary = audited_groups["genuine_baseline"]
+    prod_summary = audited_groups.get("production_v0_1_candidate", genuine_summary)
     scaled_summary = audited_groups["scaled_pilot"]
     expanded_summary = audited_groups["expanded_pilot"]
 
@@ -787,21 +1036,23 @@ def run_full_truth_audit(
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "taxonomy": list(ALL_TAXONOMY_CLASSES),
         "tokenizer": {
-            "path": os.path.relpath(tok_path, base_dir).replace("\\", "/"),
-            "sha256": file_sha256(tok_path),
+            "path": _safe_relpath(tok_path, base_dir),
+            "sha256": tok_sha,
             "vocab_size": tokenizer.vocab_size if tokenizer else None,
             "merges_count": len(tokenizer.merges) if tokenizer else None,
         },
         "executive_summary": {
-            "dataset_status": "DATASET_NOT_READY"
-            if overall_genuine_records < PRODUCTION_PILOT_TARGETS["min_total_records"]
-            else "DATASET_READY",
+            "dataset_status": prod_summary["production_readiness"]["status"],
             "true_qualifying_baseline_records": overall_genuine_records,
             "true_qualifying_taxonomy_breakdown": genuine_summary["taxonomy_counts"],
             "true_qualifying_chatml_tokens": overall_genuine_tot_tokens,
             "true_qualifying_supervised_assistant_tokens": overall_genuine_sup_tokens,
+            "production_candidate_qualifying_records": prod_summary["qualifying_production_genuine_records"],
+            "production_candidate_supervised_assistant_tokens": prod_summary["token_stats"]["assistant_supervised_tokens"],
+            "production_candidate_category_13_distribution": prod_summary.get("category_counts_13_targets", {}),
+            "production_candidate_license_distribution": prod_summary.get("license_counts", {}),
             "minimum_genuine_pilot_targets": dict(PRODUCTION_PILOT_TARGETS),
-            "exact_shortfall": genuine_summary["production_readiness"]["shortfall"],
+            "exact_shortfall": prod_summary["production_readiness"]["shortfall"],
             "scaled_chat_total_records": scaled_summary["total_records"],
             "scaled_chat_deterministic_template_records": scaled_summary["taxonomy_counts"][
                 TAXONOMY_DETERMINISTIC_TEMPLATE
@@ -823,15 +1074,102 @@ def run_full_truth_audit(
 
     if output_path:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        with open(output_path, "w", encoding="utf-8") as f:
+        with open(output_path, "w", encoding="utf-8", newline="\n") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
             f.write("\n")
 
     return report
 
 
+def generate_progress_report(
+    base_dir: str = PROJECT_ROOT,
+    output_path: Optional[str] = DEFAULT_PROGRESS_REPORT_PATH,
+    pending_queue_path: Optional[str] = None,
+    rejected_queue_path: Optional[str] = None,
+    source_registry_path: Optional[str] = None,
+    use_cache: bool = True,
+) -> Dict[str, Any]:
+    """Generates machine-readable Phase 2.7.8 progress tracking report across approved, pending, and target thresholds."""
+    audit = run_full_truth_audit(base_dir=base_dir, output_path=None, use_cache=use_cache)
+    prod = audit["manifest_groups"].get("production_v0_1_candidate") or audit["manifest_groups"]["genuine_baseline"]
+    splits = prod.get("splits", {})
+    train_n = splits.get("train", {}).get("records_count", 0)
+    val_n = splits.get("val", {}).get("records_count", 0)
+    test_n = splits.get("test", {}).get("records_count", 0)
+    qual = prod["qualifying_production_genuine_records"]
+    sup_toks = prod["token_stats"]["assistant_supervised_tokens"]
+    tot_toks = prod["token_stats"]["total_chatml_tokens"]
+
+    p_path = pending_queue_path or os.path.join(base_dir, "datasets", "staging", "pending_review_queue.jsonl")
+    r_path = rejected_queue_path or os.path.join(base_dir, "datasets", "staging", "rejected_queue.jsonl")
+    reg_path = source_registry_path or os.path.join(base_dir, "datasets", "sources", "source_registry.json")
+
+    pending_recs, pending_malformed = load_jsonl_records(p_path)
+    rejected_recs, _ = load_jsonl_records(r_path)
+    pending_by_cat: Counter[str] = Counter({k: 0 for k in SUPPORTED_CHAT_CATEGORIES})
+    pending_by_license: Counter[str] = Counter()
+    pending_by_prov: Counter[str] = Counter()
+    for pr in pending_recs:
+        pending_by_cat[canonicalize_category(pr.get("category"))] += 1
+        pending_by_license[str(pr.get("license") or "MISSING")] += 1
+        pending_by_prov[str(pr.get("provenance_type") or "MISSING")] += 1
+
+    sources_count = 0
+    if os.path.isfile(reg_path):
+        try:
+            with open(reg_path, "r", encoding="utf-8") as sf:
+                reg = json.load(sf)
+            sources_count = len(reg.get("sources", {}))
+        except Exception:
+            sources_count = 0
+
+    progress_doc: Dict[str, Any] = {
+        "schema_version": "phase_2_7_8_dataset_progress_v1",
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "dataset_status": prod["production_readiness"]["status"],
+        "eligible_for_production_training": prod["production_readiness"]["eligible_for_production_training"],
+        "targets": dict(PRODUCTION_PILOT_TARGETS),
+        "current_approved_production": {
+            "total_records": qual,
+            "train_records": train_n,
+            "val_records": val_n,
+            "test_records": test_n,
+            "total_chatml_tokens": tot_toks,
+            "supervised_assistant_tokens": sup_toks,
+            "taxonomy_counts": prod["taxonomy_counts"],
+            "license_distribution": prod["license_counts"],
+            "category_13_distribution": prod["category_counts_13_targets"],
+            "category_raw_distribution": prod["category_counts_raw"],
+            "cross_split_leakage": prod["cross_split_leakage"],
+        },
+        "review_queue": {
+            "pending_review_count": len(pending_recs),
+            "pending_malformed_lines": pending_malformed,
+            "rejected_count": len(rejected_recs),
+            "registered_sources_count": sources_count,
+            "pending_category_13_distribution": dict(pending_by_cat),
+            "pending_license_distribution": dict(pending_by_license),
+            "pending_provenance_distribution": dict(pending_by_prov),
+        },
+        "shortfall": prod["production_readiness"]["shortfall"],
+        "completion_pct": {
+            "records_pct": round(min(100.0, (qual / PRODUCTION_PILOT_TARGETS["min_total_records"]) * 100.0), 2),
+            "supervised_tokens_pct": round(min(100.0, (sup_toks / PRODUCTION_PILOT_TARGETS["min_supervised_tokens"]) * 100.0), 2),
+        },
+    }
+
+    if output_path:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(progress_doc, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+
+    return progress_doc
+
+
 def main() -> None:
     report = run_full_truth_audit(output_path=DEFAULT_REPORT_PATH)
+    generate_progress_report()
     summary = report["executive_summary"]
     print(f"[TruthAudit] dataset_status={summary['dataset_status']}")
     print(

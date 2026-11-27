@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Moon Chat Owner & Public-Source Contribution Schema (Phase 2.7.8)",
+  "description": "Schema accepted by `python -m datasets.chat.contribute --import <file>`. All imported records default strictly to `PENDING_REVIEW` and require explicit reviewer verification via `python -m datasets.chat.review_queue --approve` before entering production manifests.",
+  "type": "object",
+  "required": ["category"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Optional unique record identifier. Auto-generated deterministically if omitted."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "general_knowledge",
+        "basic_science",
+        "mathematics",
+        "programming_fundamentals",
+        "python",
+        "javascript",
+        "html_css",
+        "web_development",
+        "computer_science",
+        "ai_ml_fundamentals",
+        "instruction_following",
+        "reasoning_problem_solving",
+        "helpful_conversational"
+      ]
+    },
+    "provenance_type": {
+      "type": "string",
+      "enum": ["ORIGINAL_SELF_AUTHORED_QA", "SOURCE_DERIVED_EDUCATIONAL_SUMMARY", "PUBLIC_SOURCE_CURATED"],
+      "default": "ORIGINAL_SELF_AUTHORED_QA"
+    },
+    "license": {
+      "type": "string",
+      "enum": ["CustomSovereign", "CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0", "BSD-3-Clause", "0BSD", "PSF-2.0", "Public Domain"],
+      "default": "CustomSovereign"
+    },
+    "license_url": { "type": "string" },
+    "attribution": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Explicit author or contributor attribution text (e.g., 'Prem Gaikwad (Moon AI Chief ML Systems Architect)')."
+    },
+    "source": { "type": "string" },
+    "source_url": { "type": "string" },
+    "source_revision": { "type": "string" },
+    "transformation_performed": {
+      "type": "string",
+      "description": "Required when summarizing a public source: explains how permitted source material was rewritten/adapted into an original educational example."
+    },
+    "prompt": {
+      "type": "string",
+      "description": "Shorthand single-turn user question (used if `messages` is omitted)."
+    },
+    "answer": {
+      "type": "string",
+      "description": "Shorthand single-turn assistant explanation (used if `messages` is omitted)."
+    },
+    "messages": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["role", "content"],
+        "properties": {
+          "role": { "type": "string", "enum": ["system", "user", "assistant"] },
+          "content": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

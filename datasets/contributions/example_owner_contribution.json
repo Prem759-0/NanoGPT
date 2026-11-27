@@ -1,0 +1,13 @@
+{
+  "_schema_notes": "Copy this structure (single JSON object, JSON list, or one-JSON-per-line JSONL) and fill in your own original prompt and answer. Submitted entries always enter PENDING_REVIEW and require explicit verification before promotion.",
+  "id": "owner_contrib_example_template",
+  "category": "python",
+  "attribution": "",
+  "license": "CustomSovereign",
+  "provenance_type": "ORIGINAL_SELF_AUTHORED_QA",
+  "source": "Owner Original Contribution",
+  "source_url": "https://github.com/Prem759-0/NanoGPT/blob/main/datasets/contributions",
+  "approval_status": "PENDING_REVIEW",
+  "prompt": "",
+  "answer": ""
+}

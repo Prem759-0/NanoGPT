@@ -19,14 +19,89 @@ APPROVED_LICENSES = {
     "CC-BY-SA-3.0",
     "MIT",
     "Apache-2.0",
+    "BSD-3-Clause",
+    "0BSD",
+    "PSF-2.0",
     "Public Domain",
-    "CustomSovereign"
+    "PublicDomain",
+    "CustomSovereign",
+}
+
+PROHIBITED_LICENSES = {
+    "CC-BY-NC",
+    "CC-BY-NC-SA",
+    "CC-BY-NC-ND",
+    "CC-BY-ND",
+    "ALL_RIGHTS_RESERVED",
+    "PROPRIETARY",
+    "UNKNOWN",
+    "UNVERIFIED",
+}
+
+SUPPORTED_CHAT_CATEGORIES: Dict[str, str] = {
+    "general_knowledge": "General knowledge",
+    "basic_science": "Basic science",
+    "mathematics": "Mathematics and beginner explanations",
+    "programming_fundamentals": "Programming fundamentals",
+    "python": "Python",
+    "javascript": "JavaScript",
+    "html_css": "HTML and CSS",
+    "web_development": "Web development",
+    "computer_science": "Computer science",
+    "ai_ml_fundamentals": "AI and machine learning fundamentals",
+    "instruction_following": "Instruction following",
+    "reasoning_problem_solving": "Reasoning and problem-solving",
+    "helpful_conversational": "Helpful conversational responses",
+}
+
+CATEGORY_ALIASES: Dict[str, str] = {
+    "science": "basic_science",
+    "physics": "basic_science",
+    "biology": "basic_science",
+    "chemistry": "basic_science",
+    "beginner_educational": "mathematics",
+    "math": "mathematics",
+    "software_engineering": "programming_fundamentals",
+    "coding": "programming_fundamentals",
+    "operating_systems": "computer_science",
+    "cryptography": "computer_science",
+    "distributed_systems": "computer_science",
+    "algorithms": "computer_science",
+    "sovereign_identity": "ai_ml_fundamentals",
+    "ai_ml": "ai_ml_fundamentals",
+    "reasoning_explanations": "reasoning_problem_solving",
+    "reasoning": "reasoning_problem_solving",
+    "general_conversation": "helpful_conversational",
+    "conversational": "helpful_conversational",
+    "html": "html_css",
+    "css": "html_css",
+    "web_dev": "web_development",
+    "js": "javascript",
+}
+
+
+def canonicalize_category(category: Optional[str]) -> str:
+    """Maps a record category string to one of the 13 canonical Phase 2.7.8 categories or returns normalized raw slug."""
+    raw = re.sub(r"[^a-z0-9]+", "_", str(category or "").strip().lower()).strip("_")
+    if raw in SUPPORTED_CHAT_CATEGORIES:
+        return raw
+    return CATEGORY_ALIASES.get(raw, raw or "general_knowledge")
+
+
+APPROVAL_STATUS_PENDING = "PENDING_REVIEW"
+APPROVAL_STATUS_APPROVED = "APPROVED"
+APPROVAL_STATUS_REJECTED = "REJECTED"
+VALID_APPROVAL_STATUSES = {
+    APPROVAL_STATUS_PENDING,
+    APPROVAL_STATUS_APPROVED,
+    APPROVAL_STATUS_REJECTED,
 }
 
 # Granular provenance taxonomy
 PROVENANCE_ORIGINAL_SELF_AUTHORED_QA = "ORIGINAL_SELF_AUTHORED_QA"
 PROVENANCE_SOURCE_DERIVED_SUMMARY = "SOURCE_DERIVED_EDUCATIONAL_SUMMARY"
 PROVENANCE_SOURCE_DERIVED_EDUCATIONAL_SUMMARY = "SOURCE_DERIVED_EDUCATIONAL_SUMMARY"
+PROVENANCE_PUBLIC_SOURCE_CURATED = "PUBLIC_SOURCE_CURATED"
 PROVENANCE_GENUINE_HUMAN_CONVERSATION = "GENUINE_HUMAN_CONVERSATION"
 PROVENANCE_TEACHER_DISTILLATION_QUALIFIED = "TEACHER_DISTILLATION_OFFLINE_QUALIFIED"
 # Stage 2.1.5.1 Audit: Records produced by deterministic Python template expansion
@@ -40,6 +115,7 @@ PROVENANCE_PENDING = "PROVENANCE_PENDING"
 ALLOWED_PROVENANCE_TYPES = {
     PROVENANCE_ORIGINAL_SELF_AUTHORED_QA,
     PROVENANCE_SOURCE_DERIVED_SUMMARY,
+    PROVENANCE_PUBLIC_SOURCE_CURATED,
     PROVENANCE_GENUINE_HUMAN_CONVERSATION,
     PROVENANCE_TEACHER_DISTILLATION_QUALIFIED,
     PROVENANCE_DETERMINISTIC_CURRICULUM_TEMPLATE,
@@ -135,10 +211,19 @@ def validate_chat_record(record: Dict[str, Any], is_production: bool = True) -> 
 
     # Strict Wikipedia Licensing Check
     if "wikipedia.org" in source_url.lower():
-        if license_name in {"CC0-1.0", "Public Domain", "MIT"}:
+        if license_name in {"CC0-1.0", "Public Domain", "PublicDomain", "MIT"}:
             return False, (
                 f"Record '{rec_id}' references Wikipedia ('{source_url}') but declares license '{license_name}'. "
                 "Wikipedia text is licensed under CC-BY-SA-4.0 (or CC-BY-SA-3.0), never CC0, MIT, or Public Domain."
+            )
+
+    # Approval status check (Phase 2.7.8: unapproved records cannot pass production validation)
+    approval_status = record.get("approval_status")
+    if is_production and approval_status is not None:
+        if approval_status != APPROVAL_STATUS_APPROVED:
+            return False, (
+                f"Record '{rec_id}' has approval_status='{approval_status}'; "
+                "only 'APPROVED' (or verified legacy approved) records may enter production."
             )
 
     # Missing attribution must NEVER silently fall back to source title
@@ -177,5 +262,56 @@ def validate_chat_record(record: Dict[str, Any], is_production: bool = True) -> 
     provided_hash = record.get("sha256")
     if provided_hash and provided_hash != expected_hash:
         return False, f"Record '{rec_id}' SHA-256 mismatch (provided: {provided_hash}, expected: {expected_hash})."
+
+    return True, None
+
+
+def validate_conversation_structure_and_safety(
+    messages: Any,
+    require_strict_alternation: bool = True,
+) -> Tuple[bool, Optional[str]]:
+    """
+    Validates strict conversation UTF-8 integrity, turn roles, alternating structure,
+    non-empty content, and end-of-conversation assistant turn.
+    """
+    if not isinstance(messages, list) or len(messages) < 2:
+        return False, "Conversation 'messages' must be a list of at least 2 turns."
+
+    idx_start = 0
+    if isinstance(messages[0], dict) and messages[0].get("role") == "system":
+        sys_content = messages[0].get("content")
+        if not isinstance(sys_content, str) or not sys_content.strip():
+            return False, "Leading 'system' message must have non-empty string content."
+        idx_start = 1
+
+    conv_turns = messages[idx_start:]
+    if len(conv_turns) < 2:
+        return False, "Conversation must have at least one user turn and one assistant turn."
+
+    expected_role = "user"
+    for offset, turn in enumerate(conv_turns):
+        turn_idx = idx_start + offset
+        if not isinstance(turn, dict):
+            return False, f"Turn[{turn_idx}] must be a dictionary."
+        role = turn.get("role")
+        if role not in {"user", "assistant"}:
+            return False, f"Turn[{turn_idx}] has invalid non-system role '{role}'."
+        if require_strict_alternation and role != expected_role:
+            return False, (
+                f"Turn[{turn_idx}] violates role alternation: expected '{expected_role}', got '{role}'."
+            )
+        content = turn.get("content")
+        if not isinstance(content, str) or not content.strip():
+            return False, f"Turn[{turn_idx}] ({role}) has empty or non-string content."
+        if "\x00" in content or "\ufffd" in content:
+            return False, f"Turn[{turn_idx}] ({role}) contains NUL byte or corrupted UTF-8 replacement character."
+        try:
+            content.encode("utf-8", errors="strict")
+        except UnicodeEncodeError as exc:
+            return False, f"Turn[{turn_idx}] ({role}) contains invalid UTF-8 surrogate/encoding: {exc}"
+        expected_role = "assistant" if role == "user" else "user"
+
+    if require_strict_alternation and conv_turns[-1].get("role") != "assistant":
+        return False, "Conversation must end with an 'assistant' response turn."
 
     return True, None

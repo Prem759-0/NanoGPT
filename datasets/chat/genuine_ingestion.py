@@ -28,60 +28,24 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from datasets.chat.schema import compute_conversation_sha256, normalize_text
-from datasets.chat.tokenizer import SovereignTokenizer
+from datasets.chat.quality_gate import check_code_and_safety, validate_candidate_record
+from datasets.chat.schema import APPROVAL_STATUS_APPROVED, canonicalize_category, compute_conversation_sha256
 from datasets.chat.truth_audit import (
     ALL_TAXONOMY_CLASSES,
     DEFAULT_TOKENIZER_PATH,
     PRODUCTION_PILOT_TARGETS,
     QUALIFYING_PRODUCTION_TAXONOMIES,
+    _safe_relpath,
     classify_chat_record,
     extract_first_assistant_reply,
     extract_first_user_prompt,
     file_sha256,
-    load_jsonl_records,
+    iter_jsonl_records,
     verify_production_manifest_group,
 )
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEFAULT_MANIFESTS_DIR = os.path.join(PROJECT_ROOT, "datasets", "manifests")
-
-PYTHON_FENCE_RE = re.compile(r"```python[^\n\r]*(?:\r?\n)(.*?)```", re.DOTALL | re.IGNORECASE)
-SECRET_PII_PATTERNS = (
-    re.compile(r"\bsk-[A-Za-z0-9]{20,}\b"),
-    re.compile(r"\bghp_[A-Za-z0-9]{20,}\b"),
-    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
-    re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
-)
-MIN_ASSISTANT_CONTENT_CHARS = 20
-MIN_USER_CONTENT_CHARS = 4
-
-
-def check_code_and_safety(messages: Sequence[Dict[str, Any]]) -> Tuple[bool, Optional[str]]:
-    """Checks secret/PII patterns and validates any fenced Python blocks with ast.parse."""
-    for idx, msg in enumerate(messages):
-        if not isinstance(msg, dict):
-            return False, f"Message[{idx}] is not a dict."
-        role = msg.get("role")
-        raw_content = str(msg.get("content", ""))
-        content = normalize_text(raw_content)
-        if role == "user" and len(content) < MIN_USER_CONTENT_CHARS:
-            return False, f"User message[{idx}] shorter than {MIN_USER_CONTENT_CHARS} chars."
-        if role == "assistant" and len(content) < MIN_ASSISTANT_CONTENT_CHARS:
-            return False, f"Assistant message[{idx}] shorter than {MIN_ASSISTANT_CONTENT_CHARS} chars."
-
-        for pat in SECRET_PII_PATTERNS:
-            if pat.search(raw_content):
-                return False, f"Potential secret or PII token matched in message[{idx}]."
-
-        for code_match in PYTHON_FENCE_RE.finditer(raw_content):
-            code_body = code_match.group(1)
-            try:
-                ast.parse(code_body)
-            except SyntaxError as exc:
-                return False, f"Invalid Python code block syntax in message[{idx}]: {exc.msg}"
-
-    return True, None
 
 
 def ingest_genuine_sources(
@@ -103,8 +67,17 @@ def ingest_genuine_sources(
     """
     os.makedirs(output_dir, exist_ok=True)
     source_checksums: Dict[str, str] = {}
-    raw_records_with_src: List[Tuple[Dict[str, Any], str, str]] = []
     malformed_lines_total = 0
+    raw_input_records_total = 0
+
+    accepted: List[Dict[str, Any]] = []
+    rejected: List[Dict[str, Any]] = []
+    rejection_reasons: Counter[str] = Counter()
+    taxonomy_counts: Counter[str] = Counter({k: 0 for k in ALL_TAXONOMY_CLASSES})
+
+    seen_hashes: set[str] = set()
+    seen_prompts: set[str] = set()
+    seen_replies: set[str] = set()
 
     for raw_path in source_paths:
         abs_path = os.path.abspath(raw_path)
@@ -125,77 +98,70 @@ def ingest_genuine_sources(
                     f"Source file SHA-256 mismatch for '{abs_path}': expected {expected}, got {actual_sha}"
                 )
 
-        source_checksums[os.path.relpath(abs_path, PROJECT_ROOT).replace("\\", "/")] = actual_sha
-        recs, malformed = load_jsonl_records(abs_path)
-        malformed_lines_total += malformed
-        for rec in recs:
-            raw_records_with_src.append((rec, abs_path, actual_sha))
+        source_checksums[_safe_relpath(abs_path, PROJECT_ROOT)] = actual_sha
 
-    accepted: List[Dict[str, Any]] = []
-    rejected: List[Dict[str, Any]] = []
-    rejection_reasons: Counter[str] = Counter()
-    taxonomy_counts: Counter[str] = Counter({k: 0 for k in ALL_TAXONOMY_CLASSES})
+        for line_no, rec, parse_err in iter_jsonl_records(abs_path):
+            if parse_err is not None or rec is None:
+                malformed_lines_total += 1
+                rejected.append({
+                    "id": None,
+                    "line_no": line_no,
+                    "source_file": base_key,
+                    "reason": parse_err or "Malformed JSON line.",
+                })
+                continue
 
-    seen_hashes: set[str] = set()
-    seen_prompts: set[str] = set()
-    seen_replies: set[str] = set()
+            raw_input_records_total += 1
+            ok, diag, errors = validate_candidate_record(
+                rec, source_file=base_key, line_no=line_no, require_approved=True
+            )
+            if not ok:
+                tax = diag.get("taxonomy", "UNVERIFIED")
+                rejection_reasons[f"validation_failed:{tax}"] += 1
+                rejected.append({
+                    "id": rec.get("id"),
+                    "line_no": line_no,
+                    "taxonomy": tax,
+                    "reason": "; ".join(errors),
+                    "source_file": base_key,
+                })
+                continue
 
-    for rec, src_path, src_sha in raw_records_with_src:
-        tax, tax_reasons = classify_chat_record(rec)
-        if tax not in QUALIFYING_PRODUCTION_TAXONOMIES:
-            reason_key = f"disallowed_taxonomy:{tax}"
-            rejection_reasons[reason_key] += 1
-            rejected.append({
-                "id": rec.get("id"),
-                "taxonomy": tax,
-                "reason": "; ".join(tax_reasons),
-                "source_file": os.path.basename(src_path),
-            })
-            continue
+            msgs = rec.get("messages") or []
+            conv_sha = diag["conversation_sha256"] or compute_conversation_sha256(msgs)
+            prompt_norm = diag["prompt_norm"]
+            reply_norm = diag["reply_norm"]
+            tax = diag["taxonomy"]
 
-        msgs = rec.get("messages") or []
-        safe_ok, safe_err = check_code_and_safety(msgs)
-        if not safe_ok:
-            rejection_reasons["quality_or_safety_failed"] += 1
-            rejected.append({
-                "id": rec.get("id"),
-                "taxonomy": tax,
-                "reason": safe_err,
-                "source_file": os.path.basename(src_path),
-            })
-            continue
+            if conv_sha in seen_hashes:
+                rejection_reasons["duplicate_conversation_sha256"] += 1
+                rejected.append({"id": rec.get("id"), "line_no": line_no, "taxonomy": tax, "reason": "Duplicate conversation SHA-256.", "source_file": base_key})
+                continue
+            if prompt_norm and prompt_norm in seen_prompts:
+                rejection_reasons["duplicate_prompt"] += 1
+                rejected.append({"id": rec.get("id"), "line_no": line_no, "taxonomy": tax, "reason": "Duplicate normalized prompt.", "source_file": base_key})
+                continue
+            if reply_norm and reply_norm in seen_replies:
+                rejection_reasons["duplicate_assistant_reply"] += 1
+                rejected.append({"id": rec.get("id"), "line_no": line_no, "taxonomy": tax, "reason": "Duplicate normalized assistant reply.", "source_file": base_key})
+                continue
 
-        conv_sha = compute_conversation_sha256(msgs)
-        prompt_norm = extract_first_user_prompt(msgs).lower()
-        reply_norm = extract_first_assistant_reply(msgs).lower()
+            seen_hashes.add(conv_sha)
+            if prompt_norm:
+                seen_prompts.add(prompt_norm)
+            if reply_norm:
+                seen_replies.add(reply_norm)
 
-        if conv_sha in seen_hashes:
-            rejection_reasons["duplicate_conversation_sha256"] += 1
-            rejected.append({"id": rec.get("id"), "taxonomy": tax, "reason": "Duplicate conversation SHA-256."})
-            continue
-        if prompt_norm and prompt_norm in seen_prompts:
-            rejection_reasons["duplicate_prompt"] += 1
-            rejected.append({"id": rec.get("id"), "taxonomy": tax, "reason": "Duplicate normalized prompt."})
-            continue
-        if reply_norm and reply_norm in seen_replies:
-            rejection_reasons["duplicate_assistant_reply"] += 1
-            rejected.append({"id": rec.get("id"), "taxonomy": tax, "reason": "Duplicate normalized assistant reply."})
-            continue
-
-        seen_hashes.add(conv_sha)
-        if prompt_norm:
-            seen_prompts.add(prompt_norm)
-        if reply_norm:
-            seen_replies.add(reply_norm)
-
-        taxonomy_counts[tax] += 1
-        enriched = dict(rec)
-        enriched["sha256"] = conv_sha
-        enriched["truth_taxonomy"] = tax
-        enriched["source_file_sha256"] = src_sha
-        enriched["is_dev_fixture"] = False
-        enriched["is_synthetic"] = False
-        accepted.append(enriched)
+            taxonomy_counts[tax] += 1
+            enriched = dict(rec)
+            enriched["sha256"] = conv_sha
+            enriched["truth_taxonomy"] = tax
+            enriched["canonical_category"] = canonicalize_category(rec.get("category"))
+            enriched["source_file_sha256"] = actual_sha
+            enriched["is_dev_fixture"] = False
+            enriched["is_synthetic"] = False
+            enriched.setdefault("approval_status", APPROVAL_STATUS_APPROVED)
+            accepted.append(enriched)
 
     # Split assignment: preserve verified non-leaking splits if requested, else deterministic group allocation.
     splits: Dict[str, List[Dict[str, Any]]] = {"train": [], "val": [], "test": []}
@@ -259,18 +225,19 @@ def ingest_genuine_sources(
         "dataset_status": gate_result["dataset_status"],
         "eligible_for_production_training": gate_result["passed"],
         "blockers": gate_result["blockers"],
-        "raw_input_records": len(raw_records_with_src),
+        "raw_input_records": raw_input_records_total,
         "malformed_input_lines": malformed_lines_total,
         "accepted_genuine_records": len(accepted),
         "rejected_records_count": len(rejected),
+        "rejected_records_preview": rejected[:25],
         "rejection_reasons": dict(rejection_reasons),
         "taxonomy_counts": {k: taxonomy_counts[k] for k in ALL_TAXONOMY_CLASSES},
+        "license_counts": gate_result["audit"]["license_counts"],
+        "category_counts_13_targets": gate_result["audit"]["category_counts_13_targets"],
         "source_file_sha256s": source_checksums,
         "output_files": {
             sname: {
-                "path": os.path.relpath(out_paths[sname], PROJECT_ROOT).replace("\\", "/")
-                if os.path.abspath(out_paths[sname]).startswith(PROJECT_ROOT)
-                else out_paths[sname].replace("\\", "/"),
+                "path": _safe_relpath(out_paths[sname], PROJECT_ROOT),
                 "sha256": out_hashes[sname],
                 "records_count": len(splits[sname]),
             }

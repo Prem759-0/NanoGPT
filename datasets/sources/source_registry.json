@@ -1,0 +1,426 @@
+{
+  "schema_version": "moon_chat_source_registry_v1",
+  "updated_at_utc": "2026-11-27T17:23:42.250118+00:00",
+  "sources": {
+    "wikipedia_solar_system": {
+      "source_id": "wikipedia_solar_system",
+      "title": "Wikipedia: Solar System",
+      "category": "general_knowledge",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Solar_System&oldid=1386839267",
+      "source_revision": "Wikipedia revision 1386839267 (2026-11-20T23:07:31Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Solar System' (https://en.wikipedia.org/w/index.php?title=Solar_System&oldid=1386839267), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "75797bf07651d1060fd2c96350a877975e9cbd55e6cce3b10e3e395cf1d6f604",
+      "retrieval_date": "2026-11-27T17:23:34.375885+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_solar_system"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_solar_system_75797bf07651.json"
+    },
+    "wikipedia_photosynthesis": {
+      "source_id": "wikipedia_photosynthesis",
+      "title": "Wikipedia: Photosynthesis",
+      "category": "basic_science",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Photosynthesis&oldid=1385696147",
+      "source_revision": "Wikipedia revision 1385696147 (2026-11-14T19:58:01Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Photosynthesis' (https://en.wikipedia.org/w/index.php?title=Photosynthesis&oldid=1385696147), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "390e0e0e5ba9abaa97e0f4bc724d56c8ec4a34270a9238744888d65e53bf58f2",
+      "retrieval_date": "2026-11-27T17:23:34.623439+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_photosynthesis"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_photosynthesis_390e0e0e5ba9.json"
+    },
+    "wikipedia_periodic_table": {
+      "source_id": "wikipedia_periodic_table",
+      "title": "Wikipedia: Periodic table",
+      "category": "basic_science",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Periodic_table&oldid=1386639974",
+      "source_revision": "Wikipedia revision 1386639974 (2026-11-19T17:30:13Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Periodic table' (https://en.wikipedia.org/w/index.php?title=Periodic_table&oldid=1386639974), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "c5ab10300f880cbaa82d02ad3bd493f6a9c3f8dd3d8ed2ed1ea9146309c3e198",
+      "retrieval_date": "2026-11-27T17:23:35.171210+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_periodic_table"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_periodic_table_c5ab10300f88.json"
+    },
+    "wikipedia_newton_s_laws_of_motion": {
+      "source_id": "wikipedia_newton_s_laws_of_motion",
+      "title": "Wikipedia: Newton's laws of motion",
+      "category": "basic_science",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Newton%27s_laws_of_motion&oldid=1383155631",
+      "source_revision": "Wikipedia revision 1383155631 (2026-11-01T07:18:58Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Newton's laws of motion' (https://en.wikipedia.org/w/index.php?title=Newton%27s_laws_of_motion&oldid=1383155631), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "2f4f48bdcb0182c3f5236754340771d1057dbc610898ebb020fa7c12ada72847",
+      "retrieval_date": "2026-11-27T17:23:35.434299+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_newton_s_laws_of_motion"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_newton_s_laws_of_motion_2f4f48bdcb01.json"
+    },
+    "wikipedia_linear_algebra": {
+      "source_id": "wikipedia_linear_algebra",
+      "title": "Wikipedia: Linear algebra",
+      "category": "mathematics",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Linear_algebra&oldid=1381075036",
+      "source_revision": "Wikipedia revision 1381075036 (2026-10-19T21:20:13Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Linear algebra' (https://en.wikipedia.org/w/index.php?title=Linear_algebra&oldid=1381075036), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "e362dc8e88677d0162243f6a8ef47a42474a4b3943590d7439522184f1a812e1",
+      "retrieval_date": "2026-11-27T17:23:36.016543+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_linear_algebra"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_linear_algebra_e362dc8e8867.json"
+    },
+    "wikipedia_bayes__theorem": {
+      "source_id": "wikipedia_bayes__theorem",
+      "title": "Wikipedia: Bayes' theorem",
+      "category": "mathematics",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Bayes%27_theorem&oldid=1381079899",
+      "source_revision": "Wikipedia revision 1381079899 (2026-10-19T22:05:50Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Bayes' theorem' (https://en.wikipedia.org/w/index.php?title=Bayes%27_theorem&oldid=1381079899), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "7438c41098188ae68839999dd735bf6c932bde84a5e9bd850929b89e4fd79c93",
+      "retrieval_date": "2026-11-27T17:23:36.524889+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_bayes__theorem"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_bayes__theorem_7438c4109818.json"
+    },
+    "wikipedia_algorithm": {
+      "source_id": "wikipedia_algorithm",
+      "title": "Wikipedia: Algorithm",
+      "category": "programming_fundamentals",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Algorithm&oldid=1387299230",
+      "source_revision": "Wikipedia revision 1387299230 (2026-11-23T09:24:45Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Algorithm' (https://en.wikipedia.org/w/index.php?title=Algorithm&oldid=1387299230), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "7a16890cb51e3fa14c69a9ae1257b46b665831e6c5bc088cc0e57cf1b63e5214",
+      "retrieval_date": "2026-11-27T17:23:36.817929+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_algorithm"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_algorithm_7a16890cb51e.json"
+    },
+    "wikipedia_unit_testing": {
+      "source_id": "wikipedia_unit_testing",
+      "title": "Wikipedia: Unit testing",
+      "category": "programming_fundamentals",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Unit_testing&oldid=1388307773",
+      "source_revision": "Wikipedia revision 1388307773 (2026-11-27T14:30:09Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Unit testing' (https://en.wikipedia.org/w/index.php?title=Unit_testing&oldid=1388307773), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "92f7cc65af3f82cd8de11282524448ef47f7a68e8d38421dc03ddb95f4973bb8",
+      "retrieval_date": "2026-11-27T17:23:37.259505+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_unit_testing"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_unit_testing_92f7cc65af3f.json"
+    },
+    "wikipedia_python__programming_language": {
+      "source_id": "wikipedia_python__programming_language",
+      "title": "Wikipedia: Python (programming language)",
+      "category": "python",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Python_(programming_language)&oldid=1388105028",
+      "source_revision": "Wikipedia revision 1388105028 (2026-11-26T16:42:42Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Python (programming language)' (https://en.wikipedia.org/w/index.php?title=Python_(programming_language)&oldid=1388105028), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "693fae9139911ee20f586b1f70968592090ebd8ebca51399e9006e55b7574135",
+      "retrieval_date": "2026-11-27T17:23:37.494875+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_python__programming_language"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_python__programming_language_693fae913991.json"
+    },
+    "wikipedia_javascript": {
+      "source_id": "wikipedia_javascript",
+      "title": "Wikipedia: JavaScript",
+      "category": "javascript",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=JavaScript&oldid=1387609285",
+      "source_revision": "Wikipedia revision 1387609285 (2026-11-24T20:24:59Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'JavaScript' (https://en.wikipedia.org/w/index.php?title=JavaScript&oldid=1387609285), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "b2e7545214905c99dddc2d4d41d74c526809973e628fec13c2d1210b0f914d95",
+      "retrieval_date": "2026-11-27T17:23:38.111793+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_javascript"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_javascript_b2e754521490.json"
+    },
+    "wikipedia_html": {
+      "source_id": "wikipedia_html",
+      "title": "Wikipedia: HTML",
+      "category": "html_css",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=HTML&oldid=1385144735",
+      "source_revision": "Wikipedia revision 1385144735 (2026-11-12T02:55:24Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'HTML' (https://en.wikipedia.org/w/index.php?title=HTML&oldid=1385144735), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "aeb22acae4b589779011fe100f41eb0f989accd9456741158f8ef4d70ac9bd70",
+      "retrieval_date": "2026-11-27T17:23:38.603895+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_html"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_html_aeb22acae4b5.json"
+    },
+    "wikipedia_css": {
+      "source_id": "wikipedia_css",
+      "title": "Wikipedia: CSS",
+      "category": "html_css",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=CSS&oldid=1387057698",
+      "source_revision": "Wikipedia revision 1387057698 (2026-11-22T06:07:14Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'CSS' (https://en.wikipedia.org/w/index.php?title=CSS&oldid=1387057698), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "5049039585be2b580faaf4bef57487641abb2d271cc18b9ba1730979e071a2ef",
+      "retrieval_date": "2026-11-27T17:23:38.888790+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_css"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_css_5049039585be.json"
+    },
+    "wikipedia_http": {
+      "source_id": "wikipedia_http",
+      "title": "Wikipedia: HTTP",
+      "category": "web_development",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=HTTP&oldid=1387502762",
+      "source_revision": "Wikipedia revision 1387502762 (2026-11-24T06:40:39Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'HTTP' (https://en.wikipedia.org/w/index.php?title=HTTP&oldid=1387502762), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "04c7c038b6cee229fe67d85c698adc1e0c15d83903d550adce6a6d8bf68e23ec",
+      "retrieval_date": "2026-11-27T17:23:39.356233+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_http"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_http_04c7c038b6ce.json"
+    },
+    "wikipedia_rest": {
+      "source_id": "wikipedia_rest",
+      "title": "Wikipedia: REST",
+      "category": "web_development",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=REST&oldid=1380036165",
+      "source_revision": "Wikipedia revision 1380036165 (2026-10-13T11:34:14Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'REST' (https://en.wikipedia.org/w/index.php?title=REST&oldid=1380036165), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "bb54be4815b99f846342362a85837cd0683ce758e40bd244cea4432611da00ae",
+      "retrieval_date": "2026-11-27T17:23:39.810756+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_rest"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_rest_bb54be4815b9.json"
+    },
+    "wikipedia_operating_system": {
+      "source_id": "wikipedia_operating_system",
+      "title": "Wikipedia: Operating system",
+      "category": "computer_science",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Operating_system&oldid=1388160139",
+      "source_revision": "Wikipedia revision 1388160139 (2026-11-26T21:20:10Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Operating system' (https://en.wikipedia.org/w/index.php?title=Operating_system&oldid=1388160139), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "caad67c5e0ff2bb4533b9d9cf349d89257f2ef797bce569333b66435f847829e",
+      "retrieval_date": "2026-11-27T17:23:40.289165+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_operating_system"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_operating_system_caad67c5e0ff.json"
+    },
+    "wikipedia_machine_learning": {
+      "source_id": "wikipedia_machine_learning",
+      "title": "Wikipedia: Machine learning",
+      "category": "ai_ml_fundamentals",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Machine_learning&oldid=1388023045",
+      "source_revision": "Wikipedia revision 1388023045 (2026-11-26T10:19:02Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Machine learning' (https://en.wikipedia.org/w/index.php?title=Machine_learning&oldid=1388023045), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "4108fb7eb09072cf676b3ce4aed8c240ad41d8e5e6ee0562a21840790cf44a26",
+      "retrieval_date": "2026-11-27T17:23:40.554511+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_machine_learning"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_machine_learning_4108fb7eb090.json"
+    },
+    "wikipedia_backpropagation": {
+      "source_id": "wikipedia_backpropagation",
+      "title": "Wikipedia: Backpropagation",
+      "category": "ai_ml_fundamentals",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Backpropagation&oldid=1386722640",
+      "source_revision": "Wikipedia revision 1386722640 (2026-11-20T04:53:58Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Backpropagation' (https://en.wikipedia.org/w/index.php?title=Backpropagation&oldid=1386722640), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "33ee7498c4768702f993234a34bc011e224af04ed7807c33508a26a901224a97",
+      "retrieval_date": "2026-11-27T17:23:41.297594+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_backpropagation"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_backpropagation_33ee7498c476.json"
+    },
+    "wikipedia_transformer__deep_learning_architecture": {
+      "source_id": "wikipedia_transformer__deep_learning_architecture",
+      "title": "Wikipedia: Transformer (deep learning)",
+      "category": "ai_ml_fundamentals",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Transformer_(deep_learning_architecture)&oldid=1386435542",
+      "source_revision": "Wikipedia revision 1386435542 (2026-11-18T14:47:44Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Transformer (deep learning)' (https://en.wikipedia.org/w/index.php?title=Transformer_(deep_learning_architecture)&oldid=1386435542), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "a365135012839f24e47296d535d6287dc927525f92344015894df5eeff687966",
+      "retrieval_date": "2026-11-27T17:23:41.749089+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_transformer__deep_learning_architecture"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_transformer__deep_learning_architecture_a36513501283.json"
+    },
+    "wikipedia_deductive_reasoning": {
+      "source_id": "wikipedia_deductive_reasoning",
+      "title": "Wikipedia: Deductive reasoning",
+      "category": "reasoning_problem_solving",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Deductive_reasoning&oldid=1387494832",
+      "source_revision": "Wikipedia revision 1387494832 (2026-11-24T05:22:24Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Deductive reasoning' (https://en.wikipedia.org/w/index.php?title=Deductive_reasoning&oldid=1387494832), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "bb570d402124a5300b29ae36795f3c663bab7642cc8f54bae4fde17aa3974bbb",
+      "retrieval_date": "2026-11-27T17:23:41.986331+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_deductive_reasoning"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_deductive_reasoning_bb570d402124.json"
+    },
+    "wikipedia_divide_and_conquer_algorithm": {
+      "source_id": "wikipedia_divide_and_conquer_algorithm",
+      "title": "Wikipedia: Divide-and-conquer algorithm",
+      "category": "reasoning_problem_solving",
+      "source_url": "https://en.wikipedia.org/w/index.php?title=Divide-and-conquer_algorithm&oldid=1388250685",
+      "source_revision": "Wikipedia revision 1388250685 (2026-11-27T07:38:50Z, CC-BY-SA 4.0)",
+      "author_or_publisher": "Wikipedia contributors / Wikimedia Foundation",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "share_alike_required": true,
+      "attribution": "Wikipedia contributors, 'Divide-and-conquer algorithm' (https://en.wikipedia.org/w/index.php?title=Divide-and-conquer_algorithm&oldid=1388250685), licensed under CC-BY-SA-4.0",
+      "original_file_sha256": "bf212ebbe2adff8ef1fbf40a4f7a4d8528079efebeac7316df89aa89a4361d8f",
+      "retrieval_date": "2026-11-27T17:23:42.249926+00:00",
+      "derived_record_ids": [
+        "src_draft_wikipedia_divide_and_conquer_algorithm"
+      ],
+      "transformation_performed": "Fetched official Wikimedia REST v1 page summary JSON; staged as PENDING_REVIEW conversion draft awaiting human-authored original educational Q&A synthesis.",
+      "reviewer": null,
+      "approval_status": "PENDING_REVIEW",
+      "raw_cache_relpath": "datasets/sources/raw_cache/wikipedia_divide_and_conquer_algorithm_bf212ebbe2ad.json"
+    }
+  }
+}

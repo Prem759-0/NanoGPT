@@ -39,6 +39,8 @@ class SovereignTokenizer:
         self.id_to_special = {idx: tok for idx, tok in enumerate(self.special_tokens)}
 
         self.byte_offset = len(self.special_tokens)
+        self._encode_cache: Dict[str, List[int]] = {}
+        self._max_encode_cache_size = 4096
         # Token IDs:
         # 0 .. len(SPECIAL_TOKENS)-1: special tokens
         # len(SPECIAL_TOKENS) .. len(SPECIAL_TOKENS)+255: raw bytes 0..255
@@ -59,6 +61,7 @@ class SovereignTokenizer:
     def _init_base_vocab(self):
         self.vocab.clear()
         self.id_to_token.clear()
+        self._encode_cache.clear()
         # Add special tokens
         for idx, tok in enumerate(self.special_tokens):
             self.vocab[tok] = idx
@@ -82,6 +85,7 @@ class SovereignTokenizer:
         self._init_base_vocab()
         self.merges.clear()
         self.bpe_ranks.clear()
+        self._encode_cache.clear()
 
         # Convert each text to a list of byte token IDs
         sequences: List[List[int]] = []
@@ -137,42 +141,48 @@ class SovereignTokenizer:
         """Encodes raw text into token IDs using learned byte-level BPE merges."""
         if not text:
             return []
+        cached = self._encode_cache.get(text)
+        if cached is not None:
+            return list(cached)
+
         raw_bytes = text.encode("utf-8")
         tokens = [self.byte_offset + b for b in raw_bytes]
 
         if not self.merges or len(tokens) < 2:
+            if len(text) <= 2048 and len(self._encode_cache) < self._max_encode_cache_size:
+                self._encode_cache[text] = list(tokens)
             return tokens
 
-        # Iteratively apply merges in order of priority (bpe_ranks)
-        while len(tokens) >= 2:
-            min_rank = None
-            min_pair = None
-            min_idx = -1
-
-            for i in range(len(tokens) - 1):
-                pair = (tokens[i], tokens[i + 1])
-                rank = self.bpe_ranks.get(pair)
-                if rank is not None:
-                    if min_rank is None or rank < min_rank:
-                        min_rank = rank
-                        min_pair = pair
-                        min_idx = i
-
-            if min_pair is None:
-                break
-
-            # Merge all occurrences of min_pair
-            new_tokens = []
+        # Rank-ordered merge pass guarantees bit-for-bit identical output to iterative min-rank scan
+        # because merge rank is strictly monotonic with newly created token IDs.
+        tset = set(tokens)
+        byte_plus_256 = self.byte_offset + 256
+        for rank, (p0, p1) in enumerate(self.merges):
+            if p0 not in tset or p1 not in tset:
+                continue
+            mid = byte_plus_256 + rank
+            new_tokens: List[int] = []
             i = 0
-            merged_id = self.byte_offset + 256 + min_rank
-            while i < len(tokens):
-                if i < len(tokens) - 1 and (tokens[i], tokens[i + 1]) == min_pair:
-                    new_tokens.append(merged_id)
+            n = len(tokens)
+            merged = False
+            while i < n:
+                if i < n - 1 and tokens[i] == p0 and tokens[i + 1] == p1:
+                    new_tokens.append(mid)
                     i += 2
+                    merged = True
                 else:
                     new_tokens.append(tokens[i])
                     i += 1
-            tokens = new_tokens
+            if merged:
+                tokens = new_tokens
+                tset.add(mid)
+                if len(tokens) < 2:
+                    break
+
+        if len(text) <= 2048:
+            if len(self._encode_cache) >= self._max_encode_cache_size:
+                self._encode_cache.clear()
+            self._encode_cache[text] = list(tokens)
 
         return tokens
 

@@ -46,3 +46,7 @@ datasets/manifests/quarantined_teacher_data.jsonl
 datasets/manifests/teacher_pilot_demonstrations.jsonl
 datasets/quarantine/
 data/splits/
+
+# Ephemeral acquisition raw download cache and manifest audit SHA cache (Phase 2.7.8)
+datasets/sources/raw_cache/
+datasets/sources/.manifest_audit_cache.json
