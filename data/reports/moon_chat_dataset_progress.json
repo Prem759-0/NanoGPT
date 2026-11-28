@@ -1,6 +1,6 @@
 {
-  "schema_version": "phase_2_7_8_dataset_progress_v1",
-  "generated_at_utc": "2026-11-27T18:07:59.995037+00:00",
+  "schema_version": "phase_2_7_9_dataset_progress_v2",
+  "generated_at_utc": "2026-11-28T18:18:08.174442+00:00",
   "dataset_status": "DATASET_NOT_READY",
   "eligible_for_production_training": false,
   "targets": {
@@ -25,6 +25,9 @@
       "SYNTHETIC_FIXTURE": 0,
       "AI_GENERATED": 0,
       "UNVERIFIED": 0
+    },
+    "approval_status_distribution": {
+      "IMMUTABLE_BASELINE": 22
     },
     "license_distribution": {
       "CustomSovereign": 6,

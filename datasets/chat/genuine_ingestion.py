@@ -28,7 +28,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from datasets.chat.quality_gate import check_code_and_safety, validate_candidate_record
+from datasets.chat.quality_gate import check_code_and_safety, validate_baseline_record, validate_candidate_record
 from datasets.chat.schema import APPROVAL_STATUS_APPROVED, canonicalize_category, compute_conversation_sha256
 from datasets.chat.truth_audit import (
     ALL_TAXONOMY_CLASSES,
@@ -160,7 +160,6 @@ def ingest_genuine_sources(
             enriched["source_file_sha256"] = actual_sha
             enriched["is_dev_fixture"] = False
             enriched["is_synthetic"] = False
-            enriched.setdefault("approval_status", APPROVAL_STATUS_APPROVED)
             accepted.append(enriched)
 
     # Split assignment: preserve verified non-leaking splits if requested, else deterministic group allocation.
@@ -257,22 +256,117 @@ def ingest_genuine_sources(
     return provenance_doc
 
 
-def run_repo_baseline_ingestion(base_dir: str = PROJECT_ROOT) -> Dict[str, Any]:
-    """Ingests the existing verified baseline manifests into prod_chat_{train,val,test}.jsonl."""
+def ingest_immutable_baseline_sources(
+    base_dir: str = PROJECT_ROOT,
+    output_dir: Optional[str] = None,
+    output_prefix: str = "prod_chat",
+) -> Dict[str, Any]:
+    """
+    Dedicated historical baseline ingestion path strictly for the 22 pre-Phase-2.7.8
+    verified baseline records (`chat_{train,val,test}.jsonl`).
+    """
     manifests_dir = os.path.join(base_dir, "datasets", "manifests")
+    out_dir = output_dir or manifests_dir
+    os.makedirs(out_dir, exist_ok=True)
     tok_path = os.path.join(base_dir, "models", "chat", "tokenizer.json")
-    sources = [
-        os.path.join(manifests_dir, "chat_train.jsonl"),
-        os.path.join(manifests_dir, "chat_val.jsonl"),
-        os.path.join(manifests_dir, "chat_test.jsonl"),
-    ]
-    return ingest_genuine_sources(
-        source_paths=sources,
-        output_dir=manifests_dir,
-        output_prefix="prod_chat",
+    sources = {
+        "train": os.path.join(manifests_dir, "chat_train.jsonl"),
+        "val": os.path.join(manifests_dir, "chat_val.jsonl"),
+        "test": os.path.join(manifests_dir, "chat_test.jsonl"),
+    }
+
+    splits: Dict[str, List[Dict[str, Any]]] = {"train": [], "val": [], "test": []}
+    source_checksums: Dict[str, str] = {}
+    rejected: List[Dict[str, Any]] = []
+    taxonomy_counts: Counter[str] = Counter({k: 0 for k in ALL_TAXONOMY_CLASSES})
+    seen_hashes: set[str] = set()
+
+    for sname, spath in sources.items():
+        actual_sha = file_sha256(spath) or ""
+        source_checksums[_safe_relpath(spath, PROJECT_ROOT)] = actual_sha
+        for line_no, rec, parse_err in iter_jsonl_records(spath):
+            if parse_err is not None or rec is None:
+                rejected.append({"id": None, "line_no": line_no, "reason": parse_err or "Malformed JSON line."})
+                continue
+            ok, diag, errors = validate_baseline_record(rec, source_file=os.path.basename(spath), line_no=line_no)
+            if not ok:
+                rejected.append({"id": diag.get("id"), "line_no": line_no, "reason": "; ".join(errors)})
+                continue
+            csha = diag["conversation_sha256"]
+            if csha in seen_hashes:
+                rejected.append({"id": rec.get("id"), "line_no": line_no, "reason": "Duplicate baseline SHA-256."})
+                continue
+            seen_hashes.add(csha)
+            tax = diag["taxonomy"]
+            taxonomy_counts[tax] += 1
+            enriched = dict(rec)
+            enriched["sha256"] = csha
+            enriched["truth_taxonomy"] = tax
+            enriched["canonical_category"] = canonicalize_category(rec.get("category"))
+            enriched["source_file_sha256"] = actual_sha
+            enriched["is_dev_fixture"] = False
+            enriched["is_synthetic"] = False
+            enriched["baseline_historical_verified"] = True
+            enriched["split"] = sname
+            splits[sname].append(enriched)
+
+    out_paths: Dict[str, str] = {}
+    out_hashes: Dict[str, Optional[str]] = {}
+    for sname in ("train", "val", "test"):
+        spath = os.path.join(out_dir, f"{output_prefix}_{sname}.jsonl")
+        with open(spath, "w", encoding="utf-8", newline="\n") as f:
+            for item in splits[sname]:
+                f.write(json.dumps(item, ensure_ascii=False) + "\n")
+        out_paths[sname] = spath
+        out_hashes[sname] = file_sha256(spath)
+
+    gate_result = verify_production_manifest_group(
+        train_path=out_paths["train"],
+        val_path=out_paths["val"],
+        test_path=out_paths["test"],
         tokenizer_path=tok_path,
-        preserve_explicit_splits=True,
+        require_scale=True,
     )
+    accepted_total = sum(len(splits[s]) for s in ("train", "val", "test"))
+    prov_doc = {
+        "schema_version": "moon_chat_genuine_ingestion_v1",
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "dataset_status": gate_result["dataset_status"],
+        "eligible_for_production_training": gate_result["passed"],
+        "blockers": gate_result["blockers"],
+        "raw_input_records": accepted_total + len(rejected),
+        "malformed_input_lines": 0,
+        "accepted_genuine_records": accepted_total,
+        "rejected_records_count": len(rejected),
+        "rejected_records_preview": rejected[:25],
+        "rejection_reasons": {"baseline_validation_failed": len(rejected)} if rejected else {},
+        "taxonomy_counts": {k: taxonomy_counts[k] for k in ALL_TAXONOMY_CLASSES},
+        "license_counts": gate_result["audit"]["license_counts"],
+        "category_counts_13_targets": gate_result["audit"]["category_counts_13_targets"],
+        "source_file_sha256s": source_checksums,
+        "output_files": {
+            sname: {
+                "path": _safe_relpath(out_paths[sname], PROJECT_ROOT),
+                "sha256": out_hashes[sname],
+                "records_count": len(splits[sname]),
+            }
+            for sname in ("train", "val", "test")
+        },
+        "token_stats": gate_result["audit"]["token_stats"],
+        "cross_split_leakage": gate_result["audit"]["cross_split_leakage"],
+        "shortfall": gate_result["audit"]["production_readiness"]["shortfall"],
+    }
+    prov_path = os.path.join(out_dir, f"{output_prefix}_provenance.json")
+    with open(prov_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(prov_doc, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    prov_doc["provenance_path"] = prov_path
+    return prov_doc
+
+
+def run_repo_baseline_ingestion(base_dir: str = PROJECT_ROOT) -> Dict[str, Any]:
+    """Ingests the existing verified baseline manifests via the dedicated historical baseline path."""
+    return ingest_immutable_baseline_sources(base_dir=base_dir)
 
 
 def main() -> None:

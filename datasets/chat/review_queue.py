@@ -20,7 +20,11 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from datasets.chat.acquisition import DEFAULT_REGISTRY_PATH, load_source_registry, save_source_registry
 from datasets.chat.contribute import DEFAULT_PENDING_QUEUE_PATH
-from datasets.chat.quality_gate import validate_candidate_record
+from datasets.chat.quality_gate import (
+    check_draft_summary_originality,
+    validate_baseline_record,
+    validate_candidate_record,
+)
 from datasets.chat.schema import (
     APPROVAL_STATUS_APPROVED,
     APPROVAL_STATUS_PENDING,
@@ -115,10 +119,28 @@ def rebuild_production_manifests(
     taxonomy_counts = {k: 0 for k in ALL_TAXONOMY_CLASSES}
     rejected_on_rebuild: List[Dict[str, Any]] = []
 
-    def _admit_record(rec: Dict[str, Any], src_label: str, src_sha: str, line_no: int) -> Optional[Tuple[Dict[str, Any], str]]:
-        ok, diag, errors = validate_candidate_record(
-            rec, source_file=src_label, line_no=line_no, require_approved=True, tokenizer=tok
-        )
+    def _admit_verified(
+        rec: Dict[str, Any],
+        src_label: str,
+        src_sha: str,
+        line_no: int,
+        *,
+        is_baseline: bool,
+    ) -> Optional[Tuple[Dict[str, Any], str]]:
+        if is_baseline:
+            ok, diag, errors = validate_baseline_record(
+                rec, source_file=src_label, line_no=line_no, tokenizer=tok
+            )
+        else:
+            ok, diag, errors = validate_candidate_record(
+                rec, source_file=src_label, line_no=line_no, require_approved=True, tokenizer=tok
+            )
+            if ok:
+                reviewer_str = str(rec.get("reviewer") or "").strip()
+                if len(reviewer_str) < 3:
+                    ok = False
+                    errors = errors + [f"[{src_label}:{line_no} id={diag.get('id')}] Curated APPROVED record missing reviewer identity."]
+
         if not ok:
             rejected_on_rebuild.append({"id": diag.get("id"), "source": src_label, "reasons": errors})
             return None
@@ -145,11 +167,15 @@ def rebuild_production_manifests(
         enriched["source_file_sha256"] = enriched.get("source_file_sha256") or src_sha
         enriched["is_dev_fixture"] = False
         enriched["is_synthetic"] = False
-        enriched.setdefault("approval_status", APPROVAL_STATUS_APPROVED)
+        if is_baseline:
+            enriched["baseline_historical_verified"] = True
         taxonomy_counts[diag["taxonomy"]] += 1
         return enriched, diag["taxonomy"]
 
-    # 1. Load immutable baseline verified splits preserving their leak-free assignment
+    baseline_count = 0
+    curated_count = 0
+
+    # 1. Load immutable baseline verified splits via dedicated historical baseline validation path
     for sname, spath in baseline_sources.items():
         if not os.path.isfile(spath):
             continue
@@ -159,13 +185,14 @@ def rebuild_production_manifests(
         for line_no, rec, err in iter_jsonl_records(spath):
             if err is not None or rec is None:
                 continue
-            res = _admit_record(rec, os.path.basename(spath), ssha, line_no)
+            res = _admit_verified(rec, os.path.basename(spath), ssha, line_no, is_baseline=True)
             if res is not None:
                 item, _ = res
                 item["split"] = sname
                 splits[sname].append(item)
+                baseline_count += 1
 
-    # 2. Load newly approved records from curated ledger and partition by source group without leakage
+    # 2. Load newly approved curated records via strict APPROVED-only validation path
     extra_approved: List[Tuple[Dict[str, Any], str]] = []
     if os.path.isfile(cur_path):
         csha_file = file_sha256(cur_path) or ""
@@ -173,9 +200,10 @@ def rebuild_production_manifests(
         for line_no, rec, err in iter_jsonl_records(cur_path):
             if err is not None or rec is None:
                 continue
-            res = _admit_record(rec, os.path.basename(cur_path), csha_file, line_no)
+            res = _admit_verified(rec, os.path.basename(cur_path), csha_file, line_no, is_baseline=False)
             if res is not None:
                 extra_approved.append(res)
+                curated_count += 1
 
     if extra_approved:
         groups: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
@@ -240,6 +268,10 @@ def rebuild_production_manifests(
         "raw_input_records": total_approved + len(rejected_on_rebuild),
         "malformed_input_lines": 0,
         "accepted_genuine_records": total_approved,
+        "approved_breakdown": {
+            "immutable_baseline_records": baseline_count,
+            "curated_explicitly_approved_records": curated_count,
+        },
         "rejected_records_count": len(rejected_on_rebuild),
         "rejection_reasons": {"rebuild_rejected": len(rejected_on_rebuild)} if rejected_on_rebuild else {},
         "taxonomy_counts": taxonomy_counts,
@@ -280,6 +312,86 @@ def rebuild_production_manifests(
     return provenance_doc
 
 
+def complete_pending_draft(
+    record_id: str,
+    *,
+    answer: str,
+    prompt: Optional[str] = None,
+    attribution: Optional[str] = None,
+    transformation_performed: Optional[str] = None,
+    queue_path: str = DEFAULT_PENDING_QUEUE_PATH,
+    tokenizer_path: str = DEFAULT_TOKENIZER_PATH,
+) -> Dict[str, Any]:
+    """
+    Completes a staged PENDING_REVIEW conversion draft with owner-authored educational prose,
+    preserving all source attribution/license metadata and keeping `approval_status = "PENDING_REVIEW"`
+    until explicit reviewer verification and promotion.
+    """
+    pending = _load_records_clean(queue_path)
+    tok = SovereignTokenizer.load(tokenizer_path) if os.path.isfile(tokenizer_path) else None
+    updated_queue: List[Dict[str, Any]] = []
+    target_updated: Optional[Dict[str, Any]] = None
+    now_ts = datetime.now(timezone.utc).isoformat()
+
+    for rec in pending:
+        if str(rec.get("id")) != record_id or target_updated is not None:
+            updated_queue.append(rec)
+            continue
+
+        candidate = dict(rec)
+        orig_msgs = list(candidate.get("messages") or [])
+        user_text = str(prompt).strip() if prompt is not None else ""
+        if not user_text:
+            for turn in orig_msgs:
+                if isinstance(turn, dict) and turn.get("role") == "user":
+                    user_text = str(turn.get("content") or "").strip()
+                    break
+        candidate["messages"] = [
+            {"role": "user", "content": user_text},
+            {"role": "assistant", "content": str(answer).strip()},
+        ]
+        candidate["sha256"] = compute_conversation_sha256(candidate["messages"])
+        if attribution and attribution.strip():
+            candidate["attribution"] = attribution.strip()
+        if transformation_performed and transformation_performed.strip():
+            candidate["transformation_performed"] = transformation_performed.strip()
+        elif candidate.get("record_kind") == "SOURCE_CONVERSION_DRAFT":
+            candidate["transformation_performed"] = (
+                f"Original educational Q&A explanation synthesized from verified source metadata "
+                f"({candidate.get('source_url', '')}); source attribution and license preserved."
+            )
+            candidate["modification_summary"] = "Owner-authored educational synthesis ready for reviewer inspection."
+        candidate["needs_original_human_summary"] = False
+        if candidate.get("record_kind") == "SOURCE_CONVERSION_DRAFT":
+            candidate["record_kind"] = "SOURCE_DERIVED_COMPLETED"
+        candidate["approval_status"] = APPROVAL_STATUS_PENDING
+        candidate["reviewer"] = None
+        candidate["draft_completed_at_utc"] = now_ts
+
+        st_ok, diag, st_errs = validate_candidate_record(
+            candidate, source_file=os.path.basename(queue_path), line_no=0, require_approved=False, tokenizer=tok
+        )
+        orig_ok, orig_err = check_draft_summary_originality(candidate)
+        if not st_ok or not orig_ok:
+            errs = list(st_errs) + ([orig_err] if orig_err else [])
+            return {"completed": False, "id": record_id, "errors": errs}
+
+        target_updated = candidate
+        updated_queue.append(candidate)
+
+    if target_updated is None:
+        return {"completed": False, "id": record_id, "errors": [f"Record '{record_id}' not found in pending queue."]}
+
+    _write_jsonl_atomic(queue_path, updated_queue)
+    return {
+        "completed": True,
+        "id": record_id,
+        "approval_status": APPROVAL_STATUS_PENDING,
+        "record": target_updated,
+        "diagnostics": diag,
+    }
+
+
 def approve_pending_records(
     record_ids: Sequence[str],
     *,
@@ -292,8 +404,11 @@ def approve_pending_records(
     base_dir: str = PROJECT_ROOT,
 ) -> Dict[str, Any]:
     """
-    Promotes explicitly verified records from PENDING_REVIEW to APPROVED after re-running
-    all quality, licensing, AST code, security/PII, and duplicate gates.
+    Promotes explicitly verified records from PENDING_REVIEW to APPROVED after validating:
+      1. Reviewer identity & timestamp.
+      2. Pre-approval quality, license, attribution, AST syntax, and PII checks.
+      3. Draft completeness & non-verbatim originality (blocks empty or incomplete source drafts).
+      4. Strict production validation with explicit `approval_status == "APPROVED"`.
     """
     if not reviewer or len(reviewer.strip()) < 3:
         raise ValueError("Approval requires non-empty reviewer identity (--reviewer).")
@@ -316,28 +431,39 @@ def approve_pending_records(
             remaining_pending.append(rec)
             continue
 
-        # Run strict validation cleanly prior to promotion
-        test_rec = dict(rec)
-        test_rec["approval_status"] = APPROVAL_STATUS_APPROVED
-        test_rec["reviewer"] = reviewer.strip()
+        pre_ok, _, pre_errors = validate_candidate_record(
+            rec, source_file=os.path.basename(queue_path), line_no=0, require_approved=False, tokenizer=tok
+        )
+        orig_ok, orig_err = check_draft_summary_originality(rec)
+        if not pre_ok or not orig_ok:
+            combined_errs = list(pre_errors) + ([orig_err] if orig_err else [])
+            failed_checks.append({"id": rid, "errors": combined_errs})
+            remaining_pending.append(rec)
+            continue
+
+        promoted_rec = dict(rec)
+        promoted_rec["approval_status"] = APPROVAL_STATUS_APPROVED
+        promoted_rec["reviewer"] = reviewer.strip()
+        promoted_rec["reviewed_at_utc"] = now_ts
+        promoted_rec["needs_original_human_summary"] = False
+
         ok, diag, errors = validate_candidate_record(
-            test_rec, source_file=os.path.basename(queue_path), line_no=0, require_approved=True, tokenizer=tok
+            promoted_rec, source_file=os.path.basename(queue_path), line_no=0, require_approved=True, tokenizer=tok
         )
         if not ok:
             failed_checks.append({"id": rid, "errors": errors})
             remaining_pending.append(rec)
             continue
 
-        test_rec["reviewed_at_utc"] = now_ts
-        test_rec["needs_original_human_summary"] = False
-        test_rec["sha256"] = diag["conversation_sha256"]
-        curated.append(test_rec)
-        approved_now.append(test_rec)
+        promoted_rec["sha256"] = diag["conversation_sha256"]
+        curated.append(promoted_rec)
+        approved_now.append(promoted_rec)
 
-        src_id = test_rec.get("source_id")
+        src_id = promoted_rec.get("source_id")
         if reg and src_id and src_id in reg.get("sources", {}):
             reg["sources"][src_id]["approval_status"] = APPROVAL_STATUS_APPROVED
             reg["sources"][src_id]["reviewer"] = reviewer.strip()
+            reg["sources"][src_id]["reviewed_at_utc"] = now_ts
 
     not_found = sorted(target_set - ({str(r.get("id")) for r in approved_now} | {f["id"] for f in failed_checks}))
 
@@ -410,6 +536,7 @@ def reject_pending_record(
         if src_id and src_id in reg.get("sources", {}):
             reg["sources"][src_id]["approval_status"] = APPROVAL_STATUS_REJECTED
             reg["sources"][src_id]["reviewer"] = reviewer.strip()
+            reg["sources"][src_id]["reviewed_at_utc"] = rejected_item["reviewed_at_utc"]
             save_source_registry(reg, source_registry_path)
 
     return {"rejected": True, "id": record_id, "remaining_pending_count": len(remaining)}
@@ -419,11 +546,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Moon Chat Review Queue & Manifest Builder")
     parser.add_argument("--status", action="store_true", help="Print progress summary and refresh progress JSON.")
     parser.add_argument("--list", action="store_true", help="List items currently in PENDING_REVIEW.")
+    parser.add_argument("--show", type=str, default=None, help="Inspect full details, source extract, and status for one pending record.")
+    parser.add_argument("--complete-draft", type=str, default=None, help="Record ID in pending queue to fill in with owner-authored answer.")
+    parser.add_argument("--prompt", type=str, default=None, help="Optional revised user question for --complete-draft.")
+    parser.add_argument("--answer", type=str, default=None, help="Owner-authored original educational answer for --complete-draft.")
+    parser.add_argument("--author", type=str, default=None, help="Optional updated attribution for --complete-draft.")
     parser.add_argument("--approve", nargs="+", default=None, help="Record ID(s) to approve and promote.")
     parser.add_argument("--reject", type=str, default=None, help="Record ID to reject.")
     parser.add_argument("--reviewer", type=str, default="", help="Reviewer name/identity.")
     parser.add_argument("--reason", type=str, default="", help="Rejection reason.")
-    parser.add_argument("--rebuild-manifests", action="store_true", help="Rebuild production manifests deterministically from APPROVED records.")
+    parser.add_argument("--rebuild-manifests", action="store_true", help="Rebuild production manifests deterministically from APPROVED/baseline records.")
     args = parser.parse_args()
 
     if args.list:
@@ -431,8 +563,37 @@ def main() -> None:
         print(f"Pending review queue ({len(pending)} records):")
         for r in pending:
             ready_ok, _, errs = validate_candidate_record(r, require_approved=False)
-            state = "READY_FOR_REVIEW" if ready_ok else f"NEEDS_EDIT ({errs[0]})"
+            orig_ok, orig_err = check_draft_summary_originality(r)
+            if ready_ok and orig_ok:
+                state = "READY_FOR_REVIEW"
+            else:
+                reason = errs[0] if errs else (orig_err or "incomplete draft")
+                state = f"NEEDS_EDIT ({reason})"
             print(f"  - {r.get('id')} | {r.get('category')} | {r.get('license')} | {state}")
+        return
+
+    if args.show:
+        pending = list_pending_records()
+        match = next((r for r in pending if r.get("id") == args.show), None)
+        if match is None:
+            print(f"[ReviewQueue] Record '{args.show}' not found in pending queue.")
+            return
+        print(json.dumps(match, indent=2, ensure_ascii=False))
+        return
+
+    if args.complete_draft:
+        if not args.answer:
+            print("[ReviewQueue] Error: --complete-draft requires --answer \"...\".")
+            return
+        res = complete_pending_draft(
+            args.complete_draft,
+            answer=args.answer,
+            prompt=args.prompt,
+            attribution=args.author,
+        )
+        print(f"[ReviewQueue] complete_draft={res.get('completed')} id={res.get('id')} status={res.get('approval_status')}")
+        if not res.get("completed"):
+            print(f"  Errors: {res.get('errors')}")
         return
 
     if args.approve:
@@ -464,7 +625,8 @@ def main() -> None:
     print(f"[DatasetProgress] status={prog['dataset_status']}")
     print(
         f"  Approved: {app['total_records']} (train={app['train_records']}, val={app['val_records']}, "
-        f"test={app['test_records']}), supervised_tokens={app['supervised_assistant_tokens']}"
+        f"test={app['test_records']}), supervised_tokens={app['supervised_assistant_tokens']}, "
+        f"approval_breakdown={app.get('approval_status_distribution', {})}"
     )
     print(
         f"  Pending Review: {rq['pending_review_count']} | Rejected: {rq['rejected_count']} | "
@@ -475,3 +637,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

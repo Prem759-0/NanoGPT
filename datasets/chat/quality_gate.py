@@ -25,6 +25,9 @@ from datasets.chat.schema import (
     normalize_text,
     validate_chat_record,
     validate_conversation_structure_and_safety,
+    validate_curated_production_record,
+    validate_immutable_baseline_record,
+    validate_staging_candidate_record,
 )
 from datasets.chat.tokenizer import SovereignTokenizer
 from datasets.chat.truth_audit import (
@@ -175,18 +178,46 @@ def check_tokenizer_compatibility(
     return True, stats, None
 
 
+def check_draft_summary_originality(rec: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    """
+    Ensures source-derived conversion drafts are not completed by copying raw reference extracts
+    verbatim or still flagged as needing original human educational synthesis.
+    """
+    if not isinstance(rec, dict):
+        return False, "Record must be a JSON dictionary."
+    if rec.get("needs_original_human_summary") is True:
+        return False, (
+            "Conversion draft is still marked 'needs_original_human_summary=True'; "
+            "complete original educational synthesis and mark it reviewed before approval."
+        )
+    ref_extract = normalize_text(str(rec.get("source_reference_extract") or ""))
+    msgs = rec.get("messages") or []
+    asst_reply = extract_first_assistant_reply(msgs) if isinstance(msgs, list) else ""
+    if ref_extract and len(ref_extract) >= 40 and asst_reply:
+        if asst_reply == ref_extract or (len(asst_reply) <= len(ref_extract) + 30 and ref_extract[:80] in asst_reply):
+            return False, (
+                "Assistant answer copies 'source_reference_extract' nearly verbatim; "
+                "write original educational explanation in your own words."
+            )
+    return True, None
+
+
 def validate_candidate_record(
     rec: Dict[str, Any],
     *,
     source_file: str = "<memory>",
     line_no: int = 0,
-    require_approved: bool = False,
+    require_approved: bool = True,
     tokenizer: Optional[SovereignTokenizer] = None,
 ) -> Tuple[bool, Dict[str, Any], List[str]]:
     """
-    Comprehensive Phase 2.7.8 validation gate returning (is_valid, diagnostics_dict, error_list).
-    Can validate both PENDING_REVIEW staging records (`require_approved=False`) and production-eligible
-    records (`require_approved=True`).
+    Comprehensive Phase 2.7.9 validation gate returning (is_valid, diagnostics_dict, error_list).
+
+    - Production/curated mode (`require_approved=True`, default): fails closed unless the record
+      explicitly carries `approval_status == "APPROVED"`. Missing, None, empty, `PENDING_REVIEW`,
+      or `REJECTED` statuses are strictly rejected. Never mutates or defaults `approval_status`.
+    - Staging mode (`require_approved=False`): validates pre-approval candidate schema/safety/taxonomy
+      without ever rewriting `PENDING_REVIEW` to `APPROVED`.
     """
     errors: List[str] = []
     rec_id = str(rec.get("id") or f"line_{line_no}") if isinstance(rec, dict) else f"line_{line_no}"
@@ -207,29 +238,113 @@ def validate_candidate_record(
     if not safe_ok:
         errors.append(_fmt("messages", safe_err or "Conversation quality/safety validation failed."))
 
+    has_approval_key = "approval_status" in rec
     approval_status = rec.get("approval_status")
     if require_approved:
-        if approval_status is not None and approval_status != APPROVAL_STATUS_APPROVED:
-            errors.append(_fmt("approval_status", f"Production requires APPROVED status, got '{approval_status}'."))
+        if not has_approval_key or not isinstance(approval_status, str) or approval_status != APPROVAL_STATUS_APPROVED:
+            got = repr(approval_status) if has_approval_key else "<MISSING>"
+            errors.append(
+                _fmt(
+                    "approval_status",
+                    f"Production requires explicit approval_status='{APPROVAL_STATUS_APPROVED}', got {got}.",
+                )
+            )
+        schema_ok, schema_err = validate_curated_production_record(rec)
     else:
-        if approval_status is not None and approval_status not in {APPROVAL_STATUS_PENDING, APPROVAL_STATUS_APPROVED, APPROVAL_STATUS_REJECTED}:
-            errors.append(_fmt("approval_status", f"Unknown approval_status '{approval_status}'."))
+        if has_approval_key and (
+            not isinstance(approval_status, str)
+            or approval_status not in {APPROVAL_STATUS_PENDING, APPROVAL_STATUS_APPROVED}
+        ):
+            errors.append(
+                _fmt(
+                    "approval_status",
+                    f"Staging rejects approval_status='{approval_status}' (must be PENDING_REVIEW or APPROVED).",
+                )
+            )
+        schema_ok, schema_err = validate_staging_candidate_record(rec)
 
-    # Temporarily evaluate structural & provenance classification independent of pending state when staging
-    eval_rec = dict(rec)
-    if not require_approved and eval_rec.get("approval_status") == APPROVAL_STATUS_PENDING:
-        eval_rec["approval_status"] = APPROVAL_STATUS_APPROVED
-
-    schema_ok, schema_err = validate_chat_record(eval_rec, is_production=True)
     if not schema_ok:
         errors.append(_fmt("schema", schema_err or "Failed schema validation."))
 
-    tax, tax_reasons = classify_chat_record(eval_rec)
+    tax, tax_reasons = classify_chat_record(rec, allow_pending_staging=(not require_approved))
     if tax not in QUALIFYING_PRODUCTION_TAXONOMIES:
         errors.append(_fmt("provenance_type", f"Disallowed truth taxonomy '{tax}': {'; '.join(tax_reasons)}"))
 
     if tax == TAXONOMY_PUBLIC_SOURCE_VERIFIED and not str(rec.get("transformation_performed") or rec.get("modification_summary") or "").strip():
         errors.append(_fmt("transformation_performed", "Source-derived records must document what transformation/editing was performed."))
+
+    if require_approved:
+        orig_ok, orig_err = check_draft_summary_originality(rec)
+        if not orig_ok:
+            errors.append(_fmt("draft_completeness", orig_err or "Incomplete source conversion draft."))
+
+    tok_stats: Dict[str, Any] = {}
+    if safe_ok and tokenizer is not None:
+        tok_ok, tok_stats, tok_err = check_tokenizer_compatibility(msgs, tokenizer)
+        if not tok_ok:
+            errors.append(_fmt("tokenizer", tok_err or "Tokenizer incompatibility."))
+
+    raw_cat = str(rec.get("category") or "").strip()
+    canon_cat = canonicalize_category(raw_cat)
+    conv_sha = compute_conversation_sha256(msgs) if isinstance(msgs, list) and msgs else ""
+    prompt_norm = extract_first_user_prompt(msgs).lower() if isinstance(msgs, list) else ""
+    reply_norm = extract_first_assistant_reply(msgs).lower() if isinstance(msgs, list) else ""
+
+    diagnostics = {
+        "id": rec_id,
+        "source_file": source_file,
+        "line_no": line_no,
+        "source_url": src_url,
+        "taxonomy": tax,
+        "raw_category": raw_cat,
+        "canonical_category": canon_cat,
+        "canonical_category_supported": canon_cat in SUPPORTED_CHAT_CATEGORIES,
+        "conversation_sha256": conv_sha,
+        "prompt_norm": prompt_norm,
+        "reply_norm": reply_norm,
+        "token_stats": tok_stats,
+    }
+    return len(errors) == 0, diagnostics, errors
+
+
+def validate_baseline_record(
+    rec: Dict[str, Any],
+    *,
+    source_file: str = "<baseline>",
+    line_no: int = 0,
+    tokenizer: Optional[SovereignTokenizer] = None,
+) -> Tuple[bool, Dict[str, Any], List[str]]:
+    """
+    Dedicated, fail-closed validation path strictly for the 22 pre-Phase-2.7.8 immutable
+    verified baseline records (`moon_chat_gen_001`..`moon_chat_gen_022`).
+    Never permits newly curated records missing `approval_status`.
+    """
+    errors: List[str] = []
+    rec_id = str(rec.get("id") or f"line_{line_no}") if isinstance(rec, dict) else f"line_{line_no}"
+    src_url = str(rec.get("source_url") or "") if isinstance(rec, dict) else ""
+
+    def _fmt(field: str, msg: str) -> str:
+        return f"[{source_file}:{line_no} id={rec_id} field={field} source={src_url}] {msg}"
+
+    if not isinstance(rec, dict):
+        return False, {"id": rec_id, "source_file": source_file, "line_no": line_no}, [_fmt("record", "Expected JSON object.")]
+
+    base_ok, base_err = validate_immutable_baseline_record(rec)
+    if not base_ok:
+        return False, {"id": rec_id, "source_file": source_file, "line_no": line_no}, [_fmt("baseline", base_err or "Not a verified immutable baseline record.")]
+
+    lic_ok, lic_err = check_license_permissibility(rec.get("license"), src_url)
+    if not lic_ok:
+        errors.append(_fmt("license", lic_err or "Invalid license."))
+
+    msgs = rec.get("messages") or []
+    safe_ok, safe_err = check_code_and_safety(msgs)
+    if not safe_ok:
+        errors.append(_fmt("messages", safe_err or "Conversation quality/safety validation failed."))
+
+    tax, tax_reasons = classify_chat_record(rec, allow_pending_staging=False)
+    if tax not in QUALIFYING_PRODUCTION_TAXONOMIES:
+        errors.append(_fmt("provenance_type", f"Disallowed baseline taxonomy '{tax}': {'; '.join(tax_reasons)}"))
 
     tok_stats: Dict[str, Any] = {}
     if safe_ok and tokenizer is not None:

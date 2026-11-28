@@ -51,6 +51,62 @@ DEFAULT_APPROVED_MANIFESTS = (
 )
 
 
+CATEGORY_AUTHORING_GUIDANCE: Dict[str, Dict[str, str]] = {
+    "general_knowledge": {
+        "label": "General knowledge",
+        "guidance": "Clear, accurate factual explanations of real-world concepts, history, geography, or everyday phenomena written in original prose.",
+    },
+    "basic_science": {
+        "label": "Basic science",
+        "guidance": "Explain core physics, chemistry, biology, or earth science principles using step-by-step intuition and everyday examples.",
+    },
+    "mathematics": {
+        "label": "Mathematics",
+        "guidance": "Walk through algebra, calculus, probability, or discrete math step-by-step, showing assumptions and why each step follows.",
+    },
+    "programming_fundamentals": {
+        "label": "Programming fundamentals",
+        "guidance": "Cover control flow, functions, recursion, testing, debugging, data representations, and clean software design principles.",
+    },
+    "python": {
+        "label": "Python",
+        "guidance": "Include valid, syntactically checked ```python code fences with idiomatic Python 3 patterns, edge-case handling, and clear complexity notes.",
+    },
+    "javascript": {
+        "label": "JavaScript",
+        "guidance": "Explain modern ES6+ features, async/await, closures, array methods, and DOM/event semantics with clean executable code examples.",
+    },
+    "html_css": {
+        "label": "HTML/CSS",
+        "guidance": "Demonstrate semantic HTML5 markup, accessibility attributes, Flexbox/Grid layouts, and responsive CSS patterns.",
+    },
+    "web_development": {
+        "label": "Web development",
+        "guidance": "Cover HTTP, REST APIs, authentication security, browser rendering, caching, and backend-frontend architecture trade-offs.",
+    },
+    "computer_science": {
+        "label": "Computer science",
+        "guidance": "Explain algorithms, data structures, time/space complexity, operating systems, networking, databases, and distributed systems.",
+    },
+    "ai_ml_fundamentals": {
+        "label": "AI/ML fundamentals",
+        "guidance": "Explain tokenization, embeddings, attention, optimization, generalization, evaluation, and Moon AI first-principles design.",
+    },
+    "instruction_following": {
+        "label": "Instruction following",
+        "guidance": "Practice exact constraint satisfaction: bullet counts, valid ```json formatting, tone shifts, comparison tables, or structured outlines.",
+    },
+    "reasoning_problem_solving": {
+        "label": "Reasoning and problem solving",
+        "guidance": "Decompose multi-step logic, trade-off analysis, root-cause debugging, and deductive reasoning explicitly before stating conclusions.",
+    },
+    "helpful_conversational": {
+        "label": "Helpful conversational responses",
+        "guidance": "Natural, concise, honest, non-sycophantic multi-turn or single-turn dialogues that clarify ambiguity and stay factual.",
+    },
+}
+
+
 def build_empty_owner_templates() -> List[Dict[str, Any]]:
     """
     Generates 13 empty, clearly labelled owner-authoring templates (1 per target category).
@@ -58,6 +114,7 @@ def build_empty_owner_templates() -> List[Dict[str, Any]]:
     """
     templates: List[Dict[str, Any]] = []
     for idx, (cat_slug, cat_label) in enumerate(SUPPORTED_CHAT_CATEGORIES.items(), start=1):
+        guide = CATEGORY_AUTHORING_GUIDANCE.get(cat_slug, {}).get("guidance", "")
         templates.append({
             "id": f"owner_template_{idx:02d}_{cat_slug}",
             "category": cat_slug,
@@ -71,10 +128,12 @@ def build_empty_owner_templates() -> List[Dict[str, Any]]:
             "provenance_type": PROVENANCE_ORIGINAL_SELF_AUTHORED_QA,
             "approval_status": APPROVAL_STATUS_PENDING,
             "_template_status": "EMPTY_TEMPLATE_FOR_OWNER_AUTHORING",
+            "_category_guidance": guide,
             "_instructions": (
-                f"Category '{cat_label}': fill in attribution (your name), user content, and "
-                "your original human-written educational assistant response. Leave approval_status "
-                "as PENDING_REVIEW and submit via `python -m datasets.chat.contribute --import <file>`."
+                f"Category '{cat_label}' ({cat_slug}): {guide} "
+                "Fill in attribution (your name), user content, and your original human-written "
+                "educational assistant response. Leave approval_status as PENDING_REVIEW and submit via "
+                "`python -m datasets.chat.contribute --import-file <file>`."
             ),
             "messages": [
                 {"role": "user", "content": ""},
@@ -375,10 +434,111 @@ def submit_single_qa(
     }
 
 
+def list_category_guidance(progress_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Returns all 13 target categories with clear authoring guidance and current approved/pending counts."""
+    approved_counts: Dict[str, int] = {}
+    pending_counts: Dict[str, int] = {}
+    if progress_path and os.path.isfile(progress_path):
+        try:
+            with open(progress_path, "r", encoding="utf-8") as f:
+                prog = json.load(f)
+            approved_counts = prog.get("current_approved_production", {}).get("category_13_distribution", {}) or {}
+            pending_counts = prog.get("review_queue", {}).get("pending_category_13_distribution", {}) or {}
+        except Exception:
+            pass
+
+    rows: List[Dict[str, Any]] = []
+    for idx, (slug, default_label) in enumerate(SUPPORTED_CHAT_CATEGORIES.items(), start=1):
+        meta = CATEGORY_AUTHORING_GUIDANCE.get(slug, {})
+        rows.append({
+            "index": idx,
+            "slug": slug,
+            "label": meta.get("label", default_label),
+            "guidance": meta.get("guidance", ""),
+            "approved_count": int(approved_counts.get(slug, 0)),
+            "pending_count": int(pending_counts.get(slug, 0)),
+        })
+    return rows
+
+
+def interactive_submit(
+    *,
+    queue_path: str = DEFAULT_PENDING_QUEUE_PATH,
+    approved_paths: Sequence[str] = DEFAULT_APPROVED_MANIFESTS,
+    tokenizer_path: str = DEFAULT_TOKENIZER_PATH,
+    input_fn: Any = input,
+    print_fn: Any = print,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+    """
+    Guided interactive owner authoring CLI across all 13 Moon Chat categories.
+    Supports multi-line code/explanation entry and always stages strictly as PENDING_REVIEW.
+    """
+    cats = list_category_guidance(os.path.join(PROJECT_ROOT, "data", "reports", "moon_chat_dataset_progress.json"))
+    print_fn("=== Moon Chat Owner Authoring Session (Always staged as PENDING_REVIEW) ===")
+    for row in cats:
+        print_fn(
+            f"  [{row['index']:2d}] {row['label']} ({row['slug']}) "
+            f"[approved={row['approved_count']}, pending={row['pending_count']}]"
+        )
+        print_fn(f"       Guide: {row['guidance']}")
+
+    raw_choice = str(input_fn("\nSelect category number (1-13) or slug: ")).strip()
+    chosen_slug: Optional[str] = None
+    if raw_choice.isdigit():
+        idx_num = int(raw_choice)
+        if 1 <= idx_num <= len(cats):
+            chosen_slug = cats[idx_num - 1]["slug"]
+    if chosen_slug is None:
+        chosen_slug = canonicalize_category(raw_choice)
+    if chosen_slug not in SUPPORTED_CHAT_CATEGORIES:
+        return {"accepted": False, "reasons": [f"Unknown category selection '{raw_choice}'."]}
+
+    author = str(input_fn("Author/attribution name [Prem Gaikwad (Moon AI)]: ")).strip() or "Prem Gaikwad (Moon AI Chief ML Systems Architect)"
+    prompt = str(input_fn("User question/prompt: ")).strip()
+    print_fn("Enter original human-written educational assistant response (end with a line containing only 'END'):")
+    answer_lines: List[str] = []
+    while True:
+        try:
+            line = input_fn("")
+        except EOFError:
+            break
+        if str(line).strip() == "END":
+            break
+        answer_lines.append(str(line))
+    answer = "\n".join(answer_lines).strip()
+
+    res = submit_single_qa(
+        category=chosen_slug,
+        prompt=prompt,
+        answer=answer,
+        attribution=author,
+        queue_path=queue_path,
+        approved_paths=approved_paths,
+        tokenizer_path=tokenizer_path,
+        dry_run=dry_run,
+    )
+    if res["accepted"]:
+        tok_stats = res["diagnostics"].get("token_stats") or {}
+        print_fn(
+            f"\n[Contribute] Staged '{res['record']['id']}' ({chosen_slug}) as {res['approval_status']} "
+            f"(supervised_tokens={tok_stats.get('supervised_tokens', 'n/a')})."
+        )
+        print_fn(
+            f"  Next step after reviewing: python -m datasets.chat.review_queue "
+            f"--approve {res['record']['id']} --reviewer \"{author}\""
+        )
+    else:
+        print_fn(f"\n[Contribute] Submission REJECTED: {res['reasons']}")
+    return res
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Moon Chat Owner-Authored Contribution CLI")
     parser.add_argument("--init-templates", nargs="?", const=DEFAULT_TEMPLATES_PATH, default=None, help="Write 13 empty category templates.")
     parser.add_argument("--init-example", nargs="?", const=DEFAULT_EXAMPLE_PATH, default=None, help="Write empty structural example file.")
+    parser.add_argument("--categories", action="store_true", help="List all 13 target categories with authoring guidance and counts.")
+    parser.add_argument("--interactive", action="store_true", help="Interactive multi-line Q&A authoring wizard (stages PENDING_REVIEW).")
     parser.add_argument("--import-file", dest="import_file", type=str, default=None, help="JSON or JSONL file to validate and stage as PENDING_REVIEW.")
     parser.add_argument("--submit", action="store_true", help="Submit a single owner-authored Q&A directly via flags.")
     parser.add_argument("--category", type=str, default="general_knowledge")
@@ -388,6 +548,21 @@ def main() -> None:
     parser.add_argument("--id", type=str, default=None)
     parser.add_argument("--dry-run", action="store_true", help="Validate and preview without modifying pending queue.")
     args = parser.parse_args()
+
+    if args.categories:
+        prog_path = os.path.join(PROJECT_ROOT, "data", "reports", "moon_chat_dataset_progress.json")
+        print("Supported 13 Moon Chat Categories & Authoring Guidance:")
+        for row in list_category_guidance(prog_path):
+            print(
+                f"  {row['index']:2d}. {row['label']} ({row['slug']}) "
+                f"[approved={row['approved_count']}, pending={row['pending_count']}]\n"
+                f"      -> {row['guidance']}"
+            )
+        return
+
+    if args.interactive:
+        interactive_submit(dry_run=args.dry_run)
+        return
 
     if args.init_templates:
         p = write_empty_owner_templates(args.init_templates)

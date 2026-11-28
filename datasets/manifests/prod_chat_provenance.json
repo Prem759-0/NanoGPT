@@ -1,6 +1,6 @@
 {
   "schema_version": "moon_chat_genuine_ingestion_v1",
-  "generated_at_utc": "2026-11-27T17:47:55.181911+00:00",
+  "generated_at_utc": "2026-11-28T18:17:47.192631+00:00",
   "dataset_status": "DATASET_NOT_READY",
   "eligible_for_production_training": false,
   "blockers": [
@@ -13,6 +13,10 @@
   "raw_input_records": 22,
   "malformed_input_lines": 0,
   "accepted_genuine_records": 22,
+  "approved_breakdown": {
+    "immutable_baseline_records": 22,
+    "curated_explicitly_approved_records": 0
+  },
   "rejected_records_count": 0,
   "rejection_reasons": {},
   "taxonomy_counts": {
@@ -51,17 +55,17 @@
   "output_files": {
     "train": {
       "path": "datasets/manifests/prod_chat_train.jsonl",
-      "sha256": "a269c0477e04a3c35bf4e264f6eb71187b3b03ed534d0b1d1ca2c98ac986fe77",
+      "sha256": "c551a384b5225a40970e0623ff75fa57f5b9d2b1a9f313a56631e0818b152c8e",
       "records_count": 18
     },
     "val": {
       "path": "datasets/manifests/prod_chat_val.jsonl",
-      "sha256": "e7c4fa56ebe90d430670dd2a2bde77d61b45ccc1425ea49e1c9bc07df4d151ba",
+      "sha256": "0c12e3cfc4802af19d0d02e69e1ff996c4a9c1c5d08da4d50f581f86ad4fabfd",
       "records_count": 2
     },
     "test": {
       "path": "datasets/manifests/prod_chat_test.jsonl",
-      "sha256": "d559e188e3a8f79296e45776529e7c9619de804a06491a021f8897572da1f74d",
+      "sha256": "4792cbf8dc06d4bf7e1d606fd56314bb953ef2653af29d5e50669457ea75ac00",
       "records_count": 2
     }
   },

@@ -1,6 +1,6 @@
 {
   "schema_version": "phase_2_7_7_dataset_truth_audit_v1",
-  "generated_at_utc": "2026-11-27T17:47:55.476695+00:00",
+  "generated_at_utc": "2026-11-28T18:18:07.314718+00:00",
   "taxonomy": [
     "HUMAN_AUTHORED_VERIFIED",
     "PUBLIC_SOURCE_VERIFIED",
@@ -207,6 +207,9 @@
             "CC-BY-SA-4.0": 12,
             "CC0-1.0": 1
           },
+          "approval_status_counts": {
+            "IMMUTABLE_BASELINE": 18
+          },
           "category_counts_raw": {
             "beginner_educational": 1,
             "physics": 1,
@@ -281,6 +284,9 @@
             "CC-BY-SA-4.0": 1,
             "CustomSovereign": 1
           },
+          "approval_status_counts": {
+            "IMMUTABLE_BASELINE": 2
+          },
           "category_counts_raw": {
             "mathematics": 1,
             "sovereign_identity": 1
@@ -341,6 +347,9 @@
           },
           "license_counts": {
             "CC-BY-SA-4.0": 2
+          },
+          "approval_status_counts": {
+            "IMMUTABLE_BASELINE": 2
           },
           "category_counts_raw": {
             "computer_science": 1,
@@ -564,6 +573,10 @@
             "CC0-1.0": 1,
             "Apache-2.0": 450
           },
+          "approval_status_counts": {
+            "IMMUTABLE_BASELINE": 18,
+            "MISSING_UNAPPROVED": 450
+          },
           "category_counts_raw": {
             "beginner_educational": 1,
             "physics": 1,
@@ -646,6 +659,10 @@
             "CustomSovereign": 1,
             "Apache-2.0": 50
           },
+          "approval_status_counts": {
+            "IMMUTABLE_BASELINE": 2,
+            "MISSING_UNAPPROVED": 50
+          },
           "category_counts_raw": {
             "mathematics": 1,
             "sovereign_identity": 1,
@@ -718,6 +735,10 @@
           "license_counts": {
             "CC-BY-SA-4.0": 2,
             "Apache-2.0": 50
+          },
+          "approval_status_counts": {
+            "IMMUTABLE_BASELINE": 2,
+            "MISSING_UNAPPROVED": 50
           },
           "category_counts_raw": {
             "computer_science": 6,
@@ -928,6 +949,9 @@
           "license_counts": {
             "Apache-2.0": 990
           },
+          "approval_status_counts": {
+            "MISSING_UNAPPROVED": 990
+          },
           "category_counts_raw": {
             "general_conversation": 99,
             "instruction_following": 99,
@@ -997,6 +1021,9 @@
           "license_counts": {
             "Apache-2.0": 50
           },
+          "approval_status_counts": {
+            "MISSING_UNAPPROVED": 50
+          },
           "category_counts_raw": {
             "general_conversation": 5,
             "instruction_following": 5,
@@ -1065,6 +1092,9 @@
           },
           "license_counts": {
             "Apache-2.0": 60
+          },
+          "approval_status_counts": {
+            "MISSING_UNAPPROVED": 60
           },
           "category_counts_raw": {
             "general_conversation": 6,
@@ -1237,7 +1267,7 @@
         "train": {
           "exists": true,
           "path": "datasets/manifests/prod_chat_train.jsonl",
-          "sha256": "a269c0477e04a3c35bf4e264f6eb71187b3b03ed534d0b1d1ca2c98ac986fe77",
+          "sha256": "c551a384b5225a40970e0623ff75fa57f5b9d2b1a9f313a56631e0818b152c8e",
           "records_count": 18,
           "malformed_lines": 0,
           "unique_sha256_records": 18,
@@ -1262,6 +1292,9 @@
             "CustomSovereign": 5,
             "CC-BY-SA-4.0": 12,
             "CC0-1.0": 1
+          },
+          "approval_status_counts": {
+            "IMMUTABLE_BASELINE": 18
           },
           "category_counts_raw": {
             "beginner_educational": 1,
@@ -1312,7 +1345,7 @@
         "val": {
           "exists": true,
           "path": "datasets/manifests/prod_chat_val.jsonl",
-          "sha256": "e7c4fa56ebe90d430670dd2a2bde77d61b45ccc1425ea49e1c9bc07df4d151ba",
+          "sha256": "0c12e3cfc4802af19d0d02e69e1ff996c4a9c1c5d08da4d50f581f86ad4fabfd",
           "records_count": 2,
           "malformed_lines": 0,
           "unique_sha256_records": 2,
@@ -1336,6 +1369,9 @@
           "license_counts": {
             "CC-BY-SA-4.0": 1,
             "CustomSovereign": 1
+          },
+          "approval_status_counts": {
+            "IMMUTABLE_BASELINE": 2
           },
           "category_counts_raw": {
             "mathematics": 1,
@@ -1375,7 +1411,7 @@
         "test": {
           "exists": true,
           "path": "datasets/manifests/prod_chat_test.jsonl",
-          "sha256": "d559e188e3a8f79296e45776529e7c9619de804a06491a021f8897572da1f74d",
+          "sha256": "4792cbf8dc06d4bf7e1d606fd56314bb953ef2653af29d5e50669457ea75ac00",
           "records_count": 2,
           "malformed_lines": 0,
           "unique_sha256_records": 2,
@@ -1397,6 +1433,9 @@
           },
           "license_counts": {
             "CC-BY-SA-4.0": 2
+          },
+          "approval_status_counts": {
+            "IMMUTABLE_BASELINE": 2
           },
           "category_counts_raw": {
             "computer_science": 1,
@@ -1490,6 +1529,9 @@
       "license_counts": {
         "CustomSovereign": 4
       },
+      "approval_status_counts": {
+        "MISSING_UNAPPROVED": 4
+      },
       "category_counts_raw": {
         "identity": 1,
         "architecture": 1,
@@ -1553,6 +1595,9 @@
       "license_counts": {
         "Apache-2.0": 40
       },
+      "approval_status_counts": {
+        "MISSING_UNAPPROVED": 40
+      },
       "category_counts_raw": {
         "general_conversation": 4,
         "instruction_following": 4,
@@ -1599,32 +1644,35 @@
     "quarantined_teacher_data": {
       "exists": true,
       "path": "datasets/manifests/quarantined_teacher_data.jsonl",
-      "sha256": "edbe0bb7282b679d7e41c44d6e1cd8e838d540967e6c3fd399a4bc32446a84b7",
-      "records_count": 123,
+      "sha256": "febcd9dccf0496985218a3f6c5517d0b352fa241700dc30580b6fb702d69198f",
+      "records_count": 126,
       "malformed_lines": 0,
       "unique_sha256_records": 4,
-      "duplicate_sha256_count": 119,
+      "duplicate_sha256_count": 122,
       "unique_prompts": 4,
       "unique_first_assistant_replies": 4,
       "repeated_answer_templates_count": 3,
-      "max_answer_template_repetition": 46,
+      "max_answer_template_repetition": 47,
       "taxonomy_counts": {
         "HUMAN_AUTHORED_VERIFIED": 0,
         "PUBLIC_SOURCE_VERIFIED": 0,
         "DETERMINISTIC_TEMPLATE": 0,
-        "SYNTHETIC_FIXTURE": 77,
-        "AI_GENERATED": 46,
+        "SYNTHETIC_FIXTURE": 79,
+        "AI_GENERATED": 47,
         "UNVERIFIED": 0
       },
       "raw_provenance_counts": {
-        "teacher_distillation_mock_mock-teacher-v1": 76,
-        "teacher_distillation_mock_mock-v1": 47
+        "teacher_distillation_mock_mock-teacher-v1": 78,
+        "teacher_distillation_mock_mock-v1": 48
       },
       "license_counts": {
-        "CC-BY-4.0": 123
+        "CC-BY-4.0": 126
+      },
+      "approval_status_counts": {
+        "MISSING_UNAPPROVED": 126
       },
       "category_counts_raw": {
-        "uncategorized": 123
+        "uncategorized": 126
       },
       "category_counts_13_targets": {
         "general_knowledge": 0,
@@ -1642,19 +1690,19 @@
         "helpful_conversational": 0
       },
       "external_http_url_count": 0,
-      "local_template_url_count": 123,
+      "local_template_url_count": 126,
       "valid_attribution_count": 0,
       "qualifying_production_genuine_records": 0,
       "token_stats": {
-        "total_chatml_tokens": 10977,
-        "user_content_tokens": 2021,
-        "assistant_content_tokens": 6218,
-        "assistant_supervised_tokens": 7256,
-        "avg_tokens_per_record": 89.24,
+        "total_chatml_tokens": 11252,
+        "user_content_tokens": 2071,
+        "assistant_content_tokens": 6376,
+        "assistant_supervised_tokens": 7440,
+        "avg_tokens_per_record": 89.3,
         "min_tokens_per_record": 54,
         "max_tokens_per_record": 116,
         "block_size": 512,
-        "total_windows": 123
+        "total_windows": 126
       }
     }
   }

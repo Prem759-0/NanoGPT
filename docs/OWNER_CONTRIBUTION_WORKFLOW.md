@@ -33,15 +33,18 @@ This guide documents how the project owner adds original human-authored Q&A exam
 
 ## 2. Quick Owner Commands
 
-### A. Generate 13 Empty Category Templates
+### A. Generate 13 Empty Category Templates or Browse Category Guidance
 ```bash
+python -m datasets.chat.contribute --categories
 python -m datasets.chat.contribute --init-templates
 python -m datasets.chat.contribute --init-example
+python -m datasets.chat.contribute --interactive
 ```
 This creates:
-- `datasets/contributions/owner_templates.jsonl` (13 empty category skeletons, zero fabricated answers)
+- `datasets/contributions/owner_templates.jsonl` (13 empty category skeletons with per-category authoring guidance, zero fabricated answers)
 - `datasets/contributions/example_owner_contribution.json` (documented structure)
 - `datasets/contributions/SCHEMA.json` (JSON Schema specification)
+- `--interactive`: launches a multi-line guided wizard with live syntax, PII, duplicate, and token-count checks (always staged as `PENDING_REVIEW`)
 
 ### B. Submit a Single Original Q&A Without Editing JSONL
 ```bash
@@ -80,7 +83,13 @@ python -m datasets.chat.review_queue --status
 # Inspect pending items:
 python -m datasets.chat.review_queue --list
 
-# Approve verified records (fails closed if answer is empty/template/insecure):
+# Inspect full details & source extract for a staged draft:
+python -m datasets.chat.review_queue --show <DRAFT_ID>
+
+# Author an original educational explanation for a staged source draft (stays PENDING_REVIEW):
+python -m datasets.chat.review_queue --complete-draft <DRAFT_ID> --answer "..."
+
+# Approve verified records (fails closed if answer is empty, copied verbatim, or unreviewed):
 python -m datasets.chat.review_queue --approve <ID_1> <ID_2> --reviewer "Prem Gaikwad"
 
 # Reject invalid/low-quality items:

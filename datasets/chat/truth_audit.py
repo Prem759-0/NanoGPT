@@ -28,12 +28,17 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from datasets.chat.schema import (
+    APPROVAL_STATUS_APPROVED,
+    APPROVAL_STATUS_PENDING,
+    APPROVAL_STATUS_REJECTED,
     APPROVED_LICENSES,
     SUPPORTED_CHAT_CATEGORIES,
     canonicalize_category,
     compute_conversation_sha256,
+    is_immutable_baseline_record,
     normalize_text,
     validate_chat_record,
+    validate_staging_candidate_record,
 )
 from datasets.chat.tokenizer import SovereignTokenizer
 
@@ -42,7 +47,7 @@ DEFAULT_TOKENIZER_PATH = os.path.join(PROJECT_ROOT, "models", "chat", "tokenizer
 DEFAULT_REPORT_PATH = os.path.join(PROJECT_ROOT, "data", "reports", "moon_chat_dataset_truth_audit.json")
 DEFAULT_PROGRESS_REPORT_PATH = os.path.join(PROJECT_ROOT, "data", "reports", "moon_chat_dataset_progress.json")
 DEFAULT_AUDIT_CACHE_PATH = os.path.join(PROJECT_ROOT, "datasets", "sources", ".manifest_audit_cache.json")
-AUDIT_CACHE_SCHEMA_VERSION = "phase_2_7_8_file_audit_cache_v1"
+AUDIT_CACHE_SCHEMA_VERSION = "phase_2_7_9_file_audit_cache_v2"
 
 # Explicit Phase 2.7.7 Taxonomy
 TAXONOMY_HUMAN_AUTHORED_VERIFIED = "HUMAN_AUTHORED_VERIFIED"
@@ -164,11 +169,12 @@ def _looks_like_deterministic_template(rec: Dict[str, Any]) -> bool:
     return False
 
 
-def classify_chat_record(rec: Dict[str, Any]) -> Tuple[str, List[str]]:
+def classify_chat_record(rec: Dict[str, Any], *, allow_pending_staging: bool = False) -> Tuple[str, List[str]]:
     """
-    Classifies a single chat JSONL record into the Phase 2.7.7 taxonomy.
+    Classifies a single chat JSONL record into the Phase 2.7.7/2.7.9 taxonomy.
     Returns (taxonomy_class, reasons).
-    Fail-closed: uncertain or missing metadata defaults to UNVERIFIED (or SYN/AI/TEMPLATE).
+    Fail-closed: uncertain, missing, PENDING_REVIEW (outside staging), or REJECTED
+    metadata defaults to UNVERIFIED (or SYN/AI/TEMPLATE).
     """
     if not isinstance(rec, dict):
         return TAXONOMY_UNVERIFIED, ["Record is not a JSON object."]
@@ -207,8 +213,19 @@ def classify_chat_record(rec: Dict[str, Any]) -> Tuple[str, List[str]]:
         reasons.append(f"Deterministic template indicators detected (provenance_type={prov or 'MISSING'}, source_url={rec.get('source_url')})")
         return TAXONOMY_DETERMINISTIC_TEMPLATE, reasons
 
+    # 3b. Approval state checks
+    if "approval_status" in rec:
+        app_status = rec.get("approval_status")
+        if app_status == APPROVAL_STATUS_REJECTED:
+            return TAXONOMY_UNVERIFIED, ["Record has approval_status='REJECTED' and is excluded from production."]
+        if app_status == APPROVAL_STATUS_PENDING and not allow_pending_staging:
+            return TAXONOMY_UNVERIFIED, ["Record has approval_status='PENDING_REVIEW' and is not approved for production."]
+
     # 4. Schema validation for production-grade human or public-source records
-    schema_ok, schema_err = validate_chat_record(rec, is_production=True)
+    if allow_pending_staging:
+        schema_ok, schema_err = validate_staging_candidate_record(rec)
+    else:
+        schema_ok, schema_err = validate_chat_record(rec, is_production=True)
     if not schema_ok:
         return TAXONOMY_UNVERIFIED, [f"Failed production schema validation: {schema_err}"]
 
@@ -531,6 +548,7 @@ def audit_single_manifest(
     taxonomy_counts: Counter[str] = Counter({k: 0 for k in ALL_TAXONOMY_CLASSES})
     provenance_counts: Counter[str] = Counter()
     license_counts: Counter[str] = Counter()
+    approval_status_counts: Counter[str] = Counter()
     category_counts_raw: Counter[str] = Counter()
     category_counts_13: Counter[str] = Counter({k: 0 for k in SUPPORTED_CHAT_CATEGORIES})
 
@@ -538,6 +556,8 @@ def audit_single_manifest(
     prompt_counter: Counter[str] = Counter()
     reply_counter: Counter[str] = Counter()
     public_source_urls: set[str] = set()
+    unapproved_non_baseline_ids: List[str] = []
+    pending_or_rejected_ids: List[str] = []
     external_url_count = 0
     local_template_url_count = 0
     valid_attribution_count = 0
@@ -560,6 +580,26 @@ def audit_single_manifest(
             continue
 
         records_count += 1
+        rec_id_str = str(rec.get("id") or f"line_{line_no}")
+        if "approval_status" in rec:
+            raw_app = rec.get("approval_status")
+            if raw_app == APPROVAL_STATUS_APPROVED:
+                approval_status_counts["APPROVED"] += 1
+            elif raw_app == APPROVAL_STATUS_PENDING:
+                approval_status_counts["PENDING_REVIEW"] += 1
+                pending_or_rejected_ids.append(rec_id_str)
+            elif raw_app == APPROVAL_STATUS_REJECTED:
+                approval_status_counts["REJECTED"] += 1
+                pending_or_rejected_ids.append(rec_id_str)
+            else:
+                approval_status_counts[f"INVALID:{raw_app}"] += 1
+                unapproved_non_baseline_ids.append(rec_id_str)
+        elif is_immutable_baseline_record(rec):
+            approval_status_counts["IMMUTABLE_BASELINE"] += 1
+        else:
+            approval_status_counts["MISSING_UNAPPROVED"] += 1
+            unapproved_non_baseline_ids.append(rec_id_str)
+
         tax, _ = classify_chat_record(rec)
         taxonomy_counts[tax] += 1
         provenance_counts[str(rec.get("provenance_type") or "MISSING")] += 1
@@ -636,6 +676,7 @@ def audit_single_manifest(
         "taxonomy_counts": {k: taxonomy_counts[k] for k in ALL_TAXONOMY_CLASSES},
         "raw_provenance_counts": dict(provenance_counts),
         "license_counts": dict(license_counts),
+        "approval_status_counts": dict(approval_status_counts),
         "category_counts_raw": dict(category_counts_raw),
         "category_counts_13_targets": {k: category_counts_13.get(k, 0) for k in SUPPORTED_CHAT_CATEGORIES},
         "external_http_url_count": external_url_count,
@@ -649,6 +690,8 @@ def audit_single_manifest(
             "reply_hashes": {_sha256_str(k): v for k, v in reply_counter.items()},
             "reply_previews": {_sha256_str(k): (k[:100] + "..." if len(k) > 100 else k) for k, v in reply_counter.items() if v > 1},
             "public_source_urls": sorted(public_source_urls),
+            "unapproved_non_baseline_ids": unapproved_non_baseline_ids[:50],
+            "pending_or_rejected_ids": pending_or_rejected_ids[:50],
             "malformed_errors": malformed_errors,
         },
     }
@@ -893,8 +936,18 @@ def verify_production_manifest_group(
     for sname, spath in split_paths.items():
         if not os.path.isfile(spath):
             blockers.append(f"Missing required {sname} manifest: {spath}")
-        elif report["splits"][sname].get("malformed_lines", 0) > 0:
-            blockers.append(f"Malformed JSON lines in {sname} manifest.")
+        else:
+            if report["splits"][sname].get("malformed_lines", 0) > 0:
+                blockers.append(f"Malformed JSON lines in {sname} manifest.")
+            app_counts = report["splits"][sname].get("approval_status_counts") or {}
+            bad_app = {
+                k: v for k, v in app_counts.items()
+                if k not in {"APPROVED", "IMMUTABLE_BASELINE"} and v > 0
+            }
+            if bad_app:
+                blockers.append(
+                    f"Split '{sname}' contains unapproved or missing-approval-status non-baseline records: {bad_app}"
+                )
 
     if report["disallowed_production_records"] > 0:
         disallowed = {
@@ -1123,8 +1176,12 @@ def generate_progress_report(
         except Exception:
             sources_count = 0
 
+    approval_totals: Counter[str] = Counter()
+    for sr in (prod.get("splits") or {}).values():
+        approval_totals.update(sr.get("approval_status_counts") or {})
+
     progress_doc: Dict[str, Any] = {
-        "schema_version": "phase_2_7_8_dataset_progress_v1",
+        "schema_version": "phase_2_7_9_dataset_progress_v2",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "dataset_status": prod["production_readiness"]["status"],
         "eligible_for_production_training": prod["production_readiness"]["eligible_for_production_training"],
@@ -1137,6 +1194,7 @@ def generate_progress_report(
             "total_chatml_tokens": tot_toks,
             "supervised_assistant_tokens": sup_toks,
             "taxonomy_counts": prod["taxonomy_counts"],
+            "approval_status_distribution": dict(approval_totals),
             "license_distribution": prod["license_counts"],
             "category_13_distribution": prod["category_counts_13_targets"],
             "category_raw_distribution": prod["category_counts_raw"],
